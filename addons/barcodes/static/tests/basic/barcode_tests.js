@@ -72,8 +72,8 @@ QUnit.module("Barcodes", (hooks) => {
             serverData,
             arch: `<form>
                         <header>
-                            <button name="do_something" string="Validate" type="object" barcode_trigger="DOIT"/>
-                            <button name="do_something_else" string="Validate" type="object" invisible="1" barcode_trigger="DOTHAT"/>
+                            <button name="do_something" string="Validate" type="object" barcode_trigger="doit"/>
+                            <button name="do_something_else" string="Validate" type="object" invisible="1" barcode_trigger="dothat"/>
                         </header>
                     </form>`,
             resId: 2,
@@ -90,11 +90,11 @@ QUnit.module("Barcodes", (hooks) => {
             },
         });
 
-        // OBTDOIT
-        simulateBarCode(["O", "B", "T", "D", "O", "I", "T", "Enter"]);
+        // O-BTN.doit
+        simulateBarCode(["O", "-", "B", "T", "N", ".", "d", "o", "i", "t", "Enter"]);
         await nextTick();
-        // OBTDOTHAT (should not call execute_action as the button isn't visible)
-        simulateBarCode(["O", "B", "T", "D", "O", "T", "H", "A", "T", "Enter"]);
+        // O-BTN.dothat (should not call execute_action as the button isn't visible)
+        simulateBarCode(["O", "-", "B", "T", "N", ".", "d", "o", "t", "h", "a", "t", "Enter"]);
         await nextTick();
         assert.verifySteps(["do_something"]);
 
@@ -110,8 +110,8 @@ QUnit.module("Barcodes", (hooks) => {
                 serverData,
                 arch: `<form>
                     <header>
-                        <button name="do_something" string="Validate" type="object" invisible="0" barcode_trigger="DOIT"/>
-                        <button name="do_something" string="Validate" type="object" invisible="1" barcode_trigger="DOIT"/>
+                        <button name="do_something" string="Validate" type="object" invisible="0" barcode_trigger="doit"/>
+                        <button name="do_something" string="Validate" type="object" invisible="1" barcode_trigger="doit"/>
                     </header>
                 </form>`,
                 resId: 2,
@@ -127,8 +127,8 @@ QUnit.module("Barcodes", (hooks) => {
                     assert.step(params.type);
                 },
             });
-            // OBTDOIT should call execute_action as the first button is visible
-            simulateBarCode(["O", "B", "T", "D", "O", "I", "T", "Enter"]);
+            // O-BTN.doit should call execute_action as the first button is visible
+            simulateBarCode(["O", "-", "B", "T", "N", ".", "d", "o", "i", "t", "Enter"]);
             await nextTick();
             assert.verifySteps(["do_something"]);
         }
@@ -148,24 +148,24 @@ QUnit.module("Barcodes", (hooks) => {
             resId: 1,
         });
 
-        // OCDEDIT
-        simulateBarCode(["O", "C", "D", "E", "D", "I", "T", "Enter"]);
+        // O-CMD.EDIT
+        simulateBarCode(["O", "-", "C", "M", "D", ".", "E", "D", "I", "T", "Enter"]);
         await nextTick();
         assert.containsOnce(target, ".o_form_editable", "should have switched to 'edit' mode");
         // dummy change to check that it actually saves
         await editInput(target.querySelector(".o_field_widget input"), null, "test");
-        // OCDSAVE
-        simulateBarCode(["O", "C", "D", "S", "A", "V", "E", "Enter"]);
+        // O-CMD.SAVE
+        simulateBarCode(["O", "-", "C", "M", "D", ".", "S", "A", "V", "E", "Enter"]);
         await nextTick();
         assert.verifySteps(["save"], "should have saved");
 
-        // OCDEDIT
-        simulateBarCode(["O", "C", "D", "E", "D", "I", "T", "Enter"]);
+        // O-CMD.EDIT
+        simulateBarCode(["O", "-", "C", "M", "D", ".", "E", "D", "I", "T", "Enter"]);
         await nextTick();
         // dummy change to check that it correctly discards
         await editInput(target.querySelector(".o_field_widget input"), null, "test");
-        // OCDDISC
-        simulateBarCode(["O", "C", "D", "D", "I", "S", "C", "Enter"]);
+        // O-CMD.CANCEL
+        simulateBarCode(["O", "-", "C", "M", "D", ".", "D", "I", "S", "C", "A", "R", "D", "Enter"]);
         await nextTick();
         assert.verifySteps([], "should not have saved");
     });
@@ -184,22 +184,21 @@ QUnit.module("Barcodes", (hooks) => {
 
         assert.strictEqual(target.querySelector(".o_field_widget input").value, "Large Cabinet");
 
-
-        // OCDNEXT
-        simulateBarCode(["O", "C", "D", "N", "E", "X", "T", "Enter"]);
+        // O-CMD.PAGER-NEXT
+        simulateBarCode(["O", "-", "C", "M", "D", ".", "N", "E", "X", "T", "Enter"]);
         await nextTick();
         assert.strictEqual(
             target.querySelector(".o_field_widget input").value,
             "Cabinet with Doors"
         );
 
-        // OCDPREV
-        simulateBarCode(["O", "C", "D", "P", "R", "E", "V", "Enter"]);
+        // O-CMD.PAGER-PREV
+        simulateBarCode(["O", "-", "C", "M", "D", ".", "P", "R", "E", "V", "Enter"]);
         await nextTick();
         assert.strictEqual(target.querySelector(".o_field_widget input").value, "Large Cabinet");
 
-        // OCDPAGERLAST
-        simulateBarCode(["O","C","D","P","A","G","E","R","L","A","S","T","Enter"]);
+        // O-CMD.PAGER-LAST
+        simulateBarCode(["O","-","C","M","D",".","P","A","G","E","R","-","L","A","S","T","Enter"]);
         // need to await 2 macro steps
         await mock.advanceTime(20);
         await mock.advanceTime(20);
@@ -208,8 +207,8 @@ QUnit.module("Barcodes", (hooks) => {
             "Cabinet with Doors"
         );
 
-        // OCDPAGERFIRST
-        simulateBarCode(["O","C","D","P","A","G","E","R","F","I","R","S","T","Enter"]);
+        // O-CMD.PAGER-FIRST
+        simulateBarCode(["O","-","C","M","D",".","P","A","G","E","R","-","F","I","R","S","T","Enter"]);
         // need to await 2 macro steps
         await mock.advanceTime(20);
         await mock.advanceTime(20);

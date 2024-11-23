@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { usePopover } from "@web/core/popover/popover_hook";
 import { registry } from "@web/core/registry";
@@ -7,7 +9,6 @@ import {
 } from "@web/views/fields/many2many_tags/many2many_tags_field";
 import { TagsList } from "@web/core/tags_list/tags_list";
 import { AvatarMany2XAutocomplete } from "@web/views/fields/relational_utils";
-import { imageUrl } from "@web/core/utils/urls";
 
 export class Many2ManyTagsAvatarField extends Many2ManyTagsField {
     static template = "web.Many2ManyTagsAvatarField";
@@ -22,7 +23,7 @@ export class Many2ManyTagsAvatarField extends Many2ManyTagsField {
     getTagProps(record) {
         return {
             ...super.getTagProps(record),
-            img: imageUrl(this.relation, record.resId, "avatar_128"),
+            img: `/web/image/${this.relation}/${record.resId}/avatar_128`,
         };
     }
 }
@@ -41,7 +42,7 @@ export const many2ManyTagsAvatarField = {
 registry.category("fields").add("many2many_tags_avatar", many2ManyTagsAvatarField);
 
 export class ListMany2ManyTagsAvatarField extends Many2ManyTagsAvatarField {
-    visibleItemsLimit = 5;
+    itemsVisible = 5;
 }
 
 export const listMany2ManyTagsAvatarField = {
@@ -106,6 +107,9 @@ export class KanbanMany2ManyTagsAvatarFieldTagsList extends TagsList {
             closeOnClickAway: (target) => !target.closest(".modal"),
         });
     }
+    get visibleTagsCount() {
+        return this.props.itemsVisible;
+    }
     openPopover(ev) {
         if (this.props.readonly) {
             return;
@@ -134,7 +138,7 @@ export class KanbanMany2ManyTagsAvatarField extends Many2ManyTagsAvatarField {
         ...Many2ManyTagsAvatarField.props,
         isEditable: { type: Boolean, optional: true },
     };
-    visibleItemsLimit = 3;
+    itemsVisible = 2;
 
     get popoverProps() {
         const props = {

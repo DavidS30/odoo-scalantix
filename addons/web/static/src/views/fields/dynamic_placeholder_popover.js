@@ -1,12 +1,8 @@
-import { memoize } from "@web/core/utils/functions";
-import { useAutofocus, useService } from "@web/core/utils/hooks";
-import { ModelFieldSelectorPopover } from "@web/core/model_field_selector/model_field_selector_popover";
-import { Component, onWillStart, useState } from "@odoo/owl";
-import { user } from "@web/core/user";
+/** @odoo-module **/
 
-const allowedQwebExpressions = memoize(async (model, orm) => {
-    return await orm.call(model, "mail_allowed_qweb_expressions");
-});
+import { useAutofocus } from "@web/core/utils/hooks";
+import { ModelFieldSelectorPopover } from "@web/core/model_field_selector/model_field_selector_popover";
+import { Component, useState } from "@odoo/owl";
 
 export class DynamicPlaceholderPopover extends Component {
     static template = "web.DynamicPlaceholderPopover";
@@ -22,22 +18,9 @@ export class DynamicPlaceholderPopover extends Component {
             isPathSelected: false,
             defaultValue: "",
         });
-        this.orm = useService("orm");
-
-        onWillStart(async () => {
-            [this.isTemplateEditor, this.allowedQwebExpressions] = await Promise.all([
-                user.hasGroup("mail.group_mail_template_editor"),
-                // (only the first element is the cache key)
-                allowedQwebExpressions(this.props.resModel, this.orm),
-            ]);
-        });
     }
 
-    filter(fieldDef, path) {
-        const fullPath = `object${path ? `.${path}` : ""}.${fieldDef.name}`;
-        if (!this.isTemplateEditor && !this.allowedQwebExpressions.includes(fullPath)) {
-            return false;
-        }
+    filter(fieldDef) {
         return !["one2many", "boolean", "many2many"].includes(fieldDef.type) && fieldDef.searchable;
     }
     closeFieldSelector(isPathSelected = false) {
@@ -47,22 +30,15 @@ export class DynamicPlaceholderPopover extends Component {
         }
         this.props.close();
     }
-    setPath(path, fieldInfo) {
+    setPath(path) {
         this.state.path = path;
-        this.state.fieldName = fieldInfo?.string;
     }
     setDefaultValue(value) {
         this.state.defaultValue = value;
     }
     validate() {
-        this.props.validate(this.state.path, this.state.defaultValue);
         this.props.close();
-    }
-
-    onBack() {
-        this.state.defaultValue = "";
-        this.state.isPathSelected = false;
-        this.state.path = "";
+        this.props.validate(this.state.path, this.state.defaultValue);
     }
 
     // @TODO should rework this to use hotkeys
@@ -70,8 +46,6 @@ export class DynamicPlaceholderPopover extends Component {
         switch (ev.key) {
             case "Enter": {
                 this.validate();
-                ev.stopPropagation();
-                ev.preventDefault();
                 break;
             }
             case "Escape": {

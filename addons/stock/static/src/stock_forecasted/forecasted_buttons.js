@@ -5,12 +5,6 @@ import { useService } from "@web/core/utils/hooks";
 import { Component } from "@odoo/owl";
 
 export class ForecastedButtons extends Component {
-    static template = "stock.ForecastedButtons";
-    static props = {
-        action: Object,
-        resModel: { type: String, optional: true },
-        reloadReport: Function,
-    };
 
     setup() {
         this.actionService = useService("action");
@@ -36,7 +30,7 @@ export class ForecastedButtons extends Component {
         } else if (this.resModel === 'product.template') {
             context.default_product_tmpl_id = this.productId;
         }
-        context.default_warehouse_id = this.context.warehouse_id;
+        context.default_warehouse_id = this.context.warehouse;
 
         const action = {
             res_model: 'product.replenish',
@@ -52,8 +46,15 @@ export class ForecastedButtons extends Component {
     async _onClickUpdateQuantity() {
         const action = await this.orm.call(this.resModel, "action_update_quantity_on_hand", [[this.productId]]);
         if (action.res_model === "stock.quant") { // Quant view in inventory mode.
-            action.views = [[false, "list"]];
+            action.views = [[false, "tree"]];
         }
         return this.actionService.doAction(action, { onClose: this._onClose.bind(this) });
     }
 }
+
+ForecastedButtons.props = {
+    action : Object,
+    resModel: {type: String, optional: true},
+    reloadReport : Function,
+};
+ForecastedButtons.template = 'stock.ForecastedButtons';

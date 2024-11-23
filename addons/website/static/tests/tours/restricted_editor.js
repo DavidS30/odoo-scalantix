@@ -1,9 +1,10 @@
 /** @odoo-module **/
 
-import { clickOnEditAndWaitEditMode, registerWebsitePreviewTour } from "@website/js/tours/tour_utils";
+import wTourUtils from "@website/js/tours/tour_utils";
 
-registerWebsitePreviewTour("restricted_editor", {
+wTourUtils.registerWebsitePreviewTour("restricted_editor", {
+    test: true,
     url: "/",
 }, () => [
-    ...clickOnEditAndWaitEditMode(),
+    ...wTourUtils.clickOnEditAndWaitEditMode(),
 ]);

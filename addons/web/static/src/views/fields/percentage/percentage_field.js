@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { _t } from "@web/core/l10n/translation";
 import { formatPercentage } from "../formatters";
@@ -20,9 +22,8 @@ export class PercentageField extends Component {
         useInputField({
             getValue: () =>
                 formatPercentage(this.props.record.data[this.props.name], {
-                    digits: this.props.digits,
+                    digits: this.digits,
                     noSymbol: true,
-                    field: this.props.record.fields[this.props.name],
                 }),
             refName: "numpadDecimal",
             parse: (v) => parsePercentage(v),
@@ -30,10 +31,13 @@ export class PercentageField extends Component {
         useNumpadDecimal();
     }
 
+    get digits() {
+        const fieldDigits = this.props.record.fields[this.props.name].digits;
+        return !this.props.digits && Array.isArray(fieldDigits) ? fieldDigits : this.props.digits;
+    }
     get formattedValue() {
         return formatPercentage(this.props.record.data[this.props.name], {
-            digits: this.props.digits,
-            field: this.props.record.fields[this.props.name],
+            digits: this.digits,
         });
     }
 }

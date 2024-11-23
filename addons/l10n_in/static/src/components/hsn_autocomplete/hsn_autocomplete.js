@@ -96,7 +96,7 @@ export class L10nInHsnAutoComplete extends CharField {
         if (this.props.l10nInHsnDescription) {
             data[this.props.l10nInHsnDescription] = option.description;
         }
-        setTimeout(() => this.props.record.update(data));
+        this.props.record.update(data);
     }
 }
 

@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { useAssignUserCommand } from "@mail/views/web/fields/assign_user_command_hook";
 
 import { registry } from "@web/core/registry";
@@ -14,9 +16,8 @@ import {
     KanbanMany2ManyTagsAvatarFieldTagsList,
 } from "@web/views/fields/many2many_tags_avatar/many2many_tags_avatar_field";
 
-export class Many2ManyAvatarUserTagsList extends TagsList {
-    static template = "mail.Many2ManyAvatarUserTagsList";
-}
+export class Many2ManyAvatarUserTagsList extends TagsList {}
+Many2ManyAvatarUserTagsList.template = "mail.Many2ManyAvatarUserTagsList";
 
 const WithUserChatter = (T) =>
     class UserChatterMixin extends T {
@@ -28,21 +29,11 @@ const WithUserChatter = (T) =>
             this.avatarCard = usePopover(AvatarCardPopover);
         }
 
-        displayAvatarCard(record) {
-            return this.relation === "res.users";
-        }
-
-        getAvatarCardProps(record) {
-            return {
-                id: record.resId,
-            };
-        }
-
         getTagProps(record) {
             return {
                 ...super.getTagProps(...arguments),
                 onImageClicked: (ev) => {
-                    if (!this.displayAvatarCard(record)) {
+                    if (this.relation !== "res.users") {
                         return;
                     }
                     const target = ev.currentTarget;
@@ -50,7 +41,9 @@ const WithUserChatter = (T) =>
                         !this.avatarCard.isOpen ||
                         (this.lastOpenedId && record.resId !== this.lastOpenedId)
                     ) {
-                        this.avatarCard.open(target, this.getAvatarCardProps(record));
+                        this.avatarCard.open(target, {
+                            id: record.resId,
+                        });
                         this.lastOpenedId = record.resId;
                     }
                 },
@@ -113,7 +106,6 @@ export class ListMany2ManyTagsAvatarUserField extends WithUserChatter(
 export const listMany2ManyTagsAvatarUserField = {
     ...listMany2ManyTagsAvatarField,
     component: ListMany2ManyTagsAvatarUserField,
-    listViewWidth: [120],
     additionalClasses: ["o_field_many2many_tags_avatar", "o_field_many2many_tags_avatar_list"],
 };
 

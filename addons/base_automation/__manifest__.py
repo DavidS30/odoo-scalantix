@@ -15,11 +15,10 @@ Use automation rules to automatically trigger actions for various screens.
 Sales Team, or an opportunity which still has status pending after 14 days might
 trigger an automatic reminder email.
     """,
-    'depends': ['base', 'digest', 'resource', 'mail', 'sms'],
+    'depends': ['base', 'resource', 'mail', 'sms'],
     'data': [
         'security/ir.model.access.csv',
         'data/base_automation_data.xml',
-        'data/digest_data.xml',
         'views/ir_actions_server_views.xml',
         'views/base_automation_views.xml',
     ],
@@ -27,7 +26,7 @@ trigger an automatic reminder email.
         'web.assets_backend': [
             'base_automation/static/src/**/*',
         ],
-        'web.assets_unit_tests': [
+        'web.qunit_suite_tests': [
             'base_automation/static/tests/**/*',
         ],
     },

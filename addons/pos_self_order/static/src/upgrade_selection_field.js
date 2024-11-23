@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { selectionField, SelectionField } from "@web/views/fields/selection/selection_field";
 import { useService } from "@web/core/utils/hooks";

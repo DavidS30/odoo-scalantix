@@ -1,9 +1,11 @@
-import { useEffect } from "@odoo/owl";
+/* @odoo-module */
+
 import { patch } from "@web/core/utils/patch";
-import { exprToBoolean } from "@web/core/utils/strings";
 import { useDebounced } from "@web/core/utils/timing";
 import { charField, CharField } from "@web/views/fields/char/char_field";
 import { textField, TextField } from "@web/views/fields/text/text_field";
+import { archParseBoolean } from "@web/views/utils";
+import { useEffect } from "@odoo/owl";
 
 /**
  * Support a key-based onchange in text fields.
@@ -57,7 +59,7 @@ TextField.props = {
 const charExtractProps = charField.extractProps;
 charField.extractProps = (fieldInfo) => {
     return Object.assign(charExtractProps(fieldInfo), {
-        onchangeOnKeydown: exprToBoolean(fieldInfo.attrs.onchange_on_keydown),
+        onchangeOnKeydown: archParseBoolean(fieldInfo.attrs.onchange_on_keydown),
         keydownDebounceDelay: fieldInfo.attrs.keydown_debounce_delay
             ? Number(fieldInfo.attrs.keydown_debounce_delay)
             : 2000,
@@ -67,7 +69,7 @@ charField.extractProps = (fieldInfo) => {
 const textExtractProps = textField.extractProps;
 textField.extractProps = (fieldInfo) => {
     return Object.assign(textExtractProps(fieldInfo), {
-        onchangeOnKeydown: exprToBoolean(fieldInfo.attrs.onchange_on_keydown),
+        onchangeOnKeydown: archParseBoolean(fieldInfo.attrs.onchange_on_keydown),
         keydownDebounceDelay: fieldInfo.attrs.keydown_debounce_delay
             ? Number(fieldInfo.attrs.keydown_debounce_delay)
             : 2000,

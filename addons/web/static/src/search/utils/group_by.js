@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { DEFAULT_INTERVAL, INTERVAL_OPTIONS } from "./dates";
 
 /**

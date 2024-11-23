@@ -1,7 +1,7 @@
 from odoo import models
 
 
-class AccountMoveSend(models.AbstractModel):
+class AccountMoveSend(models.TransientModel):
     _inherit = 'account.move.send'
 
     def _get_mail_attachment_from_doc(self, doc):

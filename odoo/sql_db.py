@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 
@@ -6,14 +7,12 @@ The PostgreSQL connector is a connectivity layer between the OpenERP code and
 the database, *not* a database abstraction toolkit. Database abstraction is what
 the ORM does, in fact.
 """
-from __future__ import annotations
 
 import logging
 import os
 import re
 import threading
 import time
-import typing
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timedelta
@@ -31,22 +30,15 @@ import odoo
 from . import tools
 from .tools import SQL
 from .tools.func import frame_codeinfo, locked
-from .tools.misc import Callbacks
 
-if typing.TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
-
-    T = typing.TypeVar('T')
-
+psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 
 def undecimalize(value, cr):
     if value is None:
         return None
     return float(value)
 
-DECIMAL_TO_FLOAT_TYPE = psycopg2.extensions.new_type((1700,), 'float', undecimalize)
-psycopg2.extensions.register_type(DECIMAL_TO_FLOAT_TYPE)
-psycopg2.extensions.register_type(psycopg2.extensions.new_array_type((1231,), 'float[]', DECIMAL_TO_FLOAT_TYPE))
+psycopg2.extensions.register_type(psycopg2.extensions.new_type((700, 701, 1700), 'float', undecimalize))
 
 _logger = logging.getLogger(__name__)
 _logger_conn = _logger.getChild("connection")
@@ -55,21 +47,6 @@ real_time = time.time.__call__  # ensure we have a non patched time for query ti
 
 re_from = re.compile(r'\bfrom\s+"?([a-zA-Z_0-9]+)\b', re.IGNORECASE)
 re_into = re.compile(r'\binto\s+"?([a-zA-Z_0-9]+)\b', re.IGNORECASE)
-
-
-def categorize_query(decoded_query):
-    res_into = re_into.search(decoded_query)
-    # prioritize `insert` over `select` so `select` subqueries are not
-    # considered when inside a `insert`
-    if res_into:
-        return 'into', res_into.group(1)
-
-    res_from = re_from.search(decoded_query)
-    if res_from:
-        return 'from', res_from.group(1)
-
-    return 'other', None
-
 
 sql_counter = 0
 
@@ -96,9 +73,10 @@ class Savepoint:
     """
     def __init__(self, cr):
         self.name = str(uuid.uuid1())
+        self._name = SQL.identifier(self.name)
         self._cr = cr
         self.closed = False
-        cr.execute('SAVEPOINT "%s"' % self.name)
+        cr.execute(SQL('SAVEPOINT %s', self._name))
 
     def __enter__(self):
         return self
@@ -111,12 +89,12 @@ class Savepoint:
             self._close(rollback)
 
     def rollback(self):
-        self._cr.execute('ROLLBACK TO SAVEPOINT "%s"' % self.name)
+        self._cr.execute(SQL('ROLLBACK TO SAVEPOINT %s', self._name))
 
     def _close(self, rollback):
         if rollback:
             self.rollback()
-        self._cr.execute('RELEASE SAVEPOINT "%s"' % self.name)
+        self._cr.execute(SQL('RELEASE SAVEPOINT %s', self._name))
         self.closed = True
 
 
@@ -144,10 +122,10 @@ class BaseCursor:
     """ Base class for cursors that manage pre/post commit hooks. """
 
     def __init__(self):
-        self.precommit = Callbacks()
-        self.postcommit = Callbacks()
-        self.prerollback = Callbacks()
-        self.postrollback = Callbacks()
+        self.precommit = tools.Callbacks()
+        self.postcommit = tools.Callbacks()
+        self.prerollback = tools.Callbacks()
+        self.postrollback = tools.Callbacks()
         # By default a cursor has no transaction object.  A transaction object
         # for managing environments is instantiated by registry.cursor().  It
         # is not done here in order to avoid cyclic module dependencies.
@@ -277,6 +255,7 @@ class Cursor(BaseCursor):
         # default log level determined at cursor creation, could be
         # overridden later for debugging purposes
         self.sql_log_count = 0
+        self._sql_table_tracking = False
 
         # avoid the call of close() (by __del__) if an exception
         # is raised by any of the following initializations
@@ -294,7 +273,6 @@ class Cursor(BaseCursor):
         self._closed = False   # real initialization value
         # See the docstring of this class.
         self.connection.set_isolation_level(ISOLATION_LEVEL_REPEATABLE_READ)
-        self.connection.set_session(readonly=pool.readonly)
 
         self.cache = {}
         self._now = None
@@ -354,7 +332,7 @@ class Cursor(BaseCursor):
             res = self._obj.execute(query, params)
         except Exception as e:
             if log_exceptions:
-                _logger.error("bad query: %s\nERROR: %s", self._obj.query or query, e)
+                _logger.error("bad query: %s\nERROR: %s", tools.ustr(self._obj.query or query), e)
             raise
         finally:
             delay = real_time() - start
@@ -375,17 +353,23 @@ class Cursor(BaseCursor):
             hook(self, query, params, start, delay)
 
         # advanced stats
-        if _logger.isEnabledFor(logging.DEBUG):
-            query_type, table = categorize_query(self._obj.query.decode())
-            log_target = None
-            if query_type == 'into':
-                log_target = self.sql_into_log
-            elif query_type == 'from':
-                log_target = self.sql_from_log
-            if log_target:
-                stats = log_target.setdefault(table, [0, 0])
-                stats[0] += 1
-                stats[1] += delay * 1E6
+        if _logger.isEnabledFor(logging.DEBUG) or self._sql_table_tracking:
+            delay *= 1E6
+
+            decoded_query = self._obj.query.decode()
+            res_into = re_into.search(decoded_query)
+            # prioritize `insert` over `select` so `select` subqueries are not
+            # considered when inside a `insert`
+            if res_into:
+                self.sql_into_log.setdefault(res_into.group(1), [0, 0])
+                self.sql_into_log[res_into.group(1)][0] += 1
+                self.sql_into_log[res_into.group(1)][1] += delay
+            else:
+                res_from = re_from.search(decoded_query)
+                if res_from:
+                    self.sql_from_log.setdefault(res_from.group(1), [0, 0])
+                    self.sql_from_log[res_from.group(1)][0] += 1
+                    self.sql_from_log[res_from.group(1)][1] += delay
         return res
 
     def execute_values(self, query, argslist, template=None, page_size=100, fetch=False):
@@ -399,7 +383,7 @@ class Cursor(BaseCursor):
             query = query.as_string(self._obj)
         return psycopg2.extras.execute_values(self, query, argslist, template=template, page_size=page_size, fetch=fetch)
 
-    def split_for_in_conditions(self, ids: Iterable[T], size: int = 0) -> Iterator[tuple[T, ...]]:
+    def split_for_in_conditions(self, ids, size=None):
         """Split a list of identifiers into one or more smaller tuples
            safe for IN conditions, after uniquifying them."""
         return tools.misc.split_every(size or self.IN_MAX, ids)
@@ -439,6 +423,15 @@ class Cursor(BaseCursor):
             yield
         finally:
             _logger.setLevel(level)
+
+    @contextmanager
+    def _enable_table_tracking(self):
+        old = self._sql_table_tracking
+        self._sql_table_tracking = True
+        try:
+            yield
+        finally:
+            self._sql_table_tracking = old
 
     def close(self):
         if not self.closed:
@@ -504,10 +497,6 @@ class Cursor(BaseCursor):
     def closed(self):
         return self._closed or self._cnx.closed
 
-    @property
-    def readonly(self):
-        return bool(self._cnx.readonly)
-
     def now(self):
         """ Return the transaction's timestamp ``NOW() AT TIME ZONE 'UTC'``. """
         if self._now is None:
@@ -524,12 +513,12 @@ class TestCursor(BaseCursor):
         +------------------------+---------------------------------------------------+
         |  test cursor           | queries on actual cursor                          |
         +========================+===================================================+
-        |``cr = TestCursor(...)``|                                                   |
+        |``cr = TestCursor(...)``| SAVEPOINT test_cursor_N                           |
         +------------------------+---------------------------------------------------+
-        | ``cr.execute(query)``  | SAVEPOINT test_cursor_N (if not savepoint)        |
-        |                        | query                                             |
+        | ``cr.execute(query)``  | query                                             |
         +------------------------+---------------------------------------------------+
-        |  ``cr.commit()``       | RELEASE SAVEPOINT test_cursor_N (if savepoint)    |
+        |  ``cr.commit()``       | RELEASE SAVEPOINT test_cursor_N                   |
+        |                        | SAVEPOINT test_cursor_N (lazy)                    |
         +------------------------+---------------------------------------------------+
         |  ``cr.rollback()``     | ROLLBACK TO SAVEPOINT test_cursor_N (if savepoint)|
         +------------------------+---------------------------------------------------+
@@ -538,37 +527,24 @@ class TestCursor(BaseCursor):
         +------------------------+---------------------------------------------------+
     """
     _cursors_stack = []
-    def __init__(self, cursor, lock, readonly):
+    def __init__(self, cursor, lock):
         assert isinstance(cursor, BaseCursor)
         super().__init__()
         self._now = None
         self._closed = False
         self._cursor = cursor
-        self.readonly = readonly
         # we use a lock to serialize concurrent requests
         self._lock = lock
         self._lock.acquire()
-        last_cursor = self._cursors_stack and self._cursors_stack[-1]
-        if last_cursor and last_cursor.readonly and not readonly and last_cursor._savepoint:
-            raise Exception('Opening a read/write test cursor from a readonly one')
         self._cursors_stack.append(self)
         # in order to simulate commit and rollback, the cursor maintains a
         # savepoint at its last commit, the savepoint is created lazily
-        self._savepoint = None
-
-    def _check_savepoint(self):
-        if not self._savepoint:
-            # we use self._cursor._obj for the savepoint to avoid having the
-            # savepoint queries in the query counts, profiler, ...
-            # Those queries are tests artefacts and should be invisible.
-            self._savepoint = Savepoint(self._cursor._obj)
-            if self.readonly:
-                # this will simulate a readonly connection
-                self._cursor._obj.execute('SET TRANSACTION READ ONLY')  # use _obj to avoid impacting query count and profiler.
+        self._savepoint = self._cursor.savepoint(flush=False)
 
     def execute(self, *args, **kwargs):
-        assert not self._closed, "Cannot use a closed cursor"
-        self._check_savepoint()
+        if not self._savepoint:
+            self._savepoint = self._cursor.savepoint(flush=False)
+
         return self._cursor.execute(*args, **kwargs)
 
     def close(self):
@@ -581,18 +557,19 @@ class TestCursor(BaseCursor):
             tos = self._cursors_stack.pop()
             if tos is not self:
                 _logger.warning("Found different un-closed cursor when trying to close %s: %s", self, tos)
+
             self._lock.release()
 
     def commit(self):
         """ Perform an SQL `COMMIT` """
         self.flush()
         if self._savepoint:
-            self._savepoint.close(rollback=self.readonly)
+            self._savepoint.close(rollback=False)
             self._savepoint = None
         self.clear()
         self.prerollback.clear()
         self.postrollback.clear()
-        self.postcommit.clear()         # TestCursor ignores post-commit hooks by default
+        self.postcommit.clear()         # TestCursor ignores post-commit hooks
 
     def rollback(self):
         """ Perform an SQL `ROLLBACK` """
@@ -600,8 +577,7 @@ class TestCursor(BaseCursor):
         self.postcommit.clear()
         self.prerollback.run()
         if self._savepoint:
-            self._savepoint.close(rollback=True)
-            self._savepoint = None
+            self._savepoint.rollback()
         self.postrollback.run()
 
     def __getattr__(self, name):
@@ -637,21 +613,15 @@ class ConnectionPool(object):
         The connections are *not* automatically closed. Only a close_db()
         can trigger that.
     """
-    def __init__(self, maxconn=64, readonly=False):
+    def __init__(self, maxconn=64):
         self._connections = []
         self._maxconn = max(maxconn, 1)
-        self._readonly = readonly
         self._lock = threading.Lock()
 
     def __repr__(self):
         used = len([1 for c, u, _ in self._connections[:] if u])
         count = len(self._connections)
-        mode = 'read-only' if self._readonly else 'read/write'
-        return f"ConnectionPool({mode};used={used}/count={count}/max={self._maxconn})"
-
-    @property
-    def readonly(self):
-        return self._readonly
+        return "ConnectionPool(used=%d/count=%d/max=%d)" % (used, count, self._maxconn)
 
     def _debug(self, msg, *args):
         _logger_conn.debug(('%r ' + msg), self, *args)
@@ -717,7 +687,6 @@ class ConnectionPool(object):
             raise
         self._connections.append([result, True, 0])
         self._debug('Create new connection backend PID %d', result.get_backend_pid())
-
         return result
 
     @locked
@@ -785,8 +754,9 @@ class Connection(object):
 
     def __bool__(self):
         raise NotImplementedError()
+    __nonzero__ = __bool__
 
-def connection_info_for(db_or_uri, readonly=False):
+def connection_info_for(db_or_uri):
     """ parse the given `db_or_uri` and return a 2-tuple (dbname, connection_params)
 
     Connection params are either a dictionary with a single key ``dsn``
@@ -795,8 +765,6 @@ def connection_info_for(db_or_uri, readonly=False):
     (dsn) from
 
     :param str db_or_uri: database name or postgres dsn
-    :param bool readonly: used to load
-        the default configuration from ``db_`` or ``db_replica_``.
     :rtype: (str, dict)
     """
     if 'ODOO_PGAPPNAME' in os.environ:
@@ -818,39 +786,33 @@ def connection_info_for(db_or_uri, readonly=False):
     connection_info = {'database': db_or_uri, 'application_name': app_name}
     for p in ('host', 'port', 'user', 'password', 'sslmode'):
         cfg = tools.config['db_' + p]
-        if readonly:
-            cfg = tools.config.get('db_replica_' + p, cfg)
         if cfg:
             connection_info[p] = cfg
 
     return db_or_uri, connection_info
 
 _Pool = None
-_Pool_readonly = None
 
-def db_connect(to, allow_uri=False, readonly=False):
-    global _Pool, _Pool_readonly  # noqa: PLW0603 (global-statement)
+def db_connect(to, allow_uri=False):
+    global _Pool
+    if _Pool is None:
+        _Pool = ConnectionPool(int(
+            odoo.evented and tools.config['db_maxconn_gevent']
+            or tools.config['db_maxconn']
+        ))
 
-    maxconn = odoo.evented and tools.config['db_maxconn_gevent'] or tools.config['db_maxconn']
-    if _Pool is None and not readonly:
-        _Pool = ConnectionPool(int(maxconn), readonly=False)
-    if _Pool_readonly is None and readonly:
-        _Pool_readonly = ConnectionPool(int(maxconn), readonly=True)
-
-    db, info = connection_info_for(to, readonly)
+    db, info = connection_info_for(to)
     if not allow_uri and db != to:
         raise ValueError('URI connections not allowed')
-    return Connection(_Pool_readonly if readonly else _Pool, db, info)
+    return Connection(_Pool, db, info)
 
 def close_db(db_name):
     """ You might want to call odoo.modules.registry.Registry.delete(db_name) along this function."""
+    global _Pool
     if _Pool:
         _Pool.close_all(connection_info_for(db_name)[1])
-    if _Pool_readonly:
-        _Pool_readonly.close_all(connection_info_for(db_name)[1])
 
 def close_all():
+    global _Pool
     if _Pool:
         _Pool.close_all()
-    if _Pool_readonly:
-        _Pool_readonly.close_all()

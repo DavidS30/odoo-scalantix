@@ -6,12 +6,7 @@
     'version': '1.0',
     'summary': "Monitor MRP using project",
     'category': 'Services/Project',
-    'depends': ['mrp', 'project'],
-    'data': [
-        'views/mrp_bom_views.xml',
-        'views/mrp_production_views.xml',
-        'views/project_project_views.xml',
-    ],
+    'depends': ['mrp_account', 'project'],
     'auto_install': True,
     'license': 'LGPL-3',
 }

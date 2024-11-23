@@ -115,6 +115,7 @@ export class SurveyQuestionTriggerWidget extends Component {
 
 export const surveyQuestionTriggerWidget = {
     component: SurveyQuestionTriggerWidget,
+    displayName: "Trigger",
     fieldDependencies: [
         { name: "triggering_question_ids", type: "many2one" },
         { name: "triggering_answer_ids", type: "many2one" },

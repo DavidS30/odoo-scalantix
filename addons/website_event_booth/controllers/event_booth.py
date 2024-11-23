@@ -5,7 +5,7 @@ import json
 import werkzeug
 from werkzeug.exceptions import Forbidden, NotFound
 
-from odoo import http, tools
+from odoo import exceptions, http, tools
 from odoo.http import request
 from odoo.addons.website_event.controllers.main import WebsiteEventController
 
@@ -14,7 +14,10 @@ class WebsiteEventBoothController(WebsiteEventController):
 
     @http.route('/event/<model("event.event"):event>/booth', type='http', auth='public', website=True, sitemap=False)
     def event_booth_main(self, event, booth_category_id=False, booth_ids=False):
-        if not event.has_access('read'):
+        try:
+            event.check_access_rights('read')
+            event.check_access_rule('read')
+        except exceptions.AccessError:
             raise Forbidden()
 
         booth_category_id = int(booth_category_id) if booth_category_id else False

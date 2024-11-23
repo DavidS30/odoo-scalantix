@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import base64
@@ -41,13 +42,11 @@ class Assets(models.AbstractModel):
                 'danger': 'null',
             })
             # Also reset gradients which are in the "website" values palette
-            preset_gradients = {f'o-cc{cc}-bg-gradient': 'null' for cc in range(1, 6)}
             self.make_scss_customization('/website/static/src/scss/options/user_values.scss', {
                 'menu-gradient': 'null',
                 'menu-secondary-gradient': 'null',
                 'footer-gradient': 'null',
                 'copyright-gradient': 'null',
-                **preset_gradients,
             })
 
         delete_attachment_id = values.pop('delete-font-attachment-id', None)

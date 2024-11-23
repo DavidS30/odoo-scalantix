@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { url } from "@web/core/utils/urls";
 
 async function loadFont(name, url) {
@@ -39,7 +41,6 @@ async function loadFont(name, url) {
 export function makeRoot(target) {
     const root = document.createElement("div");
     root.classList.add("o-livechat-root");
-    root.setAttribute("id", `o-livechat-root-${luxon.DateTime.now().ts + Math.random()}`);
     root.style.zIndex = "calc(9e999)";
     root.style.position = "relative";
     target.appendChild(root);

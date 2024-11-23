@@ -3,6 +3,7 @@
 
 {
     'name': 'Indian - Purchase Report(GST)',
+    'countries': ['in'],
     'version': '1.0',
     'description': """GST Purchase Report""",
     'category': 'Accounting/Localizations/Purchase',

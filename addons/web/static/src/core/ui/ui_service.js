@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { useService } from "@web/core/utils/hooks";
 import { registry } from "@web/core/registry";
 import { throttleForAnimation } from "@web/core/utils/timing";
@@ -154,12 +156,9 @@ export const uiService = {
         let blockCount = 0;
         function block(data) {
             blockCount++;
-            // TODO could probably be improved to handle multiple block demands
-            // but that have different messages and delays
             if (blockCount === 1) {
                 bus.trigger("BLOCK", {
                     message: data?.message,
-                    delay: data?.delay,
                 });
             }
         }

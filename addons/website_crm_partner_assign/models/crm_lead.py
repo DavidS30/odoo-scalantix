@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import random
@@ -5,6 +6,8 @@ from markupsafe import Markup
 
 from odoo import api, fields, models, _
 from odoo.exceptions import AccessDenied, AccessError, UserError
+from odoo.tools import html_escape
+
 
 
 class CrmLead(models.Model):
@@ -56,7 +59,7 @@ class CrmLead(models.Model):
         leads_with_country = self.filtered(lambda lead: lead.country_id)
         leads_without_country = self - leads_with_country
         if leads_without_country:
-            self.env.user._bus_send('simple_notification', {
+            self.env['bus.bus']._sendone(self.env.user.partner_id, 'simple_notification', {
                 'type': 'danger',
                 'title': _("Warning"),
                 'message': _('There is no country set in addresses for %(lead_names)s.', lead_names=', '.join(leads_without_country.mapped('name'))),
@@ -79,7 +82,7 @@ class CrmLead(models.Model):
             lead.assign_geo_localize(lead.partner_latitude, lead.partner_longitude)
             partner = self.env['res.partner'].browse(partner_id)
             if partner.user_id:
-                lead._handle_salesmen_assignment(user_ids=partner.user_id.ids)
+                lead._handle_salesmen_assignment(user_ids=partner.user_id.ids, team_id=partner.team_id.id)
             lead.write({'partner_assigned_id': partner_id})
         return res
 
@@ -219,7 +222,7 @@ class CrmLead(models.Model):
         self.sudo().write(values)
 
     def update_lead_portal(self, values):
-        self.browse().check_access('write')
+        self.check_access_rights('write')
         for lead in self:
             lead_values = {
                 'expected_revenue': values['expected_revenue'],
@@ -251,7 +254,7 @@ class CrmLead(models.Model):
             lead.write(lead_values)
 
     def update_contact_details_from_portal(self, values):
-        self.browse().check_access('write')
+        self.check_access_rights('write')
         fields = ['partner_name', 'phone', 'mobile', 'email_from', 'street', 'street2',
             'city', 'zip', 'state_id', 'country_id']
         if any([key not in fields for key in values]):
@@ -298,14 +301,16 @@ class CrmLead(models.Model):
         user, record = self.env.user, self
         if access_uid:
             try:
-                record.check_access("read")
+                record.check_access_rights('read')
+                record.check_access_rule("read")
             except AccessError:
                 return super(CrmLead, self)._get_access_action(access_uid=access_uid, force_website=force_website)
             user = self.env['res.users'].sudo().browse(access_uid)
             record = self.with_user(user)
         if user.share or force_website:
             try:
-                record.check_access('read')
+                record.check_access_rights('read')
+                record.check_access_rule('read')
             except AccessError:
                 pass
             else:

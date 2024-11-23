@@ -29,14 +29,6 @@ registry
     .add("surveySaveErrorHandler", SurveySaveErrorHandler, { sequence: 10 });
 
 class QuestionPageOneToManyField extends X2ManyField {
-    static components = {
-        ...X2ManyField.components,
-        ListRenderer: QuestionPageListRenderer,
-    };
-    static defaultProps = {
-        ...X2ManyField.defaultProps,
-        editable: "bottom",
-    };
     setup() {
         super.setup();
         useSubEnv({
@@ -96,6 +88,14 @@ class QuestionPageOneToManyField extends X2ManyField {
         this.canOpenRecord = true;
     }
 }
+QuestionPageOneToManyField.components = {
+    ...X2ManyField.components,
+    ListRenderer: QuestionPageListRenderer,
+};
+QuestionPageOneToManyField.defaultProps = {
+    ...X2ManyField.defaultProps,
+    editable: "bottom",
+};
 
 export const questionPageOneToManyField = {
     ...x2ManyField,

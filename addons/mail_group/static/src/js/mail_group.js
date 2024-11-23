@@ -2,12 +2,16 @@
 
 import publicWidget from "@web/legacy/js/public/public_widget";
 import { _t } from "@web/core/l10n/translation";
-import { rpc } from "@web/core/network/rpc";
 
 publicWidget.registry.MailGroup = publicWidget.Widget.extend({
     selector: '.o_mail_group',
     events: {
         'click .o_mg_subscribe_btn': '_onSubscribeBtnClick',
+    },
+
+    init() {
+        this._super(...arguments);
+        this.rpc = this.bindService("rpc");
     },
 
     /**
@@ -43,7 +47,7 @@ publicWidget.registry.MailGroup = publicWidget.Widget.extend({
 
         const action = (this.isMember || this.forceUnsubscribe) ? 'unsubscribe' : 'subscribe';
 
-        const response = await rpc('/group/' + action, {
+        const response = await this.rpc('/group/' + action, {
             'group_id': this.mailgroupId,
             'email': email,
             'token': this.token,

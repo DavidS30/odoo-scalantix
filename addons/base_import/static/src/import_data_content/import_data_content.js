@@ -23,6 +23,10 @@ export class ImportDataContent extends Component {
         previewError: { type: String, optional: true },
     };
 
+    setup() {
+        this.searchPlaceholder = _t("Search a field...");
+    }
+
     getGroups(column) {
         const groups = [
             { choices: this.makeChoices(column.fields.basic) },
@@ -43,7 +47,6 @@ export class ImportDataContent extends Component {
         return fields.map((field) => ({
             label: field.label,
             value: field.fieldPath,
-            iconClass: `o_import_field_icon_${field.type}`,
         }));
     }
 

@@ -1,19 +1,18 @@
-/** @ts-check */
+/** @odoo-module */
 
 /**
- * @typedef {import("@spreadsheet").GlobalFilter} GlobalFilter
- * @typedef {import("@spreadsheet").FieldMatching} FieldMatching
- * @typedef {import("@spreadsheet").DateGlobalFilter} DateGlobalFilter
- * @typedef {import("@spreadsheet").RelationalGlobalFilter} RelationalGlobalFilter
+ * @typedef {import("@spreadsheet/data_sources/metadata_repository").Field} Field
+ * @typedef {import("./global_filters_core_plugin").GlobalFilter} GlobalFilter
+ * @typedef {import("./global_filters_core_plugin").FieldMatching} FieldMatching
+
  */
 
 import { _t } from "@web/core/l10n/translation";
 import { sprintf } from "@web/core/utils/strings";
 import { Domain } from "@web/core/domain";
-import { user } from "@web/core/user";
 import { constructDateRange, QUARTER_OPTIONS } from "@web/search/utils/dates";
 
-import { EvaluationError, helpers } from "@odoo/o-spreadsheet";
+import * as spreadsheet from "@odoo/o-spreadsheet";
 import { CommandResult } from "@spreadsheet/o_spreadsheet/cancelled_reason";
 
 import { isEmpty } from "@spreadsheet/helpers/helpers";
@@ -23,7 +22,6 @@ import {
     getRelativeDateDomain,
 } from "@spreadsheet/global_filters/helpers";
 import { RELATIVE_DATE_RANGE_TYPES } from "@spreadsheet/helpers/constants";
-import { OdooUIPlugin } from "@spreadsheet/plugins";
 import { getItemId } from "../../helpers/model";
 import { serializeDateTime, serializeDate } from "@web/core/l10n/dates";
 
@@ -44,24 +42,16 @@ const MONTHS = {
     december: { value: 12, granularity: "month" },
 };
 
-const { UuidGenerator, createEmptyExcelSheet, createEmptySheet, toXC, toNumber } = helpers;
+const { UuidGenerator, createEmptyExcelSheet, createEmptySheet, toXC, toNumber } =
+    spreadsheet.helpers;
 const uuidGenerator = new UuidGenerator();
 
-export class GlobalFiltersUIPlugin extends OdooUIPlugin {
-    static getters = /** @type {const} */ ([
-        "exportSheetWithActiveFilters",
-        "getFilterDisplayValue",
-        "getGlobalFilterDomain",
-        "getGlobalFilterValue",
-        "getActiveFilterCount",
-        "isGlobalFilterActive",
-        "getTextFilterOptions",
-        "getTextFilterOptionsFromRange",
-    ]);
+export class GlobalFiltersUIPlugin extends spreadsheet.UIPlugin {
     constructor(config) {
         super(config);
         this.orm = config.custom.env?.services.orm;
-        this.odooDataProvider = config.custom.odooDataProvider;
+        this.dataSources = config.custom.dataSources;
+        this.user = config.custom.env?.services.user;
         /**
          * Cache record display names for relation filters.
          * For each filter, contains a promise resolving to
@@ -205,7 +195,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
             return [];
         }
         if (filter.type === "relation" && isEmpty(value) && defaultValue === "current_user") {
-            return [user.userId];
+            return [this.user.userId];
         }
         if (filter.type === "text" && preventAutomaticValue) {
             return "";
@@ -252,7 +242,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
     getFilterDisplayValue(filterName) {
         const filter = this.getters.getGlobalFilterLabel(filterName);
         if (!filter) {
-            throw new EvaluationError(sprintf(_t(`Filter "%s" not found`), filterName));
+            throw new Error(sprintf(_t(`Filter "%s" not found`), filterName));
         }
         const value = this.getGlobalFilterValue(filter.id);
         switch (filter.type) {
@@ -262,11 +252,11 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
                 if (filter.rangeType === "from_to") {
                     const locale = this.getters.getLocale();
                     const from = {
-                        value: value.from ? toNumber(value.from, locale) : "",
+                        value: value.from && toNumber(value.from, locale),
                         format: locale.dateFormat,
                     };
                     const to = {
-                        value: value.to ? toNumber(value.to, locale) : "",
+                        value: value.to && toNumber(value.to, locale),
                         format: locale.dateFormat,
                     };
                     return [[from], [to]];
@@ -302,7 +292,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
                             const names = result.map(({ display_name }) => display_name);
                             this.recordsDisplayName[filter.id] = names;
                         });
-                    this.odooDataProvider.notifyWhenPromiseResolves(promise);
+                    this.dataSources.notifyWhenPromiseResolves(promise);
                     return [[{ value: "" }]];
                 }
                 return [[{ value: this.recordsDisplayName[filter.id].join(", ") }]];
@@ -317,7 +307,8 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
      */
     getTextFilterOptions(filterId) {
         const filter = this.getters.getGlobalFilter(filterId);
-        if (filter.type !== "text" || !filter.rangeOfAllowedValues) {
+        const range = filter.rangeOfAllowedValues;
+        if (!range) {
             return [];
         }
         const additionOptions = [
@@ -326,16 +317,13 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
             this.getGlobalFilterValue(filterId),
             filter.defaultValue,
         ];
-        const options = this.getTextFilterOptionsFromRange(
-            filter.rangeOfAllowedValues,
-            additionOptions
-        );
+        const options = this.getTextFilterOptionsFromRange(range, additionOptions);
         return options;
     }
 
     /**
      * Returns the possible values a text global filter can take from a range
-     * or any addition raw string value. Removes duplicates and empty string values.
+     * or any addition raw string value. Removes duplicates.
      * @param {object} range
      * @param {string[]} additionalOptionValues
      */
@@ -344,7 +332,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
         const uniqueFormattedValues = new Set();
         const uniqueValues = new Set();
         const allowedValues = cells
-            .filter((cell) => !["empty", "error"].includes(cell.type) && cell.value !== "")
+            .filter((cell) => !["empty", "error"].includes(cell.type))
             .map((cell) => ({
                 value: cell.value.toString(),
                 formattedValue: cell.formattedValue,
@@ -380,11 +368,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
      * @param {string|Array<string>|Object} value Current value to set
      */
     _setGlobalFilterValue(id, value) {
-        const filter = this.getters.getGlobalFilter(id);
-        this.values[id] = {
-            value: value,
-            rangeType: filter.type === "date" ? filter.rangeType : undefined,
-        };
+        this.values[id] = { value: value, rangeType: this.getters.getGlobalFilter(id).rangeType };
     }
 
     /**
@@ -419,9 +403,9 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
      * @param {string} id Id of the filter
      */
     _clearGlobalFilterValue(id) {
-        const filter = this.getters.getGlobalFilter(id);
+        const { type, rangeType } = this.getters.getGlobalFilter(id);
         let value;
-        switch (filter.type) {
+        switch (type) {
             case "text":
                 value = { preventAutomaticValue: true };
                 break;
@@ -432,10 +416,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
                 value = { preventAutomaticValue: true };
                 break;
         }
-        this.values[id] = {
-            value,
-            rangeType: filter.type === "date" ? filter.rangeType : undefined,
-        };
+        this.values[id] = { value, rangeType };
     }
 
     // -------------------------------------------------------------------------
@@ -447,7 +428,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
      *
      * @private
      *
-     * @param {DateGlobalFilter} filter
+     * @param {GlobalFilter} filter
      * @param {FieldMatching} fieldMatching
      *
      * @returns {Domain}
@@ -459,7 +440,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
             return new Domain();
         }
         const field = fieldMatching.chain;
-        const type = /** @type {"date" | "datetime"} */ (fieldMatching.type);
+        const type = fieldMatching.type;
         const offset = fieldMatching.offset || 0;
         const now = DateTime.local();
 
@@ -542,7 +523,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
      *
      * @private
      *
-     * @param {RelationalGlobalFilter} filter
+     * @param {GlobalFilter} filter
      * @param {FieldMatching} fieldMatching
      *
      * @returns {Domain}
@@ -553,8 +534,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
             return new Domain();
         }
         const field = fieldMatching.chain;
-        const operator = filter.includeChildren ? "child_of" : "in";
-        return new Domain([[field, operator, values]]);
+        return new Domain([[field, "in", values]]);
     }
 
     /**
@@ -579,11 +559,9 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
         }
         const styleId = getItemId({ bold: true }, data.styles);
 
-        const cells = {
-            A1: { content: "Filter" },
-            B1: { content: "Value" },
-        };
-        const formats = {};
+        const cells = {};
+        cells["A1"] = { content: "Filter", style: styleId };
+        cells["B1"] = { content: "Value", style: styleId };
         let numberOfCols = 2; // at least 2 cols (filter title and filter value)
         let filterRowIndex = 1; // first row is the column titles
         for (const filter of this.getters.getGlobalFilters()) {
@@ -600,7 +578,7 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
                     cells[xc] = { content: cell.value.toString() };
                     if (cell.format) {
                         const formatId = getItemId(cell.format, data.formats);
-                        formats[xc] = formatId;
+                        cells[xc].format = formatId;
                     }
                 }
             }
@@ -609,14 +587,20 @@ export class GlobalFiltersUIPlugin extends OdooUIPlugin {
         const sheet = {
             ...createEmptySheet(uuidGenerator.uuidv4(), _t("Active Filters")),
             cells,
-            formats,
-            styles: {
-                A1: styleId,
-                B1: styleId,
-            },
             colNumber: numberOfCols,
             rowNumber: filterRowIndex,
         };
         data.sheets.push(sheet);
     }
 }
+
+GlobalFiltersUIPlugin.getters = [
+    "getFilterDisplayValue",
+    "getGlobalFilterDomain",
+    "getGlobalFilterValue",
+    "getActiveFilterCount",
+    "isGlobalFilterActive",
+    "getTextFilterOptions",
+    "getTextFilterOptionsFromRange",
+    "exportSheetWithActiveFilters",
+];

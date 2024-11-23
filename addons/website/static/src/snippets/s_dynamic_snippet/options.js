@@ -1,7 +1,6 @@
 /** @odoo-module **/
 
 import options from "@web_editor/js/editor/snippets.options";
-import { rpc } from "@web/core/network/rpc";
 
 const dynamicSnippetOptions = options.Class.extend({
     /**
@@ -34,6 +33,8 @@ const dynamicSnippetOptions = options.Class.extend({
         this.dynamicFilterTemplates = {};
         // Indicates that some current options are a default selection.
         this.isOptionDefault = {};
+
+        this.rpc = this.bindService("rpc");
     },
     /**
      * @override
@@ -56,13 +57,6 @@ const dynamicSnippetOptions = options.Class.extend({
         // template values are applied (numberOfElements, rowPerSlide, etc.)
         return this._refreshPublicWidgets();
     },
-    /**
-     * @override
-     */
-    async start() {
-        await this._super(...arguments);
-        this.customTemplateData = JSON.parse(this.$target[0].dataset?.customTemplateData || "{}");
-    },
 
     //--------------------------------------------------------------------------
     // Options
@@ -82,15 +76,6 @@ const dynamicSnippetOptions = options.Class.extend({
         if (params.attributeName === 'templateKey' && previewMode === false) {
             this._templateUpdated(widgetValue, params.activeValue);
         }
-    },
-    /**
-     * Saves the template data that will be handled later by the public widget.
-     *
-     * @see this.selectClass for parameters
-     */
-    customizeTemplateValues(previewMode, widgetValue, params) {
-        this.customTemplateData[params.customizeTemplateKey] = widgetValue === "true";
-        this.$target[0].dataset.customTemplateData = JSON.stringify(this.customTemplateData);
     },
 
     //--------------------------------------------------------------------------
@@ -148,16 +133,6 @@ const dynamicSnippetOptions = options.Class.extend({
     /**
      * @override
      * @private
-     */
-    _computeWidgetState(methodName, params) {
-        if (methodName === "customizeTemplateValues") {
-            return `${this.customTemplateData[params.customizeTemplateKey] || false}`;
-        }
-        return this._super(...arguments);
-    },
-    /**
-     * @override
-     * @private
      * @returns {Promise}
      */
     _refreshPublicWidgets: function () {
@@ -176,7 +151,7 @@ const dynamicSnippetOptions = options.Class.extend({
      * @returns {Promise}
      */
     async _fetchDynamicFilters() {
-        const dynamicFilters = await rpc('/website/snippet/options_filters', {
+        const dynamicFilters = await this.rpc('/website/snippet/options_filters', {
             model_name: this.modelNameFilter,
             search_domain: this.contextualFilterDomain,
         });
@@ -201,7 +176,7 @@ const dynamicSnippetOptions = options.Class.extend({
         if (!filter) {
             return [];
         }
-        const dynamicFilterTemplates = await rpc('/website/snippet/filter_templates', {
+        const dynamicFilterTemplates = await this.rpc('/website/snippet/filter_templates', {
             filter_name: filter.model_name.replaceAll('.', '_'),
         });
         for (let index in dynamicFilterTemplates) {
@@ -347,11 +322,6 @@ const dynamicSnippetOptions = options.Class.extend({
         } else {
             delete this.$target[0].dataset.extraClasses;
         }
-        if (template.columnClasses) {
-            this.$target[0].dataset.columnClasses = template.columnClasses;
-        } else {
-            delete this.$target[0].dataset.columnClasses;
-        }
     },
     /**
      * Sets the option value.
@@ -372,8 +342,5 @@ const dynamicSnippetOptions = options.Class.extend({
 });
 
 options.registry.dynamic_snippet = dynamicSnippetOptions;
-options.registry.DynamicSnippetTitle = options.Class.extend({
-    forceNoDeleteButton: true,
-});
 
 export default dynamicSnippetOptions;

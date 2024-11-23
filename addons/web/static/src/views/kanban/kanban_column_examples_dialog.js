@@ -1,13 +1,14 @@
+/** @odoo-module */
+
 import { Dialog } from "@web/core/dialog/dialog";
 import { Notebook } from "@web/core/notebook/notebook";
+import { _t } from "@web/core/l10n/translation";
 
 import { Component, useRef } from "@odoo/owl";
 
 const random = (min, max) => Math.floor(Math.random() * (max - min) + min);
 
 class KanbanExamplesNotebookTemplate extends Component {
-    static template = "web.KanbanExamplesNotebookTemplate";
-    static props = ["*"];
     static defaultProps = {
         columns: [],
         foldedColumns: [],
@@ -30,12 +31,9 @@ class KanbanExamplesNotebookTemplate extends Component {
         }
     }
 }
+KanbanExamplesNotebookTemplate.template = "web.KanbanExamplesNotebookTemplate";
 
 export class KanbanColumnExamplesDialog extends Component {
-    static template = "web.KanbanColumnExamplesDialog";
-    static components = { Dialog, Notebook };
-    static props = ["*"];
-
     setup() {
         this.navList = useRef("navList");
         this.pages = [];
@@ -60,3 +58,6 @@ export class KanbanColumnExamplesDialog extends Component {
         this.props.close();
     }
 }
+KanbanColumnExamplesDialog.template = "web.KanbanColumnExamplesDialog";
+KanbanColumnExamplesDialog.components = { Dialog, Notebook };
+KanbanColumnExamplesDialog.title = _t("Kanban Examples");

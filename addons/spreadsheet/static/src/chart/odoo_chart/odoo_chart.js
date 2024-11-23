@@ -51,8 +51,6 @@ export class OdooChart extends AbstractChart {
         this.legendPosition = definition.legendPosition;
         this.background = definition.background;
         this.dataSource = undefined;
-        this.actionXmlId = definition.actionXmlId;
-        this.showValues = definition.showValues;
     }
 
     static transformDefinition(definition) {
@@ -89,8 +87,6 @@ export class OdooChart extends AbstractChart {
             metaData: this.metaData,
             searchParams: this.searchParams,
             type: this.type,
-            actionXmlId: this.actionXmlId,
-            showValues: this.showValues,
         };
     }
 

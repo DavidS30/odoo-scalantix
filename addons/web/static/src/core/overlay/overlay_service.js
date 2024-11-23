@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { reactive } from "@odoo/owl";
 import { registry } from "../registry";
 import { OverlayContainer } from "./overlay_container";
@@ -7,10 +9,8 @@ const services = registry.category("services");
 
 /**
  * @typedef {{
- *  env?: object;
  *  onRemove?: () => void;
  *  sequence?: number;
- *  rootId?: string;
  * }} OverlayServiceAddOptions
  */
 
@@ -43,11 +43,9 @@ export const overlayService = {
             overlays[id] = {
                 id,
                 component,
-                env: options.env,
                 props,
                 remove: removeCurrentOverlay,
                 sequence: options.sequence ?? 50,
-                rootId: options.rootId,
             };
             return removeCurrentOverlay;
         };

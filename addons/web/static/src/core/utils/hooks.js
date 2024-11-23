@@ -1,3 +1,6 @@
+/** @odoo-module **/
+
+import { SERVICES_METADATA } from "@web/env";
 import { hasTouch, isMobileOS } from "@web/core/browser/feature_detection";
 
 import { status, useComponent, useEffect, useRef, onWillUnmount } from "@odoo/owl";
@@ -86,27 +89,13 @@ export function useBus(bus, eventName, callback) {
     );
 }
 
-// In an object so that it can be patched in tests (prevent error on blocking RPCs after tests)
-export const useServiceProtectMethodHandling = {
-    fn() {
-        return this.original();
-    },
-    mocked() {
-        // Keep them unresolved so that no crash in test due to triggered RPCs by services
-        return new Promise(() => {});
-    },
-    original() {
-        return Promise.reject(new Error("Component is destroyed"));
-    },
-};
-
 // -----------------------------------------------------------------------------
 // useService
 // -----------------------------------------------------------------------------
 function _protectMethod(component, fn) {
     return function (...args) {
         if (status(component) === "destroyed") {
-            return useServiceProtectMethodHandling.fn();
+            return Promise.reject(new Error("Component is destroyed"));
         }
 
         const prom = Promise.resolve(fn.call(this, ...args));
@@ -120,14 +109,12 @@ function _protectMethod(component, fn) {
     };
 }
 
-export const SERVICES_METADATA = {};
-
 /**
  * Import a service into a component
  *
- * @template {keyof import("services").ServiceFactories} K
+ * @template {keyof import("services").Services} K
  * @param {K} serviceName
- * @returns {import("services").ServiceFactories[K]}
+ * @returns {import("services").Services[K]}
  */
 export function useService(serviceName) {
     const component = useComponent();

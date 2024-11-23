@@ -1,15 +1,18 @@
 /** @odoo-module **/
 
 import publicWidget from "@web/legacy/js/public/public_widget";
-import { rpc } from "@web/core/network/rpc";
 import { loadWysiwygFromTextarea } from "@web_editor/js/frontend/loadWysiwygFromTextarea";
-import { redirect } from "@web/core/utils/urls";
 
 publicWidget.registry.websiteProfile = publicWidget.Widget.extend({
     selector: '.o_wprofile_email_validation_container',
     read_events: {
         'click .send_validation_email': '_onSendValidationEmailClick',
         'click .validated_email_close': '_onCloseValidatedEmailClick',
+    },
+
+    init() {
+        this._super(...arguments);
+        this.rpc = this.bindService("rpc");
     },
 
     //--------------------------------------------------------------------------
@@ -21,12 +24,12 @@ publicWidget.registry.websiteProfile = publicWidget.Widget.extend({
      */
     _onSendValidationEmailClick: function (ev) {
         ev.preventDefault();
-        const element = ev.currentTarget;
-        rpc('/profile/send_validation_email', {
-            redirect_url: element.dataset["redirect_url"],
+        var $element = $(ev.currentTarget);
+        this.rpc('/profile/send_validation_email', {
+            'redirect_url': $element.data('redirect_url'),
         }).then(function (data) {
             if (data) {
-                redirect(element.dataset["redirect_url"]);
+                window.location = $element.data('redirect_url');
             }
         });
     },
@@ -35,7 +38,7 @@ publicWidget.registry.websiteProfile = publicWidget.Widget.extend({
      * @private
      */
     _onCloseValidatedEmailClick: function () {
-        rpc('/profile/validate_email/close');
+        this.rpc('/profile/validate_email/close');
     },
 });
 
@@ -49,6 +52,11 @@ publicWidget.registry.websiteProfileEditor = publicWidget.Widget.extend({
         'click .o_forum_profile_bio_cancel_edit': '_onProfileBioCancelEditClick',
     },
 
+    init() {
+        this._super(...arguments);
+        this.orm = this.bindService("orm");
+    },
+
     /**
      * @override
      */
@@ -58,24 +66,26 @@ publicWidget.registry.websiteProfileEditor = publicWidget.Widget.extend({
             return def;
         }
 
-        const textareaEl = this.el.querySelector("textarea.o_wysiwyg_loader");
+        const $textarea = this.$("textarea.o_wysiwyg_loader");
+        const resId = parseInt(this.$("input[name=user_id]").val());
+        const recordContent = await this.orm.call("res.users", "get_website_description", [resId]) || '';
 
         const options = {
             recordInfo: {
                 context: this._getContext(),
                 res_model: "res.users",
-                res_id: parseInt(this.el.querySelector("input[name=user_id]").value),
+                res_id: resId,
             },
-            value: textareaEl.getAttribute("content"),
+            value: recordContent,
             resizable: true,
             userGeneratedContent: true,
         };
 
-        if (textareaEl.attributes.placeholder) {
-            options.placeholder = textareaEl.attributes.placeholder.value;
+        if ($textarea[0].attributes.placeholder) {
+            options.placeholder = $textarea[0].attributes.placeholder.value;
         }
 
-        this._wysiwyg = await loadWysiwygFromTextarea(this, textareaEl, options);
+        this._wysiwyg = await loadWysiwygFromTextarea(this, $textarea[0], options);
 
         return Promise.all([def]);
     },
@@ -90,7 +100,7 @@ publicWidget.registry.websiteProfileEditor = publicWidget.Widget.extend({
      */
     _onEditProfilePicClick: function (ev) {
         ev.preventDefault();
-        ev.currentTarget.closest("form").querySelector(".o_forum_file_upload").click();
+        $(ev.currentTarget).closest('form').find('.o_forum_file_upload').trigger('click');
     },
     /**
      * @private
@@ -100,26 +110,26 @@ publicWidget.registry.websiteProfileEditor = publicWidget.Widget.extend({
         if (!ev.currentTarget.files.length) {
             return;
         }
-        const formEl = ev.currentTarget.closest("form");
+        var $form = $(ev.currentTarget).closest('form');
         var reader = new window.FileReader();
         reader.readAsDataURL(ev.currentTarget.files[0]);
         reader.onload = function (ev) {
-            formEl.querySelector(".o_wforum_avatar_img").src = ev.target.result;
+            $form.find('.o_wforum_avatar_img').attr('src', ev.target.result);
         };
-        formEl.querySelector("#forum_clear_image")?.remove();
+        $form.find('#forum_clear_image').remove();
     },
     /**
      * @private
      * @param {Event} ev
      */
     _onProfilePicClearClick: function (ev) {
-        const formEl = ev.currentTarget.closest("form");
-        formEl.querySelector(".o_wforum_avatar_img").src = "/web/static/img/placeholder.png";
-        const inputElement = document.createElement("input");
-        inputElement.setAttribute("name", "clear_image");
-        inputElement.setAttribute("id", "forum_clear_image");
-        inputElement.setAttribute("type", "hidden");
-        formEl.append(inputElement);
+        var $form = $(ev.currentTarget).closest('form');
+        $form.find('.o_wforum_avatar_img').attr('src', '/web/static/img/placeholder.png');
+        $form.append($('<input/>', {
+            name: 'clear_image',
+            id: 'forum_clear_image',
+            type: 'hidden',
+        }));
     },
 
     /**
@@ -154,7 +164,7 @@ publicWidget.registry.websiteProfileNextRankCard = publicWidget.Widget.extend({
      * @override
      */
     start: function () {
-        new Tooltip(this.el.querySelector('g[data-bs-toggle="tooltip"]'));
+        this.$('g[data-bs-toggle="tooltip"]').tooltip();
         return this._super.apply(this, arguments);
     },
 

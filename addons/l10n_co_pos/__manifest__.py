@@ -3,6 +3,7 @@
 
 {
     'name': 'Colombian - Point of Sale',
+    'countries': ['co'],
     'version': '1.0',
     'description': """Colombian - Point of Sale""",
     'category': 'Accounting/Localizations/Point of Sale',

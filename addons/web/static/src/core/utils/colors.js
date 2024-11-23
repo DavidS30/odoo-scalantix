@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 /**
  * Converts RGB color components to HSL components.
  *

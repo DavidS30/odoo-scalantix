@@ -1,143 +1,60 @@
-// @odoo-module ignore
-
-//-----------------------------------------------------------------------------
-// Odoo Web Boostrap Code
-//-----------------------------------------------------------------------------
-
-(function (odoo) {
+/**
+ *------------------------------------------------------------------------------
+ * Odoo Web Boostrap Code
+ *------------------------------------------------------------------------------
+ */
+(function () {
     "use strict";
 
-    if (odoo.loader) {
-        // Allows for duplicate calls to `module_loader`: only the first one is
-        // executed.
-        return;
-    }
-
     class ModuleLoader {
-        /** @type {OdooModuleLoader["bus"]} */
-        bus = new EventTarget();
-        /** @type {OdooModuleLoader["checkErrorProm"]} */
-        checkErrorProm = null;
-        /** @type {OdooModuleLoader["factories"]} */
+        /** @type {Map<string,{fn: Function, deps: string[]}>} mapping name => deps/fn */
         factories = new Map();
-        /** @type {OdooModuleLoader["failed"]} */
-        failed = new Set();
-        /** @type {OdooModuleLoader["jobs"]} */
+        /** @type {Set<string>} names of modules waiting to be started */
         jobs = new Set();
-        /** @type {OdooModuleLoader["modules"]} */
+        /** @type {Set<string>} names of failed modules */
+        failed = new Set();
+
+        /** @type {Map<string,any>} mapping name => value */
         modules = new Map();
 
+        bus = new EventTarget();
+
+        checkErrorProm = null;
+
         /**
-         * @param {HTMLElement} [root]
+         * @param {string} name
+         * @param {string[]} deps
+         * @param {Function} factory
          */
-        constructor(root) {
-            this.root = root;
+        define(name, deps, factory) {
+            if (typeof name !== "string") {
+                throw new Error(`Invalid name definition: ${name} (should be a string)"`);
+            }
+            if (!(deps instanceof Array)) {
+                throw new Error(`Dependencies should be defined by an array: ${deps}`);
+            }
+            if (typeof factory !== "function") {
+                throw new Error(`Factory should be defined by a function ${factory}`);
+            }
+            if (!this.factories.has(name)) {
+                this.factories.set(name, {
+                    deps,
+                    fn: factory,
+                    ignoreMissingDeps: globalThis.__odooIgnoreMissingDependencies,
+                });
+                this.addJob(name);
+                this.checkErrorProm ||= Promise.resolve().then(() => {
+                    this.checkAndReportErrors();
+                    this.checkErrorProm = null;
+                });
+            }
         }
 
-        /** @type {OdooModuleLoader["addJob"]} */
         addJob(name) {
             this.jobs.add(name);
             this.startModules();
         }
 
-        /** @type {OdooModuleLoader["define"]} */
-        define(name, deps, factory, lazy = false) {
-            if (typeof name !== "string") {
-                throw new Error(`Module name should be a string, got: ${String(name)}`);
-            }
-            if (!Array.isArray(deps)) {
-                throw new Error(
-                    `Module dependencies should be a list of strings, got: ${String(deps)}`
-                );
-            }
-            if (typeof factory !== "function") {
-                throw new Error(`Module factory should be a function, got: ${String(factory)}`);
-            }
-            if (this.factories.has(name)) {
-                return; // Ignore duplicate modules
-            }
-            this.factories.set(name, {
-                deps,
-                fn: factory,
-                ignoreMissingDeps: globalThis.__odooIgnoreMissingDependencies || lazy,
-            });
-            if (!lazy) {
-                this.addJob(name);
-                this.checkErrorProm ||= Promise.resolve().then(() => {
-                    this.checkErrorProm = null;
-                    this.reportErrors(this.findErrors());
-                });
-            }
-        }
-
-        /** @type {OdooModuleLoader["findErrors"]} */
-        findErrors(moduleNames) {
-            /**
-             * @param {Iterable<string>} currentModuleNames
-             * @param {Set<string>} visited
-             * @returns {string | null}
-             */
-            const findCycle = (currentModuleNames, visited) => {
-                for (const name of currentModuleNames || []) {
-                    if (visited.has(name)) {
-                        const cycleModuleNames = [...visited, name];
-                        return cycleModuleNames
-                            .slice(cycleModuleNames.indexOf(name))
-                            .map((j) => `"${j}"`)
-                            .join(" => ");
-                    }
-                    const cycle = findCycle(dependencyGraph[name], new Set(visited).add(name));
-                    if (cycle) {
-                        return cycle;
-                    }
-                }
-                return null;
-            };
-
-            moduleNames ||= this.jobs;
-
-            /** @type {Record<string, Iterable<string>>} */
-            const dependencyGraph = Object.create(null);
-            /** @type {Set<string>} */
-            const missing = new Set();
-            /** @type {Set<string>} */
-            const unloaded = new Set();
-
-            for (const moduleName of moduleNames) {
-                const { deps, ignoreMissingDeps } = this.factories.get(moduleName);
-
-                dependencyGraph[moduleName] = deps;
-
-                if (ignoreMissingDeps) {
-                    continue;
-                }
-
-                unloaded.add(moduleName);
-                for (const dep of deps) {
-                    if (!this.factories.has(dep)) {
-                        missing.add(dep);
-                    }
-                }
-            }
-
-            const cycle = findCycle(unloaded, new Set());
-            const errors = {};
-            if (cycle) {
-                errors.cycle = cycle;
-            }
-            if (this.failed.size) {
-                errors.failed = this.failed;
-            }
-            if (missing.size) {
-                errors.missing = missing;
-            }
-            if (unloaded.size) {
-                errors.unloaded = unloaded;
-            }
-            return errors;
-        }
-
-        /** @type {OdooModuleLoader["findJob"]} */
         findJob() {
             for (const job of this.jobs) {
                 if (this.factories.get(job).deps.every((dep) => this.modules.has(dep))) {
@@ -147,74 +64,6 @@
             return null;
         }
 
-        /** @type {OdooModuleLoader["reportErrors"]} */
-        async reportErrors(errors) {
-            if (!Object.keys(errors).length) {
-                return;
-            }
-
-            const document = this.root?.ownerDocument || globalThis.document;
-            if (document.readyState === "loading") {
-                await new Promise((resolve) =>
-                    document.addEventListener("DOMContentLoaded", resolve)
-                );
-            }
-
-            this.root ||= document.body;
-
-            const containerEl = document.createElement("div");
-            containerEl.className =
-                "o_module_error position-fixed w-100 h-100 d-flex align-items-center flex-column bg-white overflow-auto modal";
-            containerEl.style.zIndex = "10000";
-
-            const alertEl = document.createElement("div");
-            alertEl.className = "alert alert-danger o_error_detail fw-bold m-auto";
-            containerEl.appendChild(alertEl);
-
-            const errorHeadings = [];
-
-            if (errors.failed) {
-                errorHeadings.push([
-                    "The following modules failed to load because of an error, you may find more information in the devtools console:",
-                    [...errors.failed],
-                ]);
-            }
-            if (errors.cycle) {
-                errorHeadings.push([
-                    "The following modules could not be loaded because they form a dependency cycle:",
-                    [errors.cycle],
-                ]);
-            }
-            if (errors.missing) {
-                errorHeadings.push([
-                    "The following modules are needed by other modules but have not been defined, they may not be present in the correct asset bundle:",
-                    [...errors.missing],
-                ]);
-            }
-            if (errors.unloaded) {
-                errorHeadings.push([
-                    "The following modules could not be loaded because they have unmet dependencies, this is a secondary error which is likely caused by one of the above problems:",
-                    [...errors.unloaded],
-                ]);
-            }
-
-            for (const [heading, moduleNames] of errorHeadings) {
-                const listEl = document.createElement("ul");
-                for (const moduleName of moduleNames) {
-                    const listItemEl = document.createElement("li");
-                    listItemEl.textContent = moduleName;
-                    listEl.appendChild(listItemEl);
-                }
-
-                alertEl.appendChild(document.createTextNode(heading));
-                alertEl.appendChild(listEl);
-            }
-
-            this.root.innerHTML = "";
-            this.root.appendChild(containerEl);
-        }
-
-        /** @type {OdooModuleLoader["startModules"]} */
         startModules() {
             let job;
             while ((job = this.findJob())) {
@@ -222,30 +71,149 @@
             }
         }
 
-        /** @type {OdooModuleLoader["startModule"]} */
         startModule(name) {
-            /** @type {(dependency: string) => OdooModule} */
-            const require = (dependency) => this.modules.get(dependency);
+            const require = (name) => this.modules.get(name);
             this.jobs.delete(name);
             const factory = this.factories.get(name);
-            /** @type {OdooModule | null} */
-            let module = null;
+            let value = null;
             try {
-                module = factory.fn(require);
+                value = factory.fn(require);
             } catch (error) {
                 this.failed.add(name);
                 throw new Error(`Error while loading "${name}":\n${error}`);
             }
-            this.modules.set(name, module);
+            this.modules.set(name, value);
             this.bus.dispatchEvent(
-                new CustomEvent("module-started", {
-                    detail: { moduleName: name, module },
-                })
+                new CustomEvent("module-started", { detail: { moduleName: name, module: value } })
             );
-            return module;
+        }
+
+        findErrors() {
+            // cycle detection
+            const dependencyGraph = new Map();
+            for (const job of this.jobs) {
+                dependencyGraph.set(job, this.factories.get(job).deps);
+            }
+            function visitJobs(jobs, visited = new Set()) {
+                for (const job of jobs) {
+                    const result = visitJob(job, visited);
+                    if (result) {
+                        return result;
+                    }
+                }
+                return null;
+            }
+
+            function visitJob(job, visited) {
+                if (visited.has(job)) {
+                    const jobs = Array.from(visited).concat([job]);
+                    const index = jobs.indexOf(job);
+                    return jobs
+                        .slice(index)
+                        .map((j) => `"${j}"`)
+                        .join(" => ");
+                }
+                const deps = dependencyGraph.get(job);
+                return deps ? visitJobs(deps, new Set(visited).add(job)) : null;
+            }
+
+            // missing dependencies
+            const missing = new Set();
+            for (const job of this.jobs) {
+                const factory = this.factories.get(job);
+                if (factory.ignoreMissingDeps) {
+                    continue;
+                }
+                for (const dep of factory.deps) {
+                    if (!this.factories.has(dep)) {
+                        missing.add(dep);
+                    }
+                }
+            }
+
+            return {
+                failed: [...this.failed],
+                cycle: visitJobs(this.jobs),
+                missing: [...missing],
+                unloaded: [...this.jobs].filter((j) => !this.factories.get(j).ignoreMissingDeps),
+            };
+        }
+
+        async checkAndReportErrors() {
+            const { failed, cycle, missing, unloaded } = this.findErrors();
+            if (!failed.length && !unloaded.length) {
+                return;
+            }
+
+            function domReady(cb) {
+                if (document.readyState === "complete") {
+                    cb();
+                } else {
+                    document.addEventListener("DOMContentLoaded", cb);
+                }
+            }
+
+            function list(heading, names) {
+                const frag = document.createDocumentFragment();
+                if (!names || !names.length) {
+                    return frag;
+                }
+                frag.textContent = heading;
+                const ul = document.createElement("ul");
+                for (const el of names) {
+                    const li = document.createElement("li");
+                    li.textContent = el;
+                    ul.append(li);
+                }
+                frag.appendChild(ul);
+                return frag;
+            }
+
+            domReady(() => {
+                // Empty body
+                while (document.body.childNodes.length) {
+                    document.body.childNodes[0].remove();
+                }
+                const container = document.createElement("div");
+                container.className =
+                    "o_module_error position-fixed w-100 h-100 d-flex align-items-center flex-column bg-white overflow-auto modal";
+                container.style.zIndex = "10000";
+                const alert = document.createElement("div");
+                alert.className = "alert alert-danger o_error_detail fw-bold m-auto";
+                container.appendChild(alert);
+                alert.appendChild(
+                    list(
+                        "The following modules failed to load because of an error, you may find more information in the devtools console:",
+                        failed
+                    )
+                );
+                alert.appendChild(
+                    list(
+                        "The following modules could not be loaded because they form a dependency cycle:",
+                        cycle && [cycle]
+                    )
+                );
+                alert.appendChild(
+                    list(
+                        "The following modules are needed by other modules but have not been defined, they may not be present in the correct asset bundle:",
+                        missing
+                    )
+                );
+                alert.appendChild(
+                    list(
+                        "The following modules could not be loaded because they have unmet dependencies, this is a secondary error which is likely caused by one of the above problems:",
+                        unloaded
+                    )
+                );
+                document.body.appendChild(container);
+            });
         }
     }
 
+    if (!globalThis.odoo) {
+        globalThis.odoo = {};
+    }
+    const odoo = globalThis.odoo;
     if (odoo.debug && !new URLSearchParams(location.search).has("debug")) {
         // remove debug mode if not explicitely set in url
         odoo.debug = "";
@@ -253,5 +221,6 @@
 
     const loader = new ModuleLoader();
     odoo.define = loader.define.bind(loader);
+
     odoo.loader = loader;
-})((globalThis.odoo ||= {}));
+})();

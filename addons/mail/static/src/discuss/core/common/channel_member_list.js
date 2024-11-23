@@ -1,9 +1,11 @@
+/* @odoo-module */
+
 import { ImStatus } from "@mail/core/common/im_status";
 import { ActionPanel } from "@mail/discuss/core/common/action_panel";
 
-import { Component, onWillUpdateProps, onWillStart, useState } from "@odoo/owl";
-import { _t } from "@web/core/l10n/translation";
+import { Component, onWillUpdateProps, onWillStart, useState, onWillRender } from "@odoo/owl";
 
+import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
 
 export class ChannelMemberList extends Component {
@@ -12,34 +14,30 @@ export class ChannelMemberList extends Component {
     static template = "discuss.ChannelMemberList";
 
     setup() {
-        super.setup();
         this.store = useState(useService("mail.store"));
+        this.channelMemberService = useService("discuss.channel.member");
+        this.threadService = useState(useService("mail.thread"));
         onWillStart(() => {
             if (this.props.thread.fetchMembersState === "not_fetched") {
-                this.props.thread.fetchChannelMembers();
+                this.threadService.fetchChannelMembers(this.props.thread);
             }
         });
         onWillUpdateProps((nextProps) => {
             if (nextProps.thread.fetchMembersState === "not_fetched") {
-                nextProps.thread.fetchChannelMembers();
+                this.threadService.fetchChannelMembers(nextProps.thread);
             }
         });
-    }
-
-    get onlineSectionText() {
-        return _t("Online - %(online_count)s", {
-            online_count: this.props.thread.onlineMembers.length,
-        });
-    }
-
-    get offlineSectionText() {
-        return _t("Offline - %(offline_count)s", {
-            offline_count: this.props.thread.offlineMembers.length,
+        onWillRender(() => {
+            this.onlineMembers = this.props.thread.onlineMembers;
+            this.offlineMembers = this.props.thread.offlineMembers;
         });
     }
 
     canOpenChatWith(member) {
         if (this.store.inPublicPage) {
+            return false;
+        }
+        if (member.persona?.eq(this.store.self)) {
             return false;
         }
         if (member.persona.type === "guest") {
@@ -48,10 +46,14 @@ export class ChannelMemberList extends Component {
         return true;
     }
 
-    onClickAvatar(ev, member) {
+    openChatAvatar(member) {
         if (!this.canOpenChatWith(member)) {
             return;
         }
-        this.store.openChat({ partnerId: member.persona.id });
+        this.threadService.openChat({ partnerId: member.persona.id });
+    }
+
+    get title() {
+        return _t("Member List");
     }
 }

@@ -1,13 +1,13 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+# -*- coding: utf-8 -*-
 
 from odoo import fields, models
 
 
 class ResUsers(models.Model):
-    _name = "res.users"
-    _inherit = ["res.users", "bus.listener.mixin"]
 
-    im_status = fields.Char("IM Status", compute="_compute_im_status")
+    _inherit = "res.users"
+
+    im_status = fields.Char('IM Status', compute='_compute_im_status')
 
     def _compute_im_status(self):
         """Compute the im_status of the users"""
@@ -17,9 +17,3 @@ class ResUsers(models.Model):
         }
         for user in self:
             user.im_status = presence_by_user.get(user, "offline")
-
-    def _bus_channel(self):
-        return self.partner_id._bus_channel()
-
-    def _is_user_available(self):
-        return self.im_status == 'online'

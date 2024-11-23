@@ -10,13 +10,13 @@ class Channel(models.Model):
 
     def _get_default_product_id(self):
         product_courses = self.env['product.product'].search(
-            [('service_tracking', '=', 'course')], limit=2)
+            [('detailed_type', '=', 'course')], limit=2)
         return product_courses.id if len(product_courses) == 1 else False
 
     enroll = fields.Selection(selection_add=[
         ('payment', 'On payment')
     ], ondelete={'payment': lambda recs: recs.write({'enroll': 'invite'})})
-    product_id = fields.Many2one('product.product', 'Product', domain=[('service_tracking', '=', 'course')],
+    product_id = fields.Many2one('product.product', 'Product', domain=[('detailed_type', '=', 'course')],
                                  default=_get_default_product_id)
     product_sale_revenues = fields.Monetary(
         string='Total revenues', compute='_compute_product_sale_revenues',
@@ -82,8 +82,12 @@ class Channel(models.Model):
         result = super(Channel, self)._filter_add_members(target_partners, raise_on_access=raise_on_access)
         on_payment = self.filtered(lambda channel: channel.enroll == 'payment')
         if on_payment:
-            if on_payment.has_access('write'):
+            try:
+                on_payment.check_access_rights('write')
+                on_payment.check_access_rule('write')
+            except AccessError:
+                if raise_on_access:
+                    raise AccessError(_('You are not allowed to add members to this course. Please contact the course responsible or an administrator.'))
+            else:
                 result |= on_payment
-            elif raise_on_access:
-                raise AccessError(_('You are not allowed to add members to this course. Please contact the course responsible or an administrator.'))
         return result

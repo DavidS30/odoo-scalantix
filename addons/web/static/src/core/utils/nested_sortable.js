@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { localization } from "@web/core/l10n/localization";
 import { makeDraggableHook } from "@web/core/utils/draggable_hook_builder_owl";
 
@@ -5,28 +7,56 @@ import { makeDraggableHook } from "@web/core/utils/draggable_hook_builder_owl";
 /** @typedef {DraggableHandlerParams & { group: HTMLElement | null }} NestedSortableHandlerParams */
 
 /**
- * @typedef {import("./sortable").SortableParams} NestedSortableParams
+ *
+ * MANDATORY
+ *
+ * @property {{ el: HTMLElement | null }} ref
  *
  * OPTIONAL
  *
+ * @property {boolean | () => boolean} [enable] whether the sortable system should
+ *  be enabled.
+ * @property {string | () => string} [groups] defines parent groups of sortable
+ *  elements. This allows to add `onGroupEnter` and `onGroupLeave` callbacks to
+ *  work on group elements during the dragging sequence.
+ * @property {string | () => string} [handle] additional selector for when the dragging
+ *  sequence must be initiated when dragging on a certain part of the element.
+ * @property {string | () => string} [ignore] selector targeting elements that must
+ *  initiate a drag (recursive in depth: all draggable elements under an
+ *  ignored element will be locked in place)
  * @property {(HTMLElement) => boolean} [preventDrag] function receiving a
  *  the current target for dragging (element) and returning a boolean, whether
  *  the element can be effectively dragged or not.
+ * @property {boolean | () => boolean} [connectGroups] whether elements can be dragged
+ *  across different parent groups. Note that it requires a `groups` param to work.
+ * @property {string | () => string} [cursor] cursor style during the dragging sequence.
  * @property {boolean | () => boolean} [nest] whether elements are nested or not.
  * @property {string | () => string} [listTagName] type of lists ("ul" or "ol").
  * @property {number | () => number} [nestInterval] Horizontal distance needed to trigger
  * a change in the list hierarchy (i.e. changing parent when moving horizontally)
  * @property {number | () => number} [maxLevels] The maximum depth of nested items
  * the list can accept. If set to '0' the levels are unlimited. Default: 0
- * @property {(DraggableHookContext) => boolean} [isAllowed] You can specify a custom function
+ * @property {(DraggableHookContext) => boolean}) [isAllowed] You can specify a custom function
  * to verify if a drop location is allowed. return True by default
  * @property {boolean} [useElementSize] The placeholder use the dragged element size instead
  * of the small 8px lines. Default:false
  *
  * HANDLERS (also optional)
  *
+ * @property {(params: NestedSortableHandlerParams) => any} [onDragStart] called when a
+ * dragging sequence is initiated.
  * @property {(params: MoveParams) => any} [onMove] called when the element has moved
  * (changed position) (@see MoveParams).
+ * @property {(params: NestedSortableHandlerParams) => any} [onGroupEnter] called when
+ * the element enters a group.
+ * @property {(params: NestedSortableHandlerParams) => any} [onGroupLeave] called when
+ * the element leaves a group.
+ * @property {(params: MoveParams) => any} [onDrop] called when the dragging sequence
+ *  ends on a mouseup action AND the dragged element has been moved elsewhere. The
+ *  callback will be given an object with any useful element regarding the new position
+ *  of the dragged element (@see MoveParams).
+ * @property {(params: NestedSortableHandlerParams) => any} [onDragEnd] called when the
+ * dragging sequence ends, regardless of the reason.
  */
 
 /**
@@ -45,7 +75,7 @@ import { makeDraggableHook } from "@web/core/utils/draggable_hook_builder_owl";
  * @property {boolean} dragging
  */
 
-/** @type {(params: NestedSortableParams) => SortableState} */
+/** @type {(params: SortableParams) => SortableState} */
 export const useNestedSortable = makeDraggableHook({
     name: "useNestedSortable",
     acceptedParams: {
@@ -109,7 +139,6 @@ export const useNestedSortable = makeDraggableHook({
             ctx.prevNestX = ctx.pointer.x;
         }
         ctx.current.placeHolder = ctx.current.element.cloneNode(false);
-        ctx.current.placeHolder.removeAttribute("id");
         ctx.current.placeHolder.classList.add("w-100", "d-block");
         if (ctx.useElementSize) {
             ctx.current.placeHolder.style.height = getComputedStyle(ctx.current.element).height;
@@ -215,16 +244,14 @@ export const useNestedSortable = makeDraggableHook({
             return list;
         };
 
-        const getPosition = (el) => {
-            return {
-                previous: el.previousElementSibling,
-                next: el.nextElementSibling,
-                parent: el.parentElement?.closest(ctx.elementSelector) || null,
-                group: ctx.groupSelector ? el.closest(ctx.groupSelector) : false,
-            };
+        const position = {
+            previous: ctx.current.placeHolder.previousElementSibling,
+            next: ctx.current.placeHolder.nextElementSibling,
+            parent: ctx.nest
+                ? ctx.current.placeHolder.parentElement.closest(ctx.elementSelector)
+                : false,
+            group: ctx.groupSelector ? ctx.current.placeHolder.closest(ctx.groupSelector) : false,
         };
-        const position = getPosition(ctx.current.placeHolder);
-
         /** If nesting elements is allowed, horizontal moves may change the
          * parent of the placeholder element (the placeholder does not move
          * above or under an element, but it changes parent):
@@ -302,7 +329,6 @@ export const useNestedSortable = makeDraggableHook({
         const element = closestEl.closest(ctx.elementSelector);
         // Vertical moves should move the placeholder element up or down.
         if (element && element !== ctx.current.placeHolder) {
-            const elementPosition = getPosition(element);
             const eRect = element.getBoundingClientRect();
             const pos = ctx.current.placeHolder.compareDocumentPosition(element);
             // Place placeholder before the hovered element in its parent's
@@ -313,8 +339,8 @@ export const useNestedSortable = makeDraggableHook({
             // instead.
             if (currentTop - eRect.y < 10) {
                 if (
-                    pos & Node.DOCUMENT_POSITION_PRECEDING &&
-                    (ctx.nest || elementPosition.parent === position.parent)
+                    pos === Node.DOCUMENT_POSITION_PRECEDING ||
+                    pos === (Node.DOCUMENT_POSITION_PRECEDING | Node.DOCUMENT_POSITION_CONTAINS)
                 ) {
                     element.before(ctx.current.placeHolder);
                     onMove(position);
@@ -340,14 +366,14 @@ export const useNestedSortable = makeDraggableHook({
                     }
                     // Recenter the pointer coordinates to this step
                     ctx.prevNestX = ctx.pointer.x;
-                } else if (elementPosition.parent === position.parent) {
+                } else {
                     element.after(ctx.current.placeHolder);
                     onMove(position);
                 }
             }
         } else {
             const group = closestEl.closest(ctx.groupSelector);
-            if (group && group !== position.group && (ctx.nest || !position.parent)) {
+            if (group && group !== position.group) {
                 if (
                     group.compareDocumentPosition(position.group) ===
                     Node.DOCUMENT_POSITION_PRECEDING
@@ -360,10 +386,10 @@ export const useNestedSortable = makeDraggableHook({
                 }
                 // Recenter the pointer coordinates to this step
                 ctx.prevNestX = ctx.pointer.x;
-                callHandler("onGroupEnter", { group, placeholder: ctx.current.placeHolder });
+                callHandler("onGroupEnter", { group, element: ctx.current.placeHolder });
                 callHandler("onGroupLeave", {
                     group: position.group,
-                    placeholder: ctx.current.placeHolder,
+                    element: ctx.current.placeHolder,
                 });
             }
         }

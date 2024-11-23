@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { browser } from "@web/core/browser/browser";
 import { useService } from "@web/core/utils/hooks";
 import { patch } from "@web/core/utils/patch";
@@ -5,7 +7,7 @@ import { WebClient } from "@web/webclient/webclient";
 import { onWillDestroy } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 
-const USER_DEVICES_MODEL = "mail.push.device";
+const USER_DEVICES_MODEL = "mail.partner.device";
 
 patch(WebClient.prototype, {
     /**
@@ -13,6 +15,7 @@ patch(WebClient.prototype, {
      */
     setup() {
         super.setup();
+        this.rpc = useService("rpc");
         this.orm = useService("orm");
         this.notification = useService("notification");
         if (this._canSendNativeNotification) {
@@ -98,7 +101,8 @@ patch(WebClient.prototype, {
             );
             await this.orm.call(USER_DEVICES_MODEL, "register_devices", [], kwargs);
         } catch (e) {
-            const invalidVapidErrorClass = "odoo.addons.mail.tools.jwt.InvalidVapidError";
+            const invalidVapidErrorClass =
+                "odoo.addons.mail.models.partner_devices.InvalidVapidError";
             const warningMessage = "Error sending subscription information to the server";
             if (e.data?.name === invalidVapidErrorClass) {
                 const MAX_TRIES = 2;

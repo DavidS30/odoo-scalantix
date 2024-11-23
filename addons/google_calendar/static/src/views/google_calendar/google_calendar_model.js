@@ -1,13 +1,17 @@
 /** @odoo-module **/
 
 import { AttendeeCalendarModel } from "@calendar/views/attendee_calendar/attendee_calendar_model";
-import { rpc } from "@web/core/network/rpc";
 import { patch } from "@web/core/utils/patch";
 import { useState } from "@odoo/owl";
 
+patch(AttendeeCalendarModel, {
+    services: [...AttendeeCalendarModel.services, "rpc"],
+});
+
 patch(AttendeeCalendarModel.prototype, {
-    setup(params) {
+    setup(params, { rpc }) {
         super.setup(...arguments);
+        this.rpc = rpc;
         this.isAlive = params.isAlive;
         this.googlePendingSync = false;
         this.state = useState({
@@ -43,7 +47,7 @@ patch(AttendeeCalendarModel.prototype, {
 
     async syncGoogleCalendar(silent = false) {
         this.googlePendingSync = true;
-        const result = await rpc(
+        const result = await this.rpc(
             "/google_calendar/sync_data",
             {
                 model: this.resModel,

@@ -163,26 +163,38 @@ options.registry.GalleryLayout = options.registry.CarouselHandler.extend({
     _slideshow() {
         const imageEls = this._getItemsGallery();
         const imgHolderEls = this._getImgHolderEls();
+        const images = Array.from(imageEls).map((img) => ({
+            // Use getAttribute to get the attribute value otherwise .src
+            // returns the absolute url.
+            src: img.getAttribute('src'),
+            // TODO: remove me in master. This is not needed anymore as the
+            // images of the rendered `website.gallery.slideshow` are replaced
+            // by the elements of `imgHolderEls`.
+            alt: img.getAttribute('alt'),
+        }));
         var currentInterval = this.$target.find('.carousel:first').attr('data-bs-interval');
-        let params = {
-            images: imageEls,
+        var params = {
+            images: images,
             index: 0,
+            title: "",
             interval: currentInterval || 0,
-            ride: !currentInterval ? "false" : "carousel",
             id: 'slideshow_' + new Date().getTime(),
-            hideImage: true,
-        };
-        // Since there is no versioning for this snippet we use the last version
-        // of "website.gallery.slideshow" called "website.s_image_gallery_mirror"
-        if (this.$target[0].dataset.vcss === '002') {
-            let carouselEl = this.$target[0].querySelector('.carousel');
-            params.colorContrast  = carouselEl && carouselEl.classList.contains('carousel-dark') ? 'carousel-dark' : ' ';
-        }
-        let $slideshow = $(renderToElement('website.s_image_gallery_mirror', params));
-        const carouselItemEls = $slideshow[0].querySelectorAll(".carousel-item");
-        carouselItemEls.forEach((carouselItemEl, index) => {
-            // Add the images in the carousel items.
-            carouselItemEl.appendChild(imgHolderEls[index]);
+            // TODO: in master, remove `attrClass` and `attStyle` from `params`.
+            // This is not needed anymore as the images of the rendered
+            // `website.gallery.slideshow` are replaced by the elements of
+            // `imgHolderEls`.
+            attrClass: imageEls.length > 0 ? imageEls[0].className : '',
+            attrStyle: imageEls.length > 0 ? imageEls[0].style.cssText : '',
+        },
+        $slideshow = $(renderToElement('website.gallery.slideshow', params));
+        const imgSlideshowEls = $slideshow[0].querySelectorAll("img[data-o-main-image]");
+        imgSlideshowEls.forEach((imgSlideshowEl, index) => {
+            // Replace the template image by the original one. This is needed in
+            // order to keep the characteristics of the image such as the
+            // filter, the width, the quality, the link on which the users are
+            // redirected once they click on the image etc...
+            imgSlideshowEl.after(imgHolderEls[index]);
+            imgSlideshowEl.remove();
         });
         this._replaceContent($slideshow);
         this.$("img").toArray().forEach((img, index) => {
@@ -290,13 +302,12 @@ options.registry.GalleryLayout = options.registry.CarouselHandler.extend({
         $carousel.on("slide.bs.carousel.image_gallery", (ev) => {
             lastSlideTimeStamp = ev.timeStamp;
             const activeImageEl = this.$target[0].querySelector(".carousel-item.active img");
-            this.trigger_up("is_element_selected", {
-                el: activeImageEl,
-                callback: () => {
-                    _previousEditor = true;
-                },
-            });
-            this.trigger_up("hide_overlay");
+            for (const editor of this.options.wysiwyg.snippetsMenu.snippetEditors) {
+                if (editor.isShown() && editor.$target[0] === activeImageEl) {
+                    _previousEditor = editor;
+                    editor.toggleOverlay(false);
+                }
+            }
         });
         $carousel.on("slid.bs.carousel.image_gallery", (ev) => {
             if (!_previousEditor && !_miniatureClicked) {
@@ -416,6 +427,13 @@ options.registry.GalleryImageList = options.registry.GalleryLayout.extend({
     /**
      * @override
      */
+    init() {
+        this.rpc = this.bindService("rpc");
+        return this._super.apply(this, arguments);
+    },
+    /**
+     * @override
+     */
     start() {
         // Make sure image previews are updated if images are changed
         this.$target.on('image_changed.gallery', 'img', ev => {
@@ -493,7 +511,7 @@ options.registry.GalleryImageList = options.registry.GalleryLayout.extend({
                     const imagePromises = [];
                     for (const image of images) {
                         const $img = $('<img/>', {
-                            class: $images.length > 0 ? $images[0].className : 'img img-fluid d-block mh-100 mw-100 mx-auto rounded object-fit-cover',
+                            class: $images.length > 0 ? $images[0].className : 'img img-fluid d-block ',
                             src: image.src,
                             'data-index': ++index,
                             alt: image.alt || '',
@@ -502,7 +520,7 @@ options.registry.GalleryImageList = options.registry.GalleryLayout.extend({
                         }).appendTo($container);
                         const imgEl = $img[0];
                         imagePromises.push(new Promise(resolve => {
-                            loadImageInfo(imgEl).then(() => {
+                            loadImageInfo(imgEl, this.rpc).then(() => {
                                 if (imgEl.dataset.mimetype && ![
                                     "image/gif",
                                     "image/svg+xml",

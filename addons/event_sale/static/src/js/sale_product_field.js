@@ -8,20 +8,20 @@ patch(SaleOrderLineProductField.prototype, {
 
     async _onProductUpdate() {
         super._onProductUpdate(...arguments);
-        if (this.props.record.data.service_tracking === 'event') {
+        if (this.props.record.data.product_type === 'event') {
             this._openEventConfigurator();
         }
     },
 
     _editLineConfiguration() {
         super._editLineConfiguration(...arguments);
-        if (this.props.record.data.service_tracking === 'event') {
+        if (this.props.record.data.product_type === 'event') {
             this._openEventConfigurator();
         }
     },
 
     get isConfigurableLine() {
-        return super.isConfigurableLine || this.props.record.data.service_tracking === 'event';
+        return super.isConfigurableLine || this.props.record.data.product_type === 'event';
     },
 
     async _openEventConfigurator() {

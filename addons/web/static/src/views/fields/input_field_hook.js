@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { getActiveHotkey } from "@web/core/hotkeys/hotkey_service";
 import { useBus } from "@web/core/utils/hooks";
 

@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from odoo import fields
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.addons.stock.tests.common import TestStockCommon
-from odoo.tests import Form
+from odoo.tests.common import Form
 
 
 class TestStockLot(TestStockCommon):
@@ -18,7 +18,7 @@ class TestStockLot(TestStockCommon):
         # Creates a tracked product with expiration dates.
         cls.apple_product = cls.ProductObj.create({
             'name': 'Apple',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'lot',
             'use_expiration_date': True,
             'expiration_time': 10,
@@ -33,7 +33,7 @@ class TestStockLot(TestStockCommon):
         # create product
         self.productAAA = self.ProductObj.create({
             'name': 'Product AAA',
-            'is_storable': True,
+            'type': 'product',
             'tracking':'lot',
             'company_id': self.env.company.id,
         })
@@ -43,6 +43,7 @@ class TestStockLot(TestStockCommon):
             'name': 'Lot 1 ProductAAA',
             'product_id': self.productAAA.id,
             'alert_date': fields.Date.to_string(datetime.today() - relativedelta(days=15)),
+            'company_id': self.env.company.id,
         })
 
         picking_in = self.PickingObj.create({
@@ -131,7 +132,7 @@ class TestStockLot(TestStockCommon):
         # create product
         self.productBBB = self.ProductObj.create({
             'name': 'Product BBB',
-            'is_storable': True,
+            'type': 'product',
             'tracking':'lot'
         })
 
@@ -140,6 +141,7 @@ class TestStockLot(TestStockCommon):
             'name': 'Lot 1 ProductBBB',
             'product_id': self.productBBB.id,
             'alert_date': fields.Date.to_string(datetime.today() + relativedelta(days=15)),
+            'company_id': self.env.company.id,
         })
 
         picking_in = self.PickingObj.create({
@@ -185,10 +187,10 @@ class TestStockLot(TestStockCommon):
         """ Test Scheduled Task on lot without an alert_date does not create an activity """
 
         # create product
-        self.productCCC = self.ProductObj.create({'name': 'Product CCC', 'is_storable': True, 'tracking': 'lot'})
+        self.productCCC = self.ProductObj.create({'name': 'Product CCC', 'type': 'product', 'tracking':'lot'})
 
         # create a new lot with with alert date in the past
-        self.lot1_productCCC = self.LotObj.create({'name': 'Lot 1 ProductCCC', 'product_id': self.productCCC.id})
+        self.lot1_productCCC = self.LotObj.create({'name': 'Lot 1 ProductCCC', 'product_id': self.productCCC.id, 'company_id': self.env.company.id})
 
         picking_in = self.PickingObj.create({
             'picking_type_id': self.picking_type_in,
@@ -253,6 +255,7 @@ class TestStockLot(TestStockCommon):
         lot_form = Form(self.LotObj)
         lot_form.name = 'Apple Box #1'
         lot_form.product_id = self.apple_product
+        lot_form.company_id = self.env.company
         apple_lot = lot_form.save()
         # ...then checks date fields have the expected values.
         check_expiration_dates(self.apple_product, apple_lot, today_date, time_gap)
@@ -390,11 +393,13 @@ class TestStockLot(TestStockCommon):
         lot_form = Form(self.LotObj)  # Creates the lot.
         lot_form.name = 'good-apple-lot'
         lot_form.product_id = self.apple_product
+        lot_form.company_id = self.env.company
         good_lot = lot_form.save()
 
         lot_form = Form(self.LotObj)  # Creates the lot.
         lot_form.name = 'expired-apple-lot-01'
         lot_form.product_id = self.apple_product
+        lot_form.company_id = self.env.company
         expired_lot_1 = lot_form.save()
         lot_form = Form(expired_lot_1)  # Edits the lot to make it expired.
         lot_form.expiration_date = datetime.today() - timedelta(days=10)
@@ -500,6 +505,7 @@ class TestStockLot(TestStockCommon):
         lot_form = Form(self.LotObj)
         lot_form.name = 'LOT001'
         lot_form.product_id = self.apple_product
+        lot_form.company_id = self.env.company
         apple_lot = lot_form.save()
 
         quant = self.StockQuantObj.with_context(inventory_mode=True).create({
@@ -524,6 +530,7 @@ class TestStockLot(TestStockCommon):
             'name': 'Lot 1',
             'product_id': self.apple_product.id,
             'expiration_date': fields.Datetime.to_string(exp_date),
+            'company_id': self.env.company.id,
         })
 
         sml = self.env['stock.move.line'].create({
@@ -549,6 +556,7 @@ class TestStockLot(TestStockCommon):
 
         lot = self.env['stock.lot'].create({
             'product_id': self.apple_product.id,
+            'company_id': self.env.company.id,
         })
 
         delta = timedelta(seconds=10)
@@ -567,6 +575,7 @@ class TestStockLot(TestStockCommon):
         lot_form = Form(self.LotObj)
         lot_form.name = 'LOT001'
         lot_form.product_id = self.apple_product
+        lot_form.company_id = self.env.company
         apple_lot = lot_form.save()
 
         lot_form = Form(apple_lot)
@@ -619,6 +628,7 @@ class TestStockLot(TestStockCommon):
         apple_lot = self.LotObj.create({
             'name': 'LOT001',
             'product_id': self.apple_product.id,
+            'company_id': self.env.company.id,
         })
 
         self.StockQuantObj.with_context(inventory_mode=True).create([{

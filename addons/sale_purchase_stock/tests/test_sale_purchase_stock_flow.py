@@ -2,7 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import Command
-from odoo.tests import Form, TransactionCase
+from odoo.tests.common import TransactionCase, Form
 
 
 class TestSalePurchaseStockFlow(TransactionCase):
@@ -21,17 +21,12 @@ class TestSalePurchaseStockFlow(TransactionCase):
 
         cls.mto_product = cls.env['product.product'].create({
             'name': 'SuperProduct',
-            'is_storable': True,
+            'type': 'product',
             'route_ids': [(6, 0, (cls.mto_route + cls.buy_route).ids)],
             'seller_ids': [(0, 0, {
                 'partner_id': cls.vendor.id,
             })],
         })
-        cls.warehouse = cls.env['stock.warehouse'].create({
-            'name': 'Other Warehouse',
-            'code': 'OTH',
-        })
-        cls.mto_route.rule_ids.procure_method = "make_to_order"
 
     def test_cancel_so_with_draft_po(self):
         """
@@ -159,30 +154,6 @@ class TestSalePurchaseStockFlow(TransactionCase):
         self.assertTrue(blue_po)
         self.assertRecordValues(blue_po.order_line, [{'product_id': blue_product.id, 'product_uom_qty': 3, 'price_unit': 10}])
 
-    def test_link_sale_purchase_mto_link_multi_step(self):
-        self.warehouse.reception_steps = 'two_steps'
-        sale = self.env['sale.order'].create({
-            'partner_id': self.customer.id,
-            'order_line': [
-                Command.create({
-                    'name': self.mto_product.name,
-                    'product_id': self.mto_product.id,
-                    'product_uom_qty': 1,
-                    'product_uom': self.mto_product.uom_id.id,
-                }),
-            ],
-            'warehouse_id': self.warehouse.id,
-        })
-        sale.action_confirm()
-        self.assertEqual(sale.purchase_order_count, 1)
-        purchase = sale._get_purchase_orders()
-        purchase.button_confirm()
-
-        receipt = purchase.picking_ids
-        receipt.move_ids.write({'quantity': 1, 'picked': True})
-        receipt._action_done()
-        self.assertEqual(sale.purchase_order_count, 1)
-
     def test_mto_and_partial_cancel(self):
         """
         First, confirm a SO with two lines with the MTO + Buy routes (the products
@@ -196,7 +167,7 @@ class TestSalePurchaseStockFlow(TransactionCase):
         vendor_2 = self.env['res.partner'].create({'name': 'Lovely Vendor'})
         product_2 = self.env['product.product'].create({
             'name': 'LovelyProduct',
-            'is_storable': True,
+            'type': 'product',
             'route_ids': [Command.set((self.mto_route + self.buy_route).ids)],
             'seller_ids': [Command.create({
                 'partner_id': vendor_2.id,

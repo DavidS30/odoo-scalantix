@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { BUILTINS, EvaluationError, execOnIterable } from "./py_builtin";
 import {
     NotSupportedError,
@@ -343,8 +345,6 @@ const allowedFns = new Set([
     BUILTINS.time.strftime,
     BUILTINS.set,
     BUILTINS.bool,
-    BUILTINS.min,
-    BUILTINS.max,
     BUILTINS.context_today,
     BUILTINS.datetime.datetime.now,
     BUILTINS.datetime.datetime.combine,

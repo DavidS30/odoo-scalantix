@@ -36,7 +36,3 @@ class StockMove(models.Model):
                 picking._find_auto_batch()
 
         return res
-
-    def _action_assign(self, force_qty=False):
-        super()._action_assign(force_qty=force_qty)
-        self.move_line_ids._auto_wave()

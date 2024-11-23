@@ -2,12 +2,11 @@
 
 import { _t } from "@web/core/l10n/translation";
 import publicWidget from "@web/legacy/js/public/public_widget";
-import { ObservingCookieWidgetMixin } from "@website/snippets/observing_cookie_mixin";
 
 // Note that Instagram can automatically detect the language of the user and
 // translate the embed.
 
-const InstagramPage = publicWidget.Widget.extend(ObservingCookieWidgetMixin, {
+const InstagramPage = publicWidget.Widget.extend({
     selector: ".s_instagram_page",
     disabledInEditableMode: false,
 
@@ -26,10 +25,8 @@ const InstagramPage = publicWidget.Widget.extend(ObservingCookieWidgetMixin, {
         // the iframe can send a message before this JS is fully loaded.
         this.__onMessage = this._onMessage.bind(this);
         window.addEventListener("message", this.__onMessage);
-
         // We set the src now, we are ready to receive the message.
-        const src = `https://www.instagram.com/${this.el.dataset.instagramPage}/embed`;
-        this._manageIframeSrc(this.el, src);
+        iframeEl.src = `https://www.instagram.com/${this.el.dataset.instagramPage}/embed`;
 
         return this._super(...arguments);
     },

@@ -36,7 +36,7 @@ class TestWarnUnwantedReplenish(common.TransactionCase):
 
         cls.product_A = cls.env['product.product'].create({
             'name': 'Product A',
-            'is_storable': True,
+            'type': 'product',
             'categ_id': cls.env.ref('product.product_category_all').id,
             'purchase_method': 'purchase',
             'invoice_policy': 'delivery',
@@ -49,7 +49,7 @@ class TestWarnUnwantedReplenish(common.TransactionCase):
 
         cls.product_B = cls.env['product.product'].create({
             'name': 'Product B',
-            'is_storable': True,
+            'type': 'product',
             'categ_id': cls.env.ref('product.product_category_all').id,
             'purchase_method': 'purchase',
             'invoice_policy': 'delivery',

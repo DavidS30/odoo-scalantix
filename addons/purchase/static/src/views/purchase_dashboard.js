@@ -3,8 +3,6 @@ import { useService } from "@web/core/utils/hooks";
 import { Component, onWillStart } from "@odoo/owl";
 
 export class PurchaseDashBoard extends Component {
-    static template = "purchase.PurchaseDashboard";
-    static props = {};
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
@@ -30,3 +28,5 @@ export class PurchaseDashBoard extends Component {
         }
     }
 }
+
+PurchaseDashBoard.template = "purchase.PurchaseDashboard";

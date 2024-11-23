@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { Component } from "@odoo/owl";
 
 import { registry } from "@web/core/registry";
@@ -7,6 +9,7 @@ class ActivityException extends Component {
     static props = standardFieldProps;
     static template = "mail.ActivityException";
     static fieldDependencies = [{ name: "activity_exception_icon", type: "char" }];
+    static noLabel = true;
 
     get textClass() {
         if (this.props.record.data[this.props.name]) {
@@ -29,5 +32,5 @@ Object.assign(ActivityException, {
 registry.category("fields").add("activity_exception", {
     component: ActivityException,
     fieldDependencies: ActivityException.fieldDependencies,
-    label: false,
+    noLabel: true,
 });

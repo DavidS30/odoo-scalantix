@@ -3,7 +3,6 @@
 import publicWidget from "@web/legacy/js/public/public_widget";
 import { _t } from "@web/core/l10n/translation";
 import { renderToElement } from "@web/core/utils/render";
-import { scrollTo } from "@web_editor/js/common/scrolling";
 
 publicWidget.registry.websiteEventTrackProposalForm = publicWidget.Widget.extend({
     selector: '.o_website_event_track_proposal_form',
@@ -40,8 +39,8 @@ publicWidget.registry.websiteEventTrackProposalForm = publicWidget.Widget.extend
         // 1) Valid Form Inputs
         this.$('.form-control').each(function () {
             var $formControl = $(this);
-            // Validate current input, if not SelectMenu field.
-            var inputs = $formControl.not(".o_wetrack_select_tags");
+            // Validate current input, if not select2 field.
+            var inputs = $formControl.not('.o_wetrack_select2_tags');
             var invalidInputs = inputs.toArray().filter(function (input) {
                 return !input.checkValidity();
             });
@@ -179,11 +178,11 @@ publicWidget.registry.websiteEventTrackProposalForm = publicWidget.Widget.extend
 
             const jsonResponse = response && JSON.parse(response);
             if (jsonResponse.success) {
-                // TODO we really should not remove the whole widget element
-                // like that + probably restore the widget before edit mode etc.
-                const parentEl = this.el.parentNode;
+                const offsetTop = ($("#wrapwrap").scrollTop() || 0) + this.$el.offset().top;
+                const floatingMenuHeight = ($('.o_header_standard').height() || 0) +
+                    ($('#oe_main_menu_navbar').height() || 0);
                 this.$el.replaceWith($(renderToElement('event_track_proposal_success')));
-                scrollTo(parentEl, { extraOffset: 20, duration: 50 });
+                $('#wrapwrap').scrollTop(offsetTop - floatingMenuHeight);
             } else if (jsonResponse.error) {
                 this._updateErrorDisplay([jsonResponse.error]);
             }

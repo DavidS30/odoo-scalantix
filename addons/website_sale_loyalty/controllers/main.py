@@ -2,23 +2,23 @@
 
 from werkzeug.urls import url_encode, url_parse
 
-from odoo import _
+from odoo import http, _
 from odoo.exceptions import UserError
-from odoo.http import request, route
+from odoo.http import request
 
 from odoo.addons.website_sale.controllers import main
 
 
 class WebsiteSale(main.WebsiteSale):
 
-    @route()
+    @http.route()
     def pricelist(self, promo, **post):
         order = request.website.sale_get_order()
         if not order:
             return request.redirect('/shop')
         coupon_status = order._try_apply_code(promo)
         if coupon_status.get('not_found'):
-            return super().pricelist(promo, **post)
+            return super(WebsiteSale, self).pricelist(promo, **post)
         elif coupon_status.get('error'):
             request.session['error_promo_code'] = coupon_status['error']
         elif 'error' not in coupon_status:
@@ -32,15 +32,15 @@ class WebsiteSale(main.WebsiteSale):
                 request.session['successful_code'] = promo
         return request.redirect(post.get('r', '/shop/cart'))
 
-    @route()
+    @http.route()
     def shop_payment(self, **post):
         order = request.website.sale_get_order()
         if order:
             order._update_programs_and_rewards()
             order._auto_apply_rewards()
-        return super().shop_payment(**post)
+        return super(WebsiteSale, self).shop_payment(**post)
 
-    @route()
+    @http.route()
     def cart(self, **post):
         order = request.website.sale_get_order()
         if order and order.state != 'draft':
@@ -49,9 +49,9 @@ class WebsiteSale(main.WebsiteSale):
         if order:
             order._update_programs_and_rewards()
             order._auto_apply_rewards()
-        return super().cart(**post)
+        return super(WebsiteSale, self).cart(**post)
 
-    @route(['/coupon/<string:code>'], type='http', auth='public', website=True, sitemap=False)
+    @http.route(['/coupon/<string:code>'], type='http', auth='public', website=True, sitemap=False)
     def activate_coupon(self, code, r='/shop', **kw):
         url_parts = url_parse(r)
         url_query = url_parts.decode_query()
@@ -73,7 +73,7 @@ class WebsiteSale(main.WebsiteSale):
         redirect = url_parts.replace(query=url_encode(url_query))
         return request.redirect(redirect.to_url())
 
-    @route('/shop/claimreward', type='http', auth='public', website=True, sitemap=False)
+    @http.route('/shop/claimreward', type='http', auth='public', website=True, sitemap=False)
     def claim_reward(self, reward_id, code=None, **post):
         order_sudo = request.website.sale_get_order()
         redirect = post.get('r', '/shop/cart')
@@ -102,11 +102,9 @@ class WebsiteSale(main.WebsiteSale):
                 coupon = coupon_
                 if code == coupon.code and (
                     (program_sudo.trigger == 'with_code' and program_sudo.program_type != 'promo_code')
-                    or (program_sudo.trigger == 'auto'
-                        and program_sudo.applies_on == 'future'
-                        and program_sudo.program_type not in ('ewallet', 'loyalty'))
+                    or (program_sudo.trigger == 'auto' and program_sudo.applies_on == 'future')
                 ):
-                    return self.pricelist(code)
+                    return self.pricelist(code, **post)
         if coupon:
             self._apply_reward(order_sudo, reward_sudo, coupon)
         return request.redirect(redirect)
@@ -127,10 +125,9 @@ class WebsiteSale(main.WebsiteSale):
         if 'error' in reward_status:
             request.session['error_promo_code'] = reward_status['error']
             return False
-        order._update_programs_and_rewards()
         return True
 
-    @route()
+    @http.route()
     def cart_update_json(self, *args, set_qty=None, **kwargs):
         # When a reward line is deleted we remove it from the auto claimable rewards
         if set_qty == 0:

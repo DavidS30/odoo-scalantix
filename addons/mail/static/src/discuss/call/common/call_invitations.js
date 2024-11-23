@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { CallInvitation } from "@mail/discuss/call/common/call_invitation";
 
 import { Component, useState } from "@odoo/owl";
@@ -11,7 +13,6 @@ export class CallInvitations extends Component {
     static template = "discuss.CallInvitations";
 
     setup() {
-        super.setup();
         this.rtc = useState(useService("discuss.rtc"));
         this.store = useState(useService("mail.store"));
     }

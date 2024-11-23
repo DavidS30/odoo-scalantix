@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { patch } from "@web/core/utils/patch";
 import { Picker } from "@mail/core/common/picker";
 import { isEventHandled } from "@web/core/utils/misc";

@@ -1,7 +1,9 @@
+/** @odoo-module **/
+
 import { Layout } from "@web/search/layout";
 import { useModelWithSampleData } from "@web/model/model";
 import { standardViewProps } from "@web/views/standard_view_props";
-import { useSetupAction } from "@web/search/action_hook";
+import { useSetupView } from "@web/views/view_hook";
 import { SearchBar } from "@web/search/search_bar/search_bar";
 import { useSearchBarToggler } from "@web/search/search_bar/search_bar_toggler";
 import { CogMenu } from "@web/search/cog_menu/cog_menu";
@@ -9,20 +11,10 @@ import { CogMenu } from "@web/search/cog_menu/cog_menu";
 import { Component, useRef } from "@odoo/owl";
 
 export class GraphController extends Component {
-    static template = "web.GraphView";
-    static components = { Layout, SearchBar, CogMenu };
-    static props = {
-        ...standardViewProps,
-        Model: Function,
-        modelParams: Object,
-        Renderer: Function,
-        buttonTemplate: String,
-    };
-
     setup() {
         this.model = useModelWithSampleData(this.props.Model, this.props.modelParams);
 
-        useSetupAction({
+        useSetupView({
             rootRef: useRef("root"),
             getLocalState: () => {
                 return { metaData: this.model.metaData };
@@ -53,3 +45,14 @@ export class GraphController extends Component {
         return context;
     }
 }
+
+GraphController.template = "web.GraphView";
+GraphController.components = { Layout, SearchBar, CogMenu };
+
+GraphController.props = {
+    ...standardViewProps,
+    Model: Function,
+    modelParams: Object,
+    Renderer: Function,
+    buttonTemplate: String,
+};

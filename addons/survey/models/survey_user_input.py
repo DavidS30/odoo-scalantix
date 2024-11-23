@@ -23,13 +23,13 @@ class SurveyUserInput(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
     # answer description
-    survey_id = fields.Many2one('survey.survey', string='Survey', required=True, readonly=True, index=True, ondelete='cascade')
+    survey_id = fields.Many2one('survey.survey', string='Survey', required=True, readonly=True, ondelete='cascade', index=True)
     scoring_type = fields.Selection(string="Scoring", related="survey_id.scoring_type")
     start_datetime = fields.Datetime('Start date and time', readonly=True)
     end_datetime = fields.Datetime('End date and time', readonly=True)
     deadline = fields.Datetime('Deadline', help="Datetime until customer can open the survey and submit answers")
     state = fields.Selection([
-        ('new', 'New'),
+        ('new', 'Not started yet'),
         ('in_progress', 'In Progress'),
         ('done', 'Completed')], string='Status', default='new', readonly=True)
     test_entry = fields.Boolean(readonly=True)
@@ -50,7 +50,7 @@ class SurveyUserInput(models.Model):
     user_input_line_ids = fields.One2many('survey.user_input.line', 'user_input_id', string='Answers', copy=True)
     predefined_question_ids = fields.Many2many('survey.question', string='Predefined Questions', readonly=True)
     scoring_percentage = fields.Float("Score (%)", compute="_compute_scoring_values", store=True, compute_sudo=True)  # stored for perf reasons
-    scoring_total = fields.Float("Total Score", compute="_compute_scoring_values", store=True, compute_sudo=True, digits=(10, 2))  # stored for perf reasons
+    scoring_total = fields.Float("Total Score", compute="_compute_scoring_values", store=True, compute_sudo=True)  # stored for perf reasons
     scoring_success = fields.Boolean('Quizz Passed', compute='_compute_scoring_success', store=True, compute_sudo=True)  # stored for perf reasons
     survey_first_submitted = fields.Boolean(string='Survey First Submitted')
     # live sessions
@@ -286,7 +286,7 @@ class SurveyUserInput(models.Model):
         if old_answers and not overwrite_existing:
             raise UserError(_("This answer cannot be overwritten."))
 
-        if question.question_type in ['char_box', 'text_box', 'scale', 'numerical_box', 'date', 'datetime']:
+        if question.question_type in ['char_box', 'text_box', 'numerical_box', 'date', 'datetime']:
             self._save_line_simple_answer(question, old_answers, answer)
             if question.save_as_email and answer:
                 self.write({'email': answer})
@@ -367,8 +367,6 @@ class SurveyUserInput(models.Model):
             vals['suggested_answer_id'] = int(answer)
         elif answer_type == 'numerical_box':
             vals['value_numerical_box'] = float(answer)
-        elif answer_type == 'scale':
-            vals['value_scale'] = int(answer)
         else:
             vals['value_%s' % answer_type] = answer
         return vals
@@ -671,12 +669,13 @@ class SurveyUserInput(models.Model):
 
     def _message_get_suggested_recipients(self):
         recipients = super()._message_get_suggested_recipients()
-        if self.partner_id:
-            self._message_add_suggested_recipient(
-                recipients,
-                partner=self.partner_id,
-                reason=_('Survey Participant')
-            )
+        for user_input in self:
+            if user_input.partner_id:
+                user_input._message_add_suggested_recipient(
+                    recipients,
+                    partner=user_input.partner_id,
+                    reason=_('Survey Participant')
+                )
         return recipients
 
     def _notify_new_participation_subscribers(self):
@@ -719,13 +718,11 @@ class SurveyUserInputLine(models.Model):
         ('text_box', 'Free Text'),
         ('char_box', 'Text'),
         ('numerical_box', 'Number'),
-        ('scale', 'Number'),
         ('date', 'Date'),
         ('datetime', 'Datetime'),
         ('suggestion', 'Suggestion')], string='Answer Type')
     value_char_box = fields.Char('Text answer')
     value_numerical_box = fields.Float('Numerical answer')
-    value_scale = fields.Integer('Scale value')
     value_date = fields.Date('Date answer')
     value_datetime = fields.Datetime('Datetime answer')
     value_text_box = fields.Text('Free Text answer')
@@ -752,8 +749,6 @@ class SurveyUserInputLine(models.Model):
                 line.display_name = fields.Date.to_string(line.value_date)
             elif line.answer_type == 'datetime':
                 line.display_name = fields.Datetime.to_string(line.value_datetime)
-            elif line.answer_type == 'scale':
-                line.display_name = line.value_scale
             elif line.answer_type == 'suggestion':
                 if line.matrix_row_id:
                     line.display_name = f'{line.suggested_answer_id.value}: {line.matrix_row_id.value}'
@@ -769,12 +764,9 @@ class SurveyUserInputLine(models.Model):
             if (line.skipped == bool(line.answer_type)):
                 raise ValidationError(_('A question can either be skipped or answered, not both.'))
 
-            # allow 0 for numerical box and scale
+            # allow 0 for numerical box
             if line.answer_type == 'numerical_box' and float_is_zero(line['value_numerical_box'], precision_digits=6):
                 continue
-            if line.answer_type == 'scale' and line['value_scale'] == 0:
-                continue
-
             if line.answer_type == 'suggestion':
                 field_name = 'suggested_answer_id'
             elif line.answer_type:
@@ -811,12 +803,11 @@ class SurveyUserInputLine(models.Model):
 
     def _get_answer_matching_domain(self):
         self.ensure_one()
-        if self.answer_type in ('char_box', 'text_box', 'numerical_box', 'scale', 'date', 'datetime'):
+        if self.answer_type in ('char_box', 'text_box', 'numerical_box', 'date', 'datetime'):
             value_field = {
                 'char_box': 'value_char_box',
                 'text_box': 'value_text_box',
                 'numerical_box': 'value_numerical_box',
-                'scale': 'value_scale',
                 'date': 'value_date',
                 'datetime': 'value_datetime',
             }
@@ -824,7 +815,6 @@ class SurveyUserInputLine(models.Model):
                 'char_box': 'ilike',
                 'text_box': 'ilike',
                 'numerical_box': '=',
-                'scale': '=',
                 'date': '=',
                 'datetime': '=',
             }
@@ -890,7 +880,7 @@ class SurveyUserInputLine(models.Model):
         if compute_speed_score and answer_score > 0:
             user_input = self.env['survey.user_input'].browse(user_input_id)
             session_speed_rating = user_input.exists() and user_input.is_session_answer and user_input.survey_id.session_speed_rating
-            if session_speed_rating and question.is_time_limited:
+            if session_speed_rating:
                 max_score_delay = 2
                 time_limit = question.time_limit
                 now = fields.Datetime.now()
@@ -899,8 +889,9 @@ class SurveyUserInputLine(models.Model):
                 # if answered within the max_score_delay => leave score as is
                 if question_remaining_time < 0:  # if no time left
                     answer_score /= 2
-                elif seconds_to_answer > max_score_delay:  # linear decrease in score after 2 sec
-                    score_proportion = (time_limit - seconds_to_answer) / (time_limit - max_score_delay)
+                elif seconds_to_answer > max_score_delay:
+                    time_limit -= max_score_delay  # we remove the max_score_delay to have all possible values
+                    score_proportion = (time_limit - seconds_to_answer) / time_limit
                     answer_score = (answer_score / 2) * (1 + score_proportion)
 
         return {
@@ -916,8 +907,6 @@ class SurveyUserInputLine(models.Model):
             return self.value_text_box
         elif self.answer_type == 'numerical_box':
             return self.value_numerical_box
-        elif self.answer_type == 'scale':
-            return self.value_scale
         elif self.answer_type == 'date':
             return self.value_date
         elif self.answer_type == 'datetime':

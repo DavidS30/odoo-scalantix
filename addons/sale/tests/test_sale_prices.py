@@ -19,7 +19,6 @@ class TestSalePrices(SaleCommon):
     def setUpClass(cls):
         super().setUpClass()
 
-        cls._enable_discounts()
         cls.discount = 10  # %
 
         # Needed when run without demo data
@@ -47,6 +46,7 @@ class TestSalePrices(SaleCommon):
         )
         product_price = self.product.lst_price
         product_dozen_price = product_price * 12
+        discount = 1 - self.discount/100
 
         self.empty_order.order_line = [
             Command.create({
@@ -81,14 +81,23 @@ class TestSalePrices(SaleCommon):
         discounted_lines = self.empty_order.order_line.filtered('pricelist_item_id')
         self.assertEqual(discounted_lines, self.empty_order.order_line[1:5])
         self.assertEqual(discounted_lines.pricelist_item_id, pricelist_rule)
-        self.assertTrue(all(not line.discount for line in self.empty_order.order_line - discounted_lines))
+        self.assertTrue(all(not line.discount for line in self.empty_order.order_line))
+        self.assertEqual(
+            discounted_lines.mapped('price_unit'),
+            [
+                product_price*discount,
+                product_price*discount,
+                product_dozen_price*discount,
+                product_dozen_price*discount
+            ]
+        )
+
+        self.pricelist.discount_policy = 'without_discount'
+        self.empty_order._recompute_prices()
         self.assertEqual(
             discounted_lines.mapped('price_unit'),
             [product_price, product_price, product_dozen_price, product_dozen_price])
         self.assertEqual(discounted_lines.mapped('discount'), [self.discount]*len(discounted_lines))
-
-        discounted_lines[0].product_uom_qty = 3.0
-        self.assertFalse(discounted_lines[0].discount)
 
     def test_pricelist_dates(self):
         """ Verify the order date is correctly provided to the pricelist API"""
@@ -111,8 +120,8 @@ class TestSalePrices(SaleCommon):
             self.assertEqual(order_line.pricelist_item_id, pricelist_rule)
             self.assertEqual(
                 order_line.price_unit,
-                self.product.lst_price)
-            self.assertEqual(order_line.discount, 10)
+                self.product.lst_price * (1 - self.discount / 100.0))
+            self.assertEqual(order_line.discount, 0.0)
 
             # Create an order tomorrow, add line today, rule active today doesn't work
             self.empty_order.date_order = tomorrow
@@ -147,8 +156,8 @@ class TestSalePrices(SaleCommon):
             self.assertEqual(order_line.pricelist_item_id, pricelist_rule)
             self.assertEqual(
                 order_line.price_unit,
-                self.product.lst_price)
-            self.assertEqual(order_line.discount, 10)
+                self.product.lst_price * (1 - self.discount / 100.0))
+            self.assertEqual(order_line.discount, 0.0)
 
         self.assertEqual(
             self.empty_order.amount_untaxed,
@@ -248,6 +257,7 @@ class TestSalePrices(SaleCommon):
 
         # Even when the discount is supposed to be shown
         #   Surcharges shouldn't be shown to the user
+        self.pricelist.discount_policy = 'without_discount'
         order_line = self.env['sale.order.line'].create({
             'order_id': self.empty_order.id,
             'product_id': self.product.id,
@@ -261,6 +271,7 @@ class TestSalePrices(SaleCommon):
 
         base_pricelist = self.env['product.pricelist'].create({
             'name': 'First pricelist',
+            'discount_policy': 'without_discount',
             'item_ids': [Command.create({
                 'compute_price': 'percentage',
                 'base': 'list_price',
@@ -271,11 +282,12 @@ class TestSalePrices(SaleCommon):
         })
 
         self.pricelist.write({
+            'discount_policy': 'without_discount',
             'item_ids': [Command.create({
-                'compute_price': 'percentage',
+                'compute_price': 'formula',
                 'base': 'pricelist',
                 'base_pricelist_id': base_pricelist.id,
-                'percent_price': 10,
+                'price_discount': 10,
                 'applied_on': '3_global',
                 'name': 'Second discount',
             })],
@@ -292,9 +304,7 @@ class TestSalePrices(SaleCommon):
 
         self.assertEqual(order_line.pricelist_item_id, self.pricelist.item_ids)
         self.assertEqual(order_line.price_subtotal, 81, "Second pricelist rule not applied")
-        self.assertEqual(
-            order_line.discount, 19,
-            "Discount not computed correctly based on both pricelists")
+        self.assertEqual(order_line.discount, 19, "Second discount not applied")
 
     def test_pricelist_with_another_currency(self):
         """ Test prices are correctly applied with a pricelist with another currency"""
@@ -323,6 +333,7 @@ class TestSalePrices(SaleCommon):
         pricelist_eur = self.env['product.pricelist'].create({
             'name': 'First pricelist',
             'currency_id': currency_eur.id,
+            'discount_policy': 'with_discount',
             'item_ids': [Command.create({
                 'compute_price': 'percentage',
                 'base': 'list_price',
@@ -343,13 +354,13 @@ class TestSalePrices(SaleCommon):
         })
 
         # force compute uom and prices
-        self.assertEqual(order_line.discount, 10, "First pricelist rule not applied")
+        self.assertEqual(order_line.price_unit, 180, "First pricelist rule not applied")
         order_line.product_uom = new_uom
-        self.assertEqual(order_line.price_total, 1800, "First pricelist rule not applied")
+        self.assertEqual(order_line.price_unit, 1800, "First pricelist rule not applied")
 
     def test_multi_currency_discount(self):
         """Verify the currency used for pricelist price & discount computation."""
-        product_1 = self.product
+        product_1 = self.consumable_product
         product_2 = self.service_product
 
         # Make sure the company is in USD
@@ -398,6 +409,7 @@ class TestSalePrices(SaleCommon):
         pricelist = self.env['product.pricelist'].create({
             'name': 'Test multi-currency',
             'company_id': False,
+            'discount_policy': 'without_discount',
             'currency_id': other_curr.id,
             'item_ids': [
                 Command.create({
@@ -489,23 +501,19 @@ class TestSalePrices(SaleCommon):
 
         pricelist = sale_order.pricelist_id
         pricelist.item_ids = [
-            Command.create({
+            fields.Command.create({
                 'percent_price': 5.0,
                 'compute_price': 'percentage'
             })
         ]
+        pricelist.discount_policy = "without_discount"
         sale_order._recompute_prices()
 
         self.assertTrue(all(line.discount == 5 for line in sale_order.order_line))
         self.assertEqual(sale_order.amount_undiscounted, so_amount)
         self.assertEqual(sale_order.amount_total, 0.95*so_amount)
 
-        pricelist.item_ids = [
-            Command.create({
-                'price_discount': 5,
-                'compute_price': 'formula',
-            })
-        ]
+        pricelist.discount_policy = "with_discount"
         sale_order._recompute_prices()
 
         self.assertTrue(all(line.discount == 0 for line in sale_order.order_line))
@@ -523,21 +531,6 @@ class TestSalePrices(SaleCommon):
             "The SO amount without pricelist should be the same than with an empty pricelist"
         )
 
-    def test_manual_price_prevents_recompute(self):
-        sale_order_line = self.sale_order.order_line[0]
-        # Ensure initial price is set correctly
-        self.assertEqual(sale_order_line.price_unit, 20.0)
-
-        # Update the price manually and then change the quantity
-        with Form(sale_order_line) as line:
-            line.price_unit = 100.0
-            line.product_uom_qty = 10
-
-        self.assertEqual(
-            sale_order_line.price_unit, 100.0,
-            "Price should remain 100.0 after changing the quantity"
-        )
-
     # Taxes tests:
     # We do not rely on accounting common on purpose to avoid
     # all the useless setup not needed here.
@@ -547,7 +540,7 @@ class TestSalePrices(SaleCommon):
         tax_a, tax_b = self.env['account.tax'].create([{
             'name': 'Test tax A',
             'type_tax_use': 'sale',
-            'price_include_override': 'tax_included',
+            'price_include': True,
             'amount': 15.0,
         }, {
             'name': 'Test tax B',
@@ -577,6 +570,7 @@ class TestSalePrices(SaleCommon):
         })
 
         self.pricelist.write({
+            'discount_policy': 'without_discount',
             'item_ids': [Command.create({
                 'applied_on': '3_global',
                 'compute_price': 'percentage',
@@ -633,34 +627,34 @@ class TestSalePrices(SaleCommon):
             tax_exclude_dst,
         ) = self.env['account.tax'].create([{
             'name': "fixed include",
-            'amount': 10.00,
+            'amount': '10.00',
             'amount_type': 'fixed',
-            'price_include_override': 'tax_included',
+            'price_include': True,
         }, {
             'name': "fixed exclude",
-            'amount': 10.00,
+            'amount': '10.00',
             'amount_type': 'fixed',
-            'price_include_override': 'tax_excluded',
+            'price_include': False,
         }, {
             'name': "Include 21%",
             'amount': 21.00,
             'amount_type': 'percent',
-            'price_include_override': 'tax_included',
+            'price_include': True,
         }, {
             'name': "Include 6%",
             'amount': 6.00,
             'amount_type': 'percent',
-            'price_include_override': 'tax_included',
+            'price_include': True,
         }, {
             'name': "Exclude 15%",
             'amount': 15.00,
             'amount_type': 'percent',
-            'price_include_override': 'tax_excluded',
+            'price_include': False,
         }, {
             'name': "Exclude 21%",
             'amount': 21.00,
             'amount_type': 'percent',
-            'price_include_override': 'tax_excluded',
+            'price_include': False,
         }])
 
         (
@@ -804,7 +798,7 @@ class TestSalePrices(SaleCommon):
         tax_include, tax_exclude = self.env['account.tax'].create([{
             'name': 'Include Tax',
             'amount': '21.00',
-            'price_include_override': 'tax_included',
+            'price_include': True,
             'type_tax_use': 'sale',
         }, {
             'name': 'Exclude Tax',
@@ -845,14 +839,14 @@ class TestSalePrices(SaleCommon):
             'type_tax_use': 'sale',
             'amount_type': 'fixed',
             'amount': 0.05,
-            'price_include_override': 'tax_included',
+            'price_include': True,
             'include_base_amount': True,
         }, {
             'name': 'Recupel 0.25',
             'type_tax_use': 'sale',
             'amount_type': 'fixed',
             'amount': 0.25,
-            'price_include_override': 'tax_included',
+            'price_include': True,
             'include_base_amount': True,
         }])
         order = self.empty_order
@@ -881,7 +875,7 @@ class TestSalePrices(SaleCommon):
         tax_include, tax_exclude = self.env['account.tax'].create([{
             'name': 'Tax with price include',
             'amount': 10,
-            'price_include_override': 'tax_included',
+            'price_include': True
         }, {
             'name': 'Tax with no price include',
             'amount': 10,
@@ -932,7 +926,7 @@ class TestSalePrices(SaleCommon):
             'name': 'Super Tax',
             'amount_type': 'percent',
             'amount': 15.0,
-            'price_include_override': 'tax_included',
+            'price_include': True,
         })]
         order.action_confirm()
         self.assertEqual(line.untaxed_amount_to_invoice, 0)
@@ -964,7 +958,6 @@ class TestSalePrices(SaleCommon):
         order_line.write({
             'product_uom_qty': 3.0,
             'price_unit': 100.0,
-            'discount': 1.0,
         })
         order.invalidate_recordset(['amount_undiscounted'])
 
@@ -983,7 +976,7 @@ class TestSalePrices(SaleCommon):
             'name': 'Super Tax',
             'amount_type': 'percent',
             'amount': 10.0,
-            'price_include_override': 'tax_included',
+            'price_include': True,
         })]
         line.discount = 50.0
         order.action_confirm()
@@ -1012,85 +1005,4 @@ class TestSalePrices(SaleCommon):
         expected_price_subtotal = line.currency_id.round(
             line.price_unit * float_round(product_uom_qty, precision_digits=quantity_precision))
         self.assertAlmostEqual(line.price_subtotal, expected_price_subtotal)
-        self.assertEqual(order.amount_total, order.tax_totals.get('total_amount_currency'))
-
-    def test_show_discount(self):
-        """
-            Test that discount is shown only when compute_price is percentage
-            If compute_price is formula, discount should be included in price.
-        """
-        test_product_discount = self.env['product.product'].create({
-            'name': 'Test Product',
-            'list_price': 100.0,
-            'taxes_id': None,
-        })
-        test_product_incl_discount = self.env['product.product'].create({
-            'name': 'Test Product',
-            'list_price': 100.0,
-            'taxes_id': None,
-        })
-        sale_order = self.env['sale.order'].create({
-            'partner_id': self.partner.id,
-            'order_line': [
-                Command.create({
-                    'product_id': test_product_discount.id,
-                    'product_uom_qty': 1.0,
-                }),
-                Command.create({
-                    'product_id': test_product_incl_discount.id,
-                    'product_uom_qty': 1,
-                })
-            ]
-        })
-
-        self.assertEqual(200, sale_order.amount_total)
-        base_discount_pricelist = self.env['product.pricelist'].create({
-            'name': 'Base Discount Pricelist',
-            'item_ids': [
-                Command.create({
-                    'name': 'Discount',
-                    'applied_on': '1_product',
-                    'product_tmpl_id':  test_product_discount.product_tmpl_id.id,
-                    'compute_price': 'percentage',
-                    'percent_price': 10,
-                }),
-                Command.create({
-                    'name': 'Formula',
-                    'applied_on': '1_product',
-                    'product_tmpl_id':  test_product_incl_discount.product_tmpl_id.id,
-                    'compute_price': 'formula',
-                    'price_discount': 10,
-                }),
-            ]})
-
-        sale_order.pricelist_id = base_discount_pricelist
-        sale_order._recompute_prices()
-        show_discount_line = sale_order.order_line[0]
-        included_discount_line = sale_order.order_line[1]
-
-        self.assertEqual(show_discount_line.price_unit, 100)
-        self.assertEqual(show_discount_line.price_subtotal, show_discount_line.price_unit * 0.9)
-        self.assertEqual(show_discount_line.discount, 10)
-        self.assertEqual(included_discount_line.price_unit, included_discount_line.price_subtotal)
-        self.assertEqual(included_discount_line.discount, 0)
-
-        # Test with discount based on other pricelist
-        discount_pricelist = self.env['product.pricelist'].create({
-            'name': 'Discount Pricelist',
-            'item_ids': [
-                Command.create({
-                    'name': 'Discount based on pricelist',
-                    'applied_on': '1_product',
-                    'product_tmpl_id': test_product_discount.product_tmpl_id.id,
-                    'compute_price': 'percentage',
-                    'percent_price': 10,
-                    'base': 'pricelist',
-                    'base_pricelist_id': base_discount_pricelist.id,
-                }),
-            ]})
-        sale_order.pricelist_id = discount_pricelist
-        sale_order._recompute_prices()
-
-        self.assertEqual(show_discount_line.price_unit, 100)
-        self.assertEqual(show_discount_line.price_subtotal, show_discount_line.price_unit * 0.81)
-        self.assertEqual(show_discount_line.discount, 19)
+        self.assertEqual(order.amount_total, order.tax_totals.get('amount_total'))

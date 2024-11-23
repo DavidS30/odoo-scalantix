@@ -1,16 +1,18 @@
+/* @odoo-module */
+
 import { makeRoot, makeShadow } from "@im_livechat/embed/common/boot_helpers";
 import { LivechatRoot } from "@im_livechat/embed/frontend/livechat_root";
+import { isAvailable } from "@im_livechat/embed/common/livechat_data";
 import { _t } from "@web/core/l10n/translation";
 import { App } from "@odoo/owl";
 
-import { getTemplate } from "@web/core/templates";
+import { templates } from "@web/core/assets";
 import { registry } from "@web/core/registry";
-import { session } from "@web/session";
 
-registry.category("main_components").remove("mail.ChatHub");
+registry.category("main_components").remove("mail.ChatWindowContainer");
 
 export const livechatBootService = {
-    dependencies: ["mail.store"],
+    dependencies: ["mail.messaging"],
 
     /**
      * To be overriden in tests.
@@ -20,7 +22,7 @@ export const livechatBootService = {
     },
 
     start(env) {
-        if (!session.livechatData?.isAvailable) {
+        if (!isAvailable) {
             return;
         }
         const target = this.getTarget();
@@ -28,7 +30,7 @@ export const livechatBootService = {
         makeShadow(root).then((shadow) => {
             new App(LivechatRoot, {
                 env,
-                getTemplate,
+                templates,
                 translatableAttributes: ["data-tooltip"],
                 translateFn: _t,
                 dev: env.debug,

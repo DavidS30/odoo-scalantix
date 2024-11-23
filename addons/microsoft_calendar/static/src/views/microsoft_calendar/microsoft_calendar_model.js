@@ -1,17 +1,17 @@
 /** @odoo-module **/
 
 import { AttendeeCalendarModel } from "@calendar/views/attendee_calendar/attendee_calendar_model";
-import { rpc } from "@web/core/network/rpc";
 import { patch } from "@web/core/utils/patch";
 import { useState } from "@odoo/owl";
 
 patch(AttendeeCalendarModel, {
-    services: [...AttendeeCalendarModel.services],
+    services: [...AttendeeCalendarModel.services, "rpc"],
 });
 
 patch(AttendeeCalendarModel.prototype, {
-    setup(params) {
+    setup(params, { rpc }) {
         super.setup(...arguments);
+        this.rpc = rpc;
         this.isAlive = params.isAlive;
         this.microsoftPendingSync = false;
         this.state = useState({
@@ -47,7 +47,7 @@ patch(AttendeeCalendarModel.prototype, {
 
     async syncMicrosoftCalendar(silent = false) {
         this.microsoftPendingSync = true;
-        const result = await rpc(
+        const result = await this.rpc(
             "/microsoft_calendar/sync_data",
             {
                 model: this.resModel,

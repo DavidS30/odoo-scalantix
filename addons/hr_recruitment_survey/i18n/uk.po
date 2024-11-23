@@ -3,15 +3,16 @@
 # 	* hr_recruitment_survey
 # 
 # Translators:
-# Wil Odoo, 2024
+# Wil Odoo, 2023
+# Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2023
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:55+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
-"Last-Translator: Wil Odoo, 2024\n"
+"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"Last-Translator: Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2023\n"
 "Language-Team: Ukrainian (https://app.transifex.com/odoo/teams/41243/uk/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -69,11 +70,6 @@ msgstr ""
 "            "
 
 #. module: hr_recruitment_survey
-#: model_terms:ir.ui.view,arch_db:hr_recruitment_survey.hr_recruitment_survey_button_form_view
-msgid "<i class=\"oi oi-fw oi-arrow-right\"/>Go to Recruitment"
-msgstr ""
-
-#. module: hr_recruitment_survey
 #: model_terms:ir.ui.view,arch_db:hr_recruitment_survey.hr_applicant_view_form_inherit
 msgid ""
 "<span class=\"o_stat_text\">Consult</span>\n"
@@ -91,11 +87,6 @@ msgstr "Про вас"
 #: model:survey.question,title:hr_recruitment_survey.survey_recruitment_form_p1_q7
 msgid "Activities"
 msgstr "Дії"
-
-#. module: hr_recruitment_survey
-#: model_terms:ir.actions.act_window,help:hr_recruitment_survey.survey_survey_action_recruitment
-msgid "Add a new survey"
-msgstr "Додати нове опитування"
 
 #. module: hr_recruitment_survey
 #: model:ir.model,name:hr_recruitment_survey.model_hr_applicant
@@ -174,6 +165,7 @@ msgstr "Форма інтерв'ю"
 #. module: hr_recruitment_survey
 #. odoo-python
 #: code:addons/hr_recruitment_survey/models/hr_job.py:0
+#, python-format
 msgid "Interview Form: %s"
 msgstr "Форма інтервʼю: %s"
 
@@ -183,15 +175,12 @@ msgid "Interview Survey"
 msgstr "Опитування інтерв'ю"
 
 #. module: hr_recruitment_survey
-#: model:ir.actions.act_window,name:hr_recruitment_survey.survey_survey_action_recruitment
-#: model:ir.ui.menu,name:hr_recruitment_survey.menu_hr_recruitment_config_surveys
 #: model_terms:ir.ui.view,arch_db:hr_recruitment_survey.view_hr_job_kanban_inherit
 msgid "Interviews"
 msgstr "Інтерв'ю"
 
 #. module: hr_recruitment_survey
 #: model:ir.model,name:hr_recruitment_survey.model_hr_job
-#: model:ir.model.fields,field_description:hr_recruitment_survey.field_survey_survey__hr_job_ids
 msgid "Job Position"
 msgstr "Посада"
 
@@ -246,6 +235,7 @@ msgstr ""
 #. module: hr_recruitment_survey
 #. odoo-python
 #: code:addons/hr_recruitment_survey/models/hr_applicant.py:0
+#, python-format
 msgid "Please provide an applicant name."
 msgstr "Вкажіть імʼя заявника."
 
@@ -265,11 +255,6 @@ msgid ""
 msgstr ""
 "Розкажіть, будь ласка, трохи більше про себе: які ваші основні види "
 "діяльності, ..."
-
-#. module: hr_recruitment_survey
-#: model:ir.model.fields.selection,name:hr_recruitment_survey.selection__survey_survey__survey_type__recruitment
-msgid "Recruitment"
-msgstr "Рекрутинг"
 
 #. module: hr_recruitment_survey
 #: model:survey.survey,title:hr_recruitment_survey.survey_recruitment_form
@@ -294,14 +279,15 @@ msgstr "Надіслати інтервʼю"
 #. module: hr_recruitment_survey
 #. odoo-python
 #: code:addons/hr_recruitment_survey/models/hr_applicant.py:0
+#, python-format
 msgid "Send an interview"
 msgstr "Надіслати інтервʼю"
 
 #. module: hr_recruitment_survey
 #. odoo-python
 #: code:addons/hr_recruitment_survey/models/hr_job.py:0
-#: model:ir.model,name:hr_recruitment_survey.model_survey_survey
 #: model:ir.model.fields,field_description:hr_recruitment_survey.field_hr_applicant__survey_id
+#, python-format
 msgid "Survey"
 msgstr "Опитування"
 
@@ -309,11 +295,6 @@ msgstr "Опитування"
 #: model:ir.model,name:hr_recruitment_survey.model_survey_invite
 msgid "Survey Invitation Wizard"
 msgstr "Помічник запрошення взяти участь в опитуванні"
-
-#. module: hr_recruitment_survey
-#: model:ir.model.fields,field_description:hr_recruitment_survey.field_survey_survey__survey_type
-msgid "Survey Type"
-msgstr "Тип опитування"
 
 #. module: hr_recruitment_survey
 #: model:ir.model,name:hr_recruitment_survey.model_survey_user_input
@@ -328,12 +309,14 @@ msgstr "Дякуємо, що відповіли на опитування. Ми 
 #. module: hr_recruitment_survey
 #. odoo-python
 #: code:addons/hr_recruitment_survey/models/survey_user_input.py:0
+#, python-format
 msgid "The applicant \"%s\" has finished the survey."
 msgstr "Заявник \"%s\" завершив опитування."
 
 #. module: hr_recruitment_survey
 #. odoo-python
 #: code:addons/hr_recruitment_survey/wizard/survey_invite.py:0
+#, python-format
 msgid "The survey %(survey_link)s has been sent to %(partner_link)s"
 msgstr "Опитування %(survey_link)s надіслане %(partner_link)s"
 
@@ -366,10 +349,3 @@ msgstr "З якої ви країни?"
 #: model:survey.question.answer,value:hr_recruitment_survey.survey_recruitment_form_p1_q8_row4
 msgid "Working with state of the art technology"
 msgstr "Робота із сучасними технологіями"
-
-#. module: hr_recruitment_survey
-#: model_terms:ir.actions.act_window,help:hr_recruitment_survey.survey_survey_action_recruitment
-msgid ""
-"You can create surveys used for recruitments. Design easily your interview,\n"
-"                send invitations and analyze answers."
-msgstr ""

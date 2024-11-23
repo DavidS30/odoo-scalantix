@@ -1,20 +1,23 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import _, fields, models
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+from odoo import fields,api, models, _
+from odoo.exceptions import UserError, ValidationError
 
 
 class CrmTeam(models.Model):
-    _inherit = 'crm.team'
+    _inherit = "crm.team"
 
-    website_ids = fields.One2many(
-        string="Websites", comodel_name='website', inverse_name='salesteam_id',
-    )
-    abandoned_carts_amount = fields.Integer(
-        string="Amount of Abandoned Carts", compute='_compute_abandoned_carts',
-    )
+    website_ids = fields.One2many('website', 'salesteam_id', string='Websites')
     abandoned_carts_count = fields.Integer(
-        string="Number of Abandoned Carts", compute='_compute_abandoned_carts',
-    )
+        compute='_compute_abandoned_carts',
+        string='Number of Abandoned Carts', readonly=True)
+    abandoned_carts_amount = fields.Integer(
+        compute='_compute_abandoned_carts',
+        string='Amount of Abandoned Carts', readonly=True)
 
     def _compute_abandoned_carts(self):
         # abandoned carts to recover are draft sales orders that have no order lines,
@@ -37,7 +40,7 @@ class CrmTeam(models.Model):
         return {
             'name': _('Abandoned Carts'),
             'type': 'ir.actions.act_window',
-            'view_mode': 'list,form',
+            'view_mode': 'tree,form',
             'domain': [('is_abandoned_cart', '=', True)],
             'search_view_id': [self.env.ref('sale.sale_order_view_search_inherit_sale').id],
             'context': {

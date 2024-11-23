@@ -1,5 +1,6 @@
+/* @odoo-module */
+
 import { Composer } from "@mail/core/common/composer";
-import { _t } from "@web/core/l10n/translation";
 
 import { patch } from "@web/core/utils/patch";
 
@@ -8,10 +9,10 @@ patch(Composer.prototype, {
         super.onKeydown(ev);
         if (
             ev.key === "Tab" &&
-            this.thread?.channel_type === "livechat" &&
-            !this.props.composer.text
+            this.thread?.type === "livechat" &&
+            !this.props.composer.textInputContent
         ) {
-            const threadChanged = this.store.goToOldestUnreadLivechatThread();
+            const threadChanged = this.threadService.goToOldestUnreadLivechatThread();
             if (threadChanged) {
                 // prevent chat window from switching to the next thread: as
                 // we want to go to the oldest unread thread, not the next
@@ -20,20 +21,12 @@ patch(Composer.prototype, {
             }
         }
     },
-    get placeholder() {
-        if (
-            this.displayNextLivechatHint() &&
-            this.props.composer.isFocused &&
-            this.env.inChatWindow
-        ) {
-            return _t("Tab to next livechat");
-        }
-        return super.placeholder;
-    },
+
     displayNextLivechatHint() {
         return (
-            this.thread?.channel_type === "livechat" &&
-            this.store.discuss.livechats.some(
+            this.thread?.type === "livechat" &&
+            !this.env.inChatWindow &&
+            this.store.discuss.livechat.threads.some(
                 (thread) => thread.notEq(this.thread) && thread.isUnread
             )
         );

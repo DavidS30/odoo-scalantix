@@ -4,6 +4,7 @@
 import json
 
 from odoo import models, fields
+from odoo.tools import SQL
 from collections import defaultdict
 
 
@@ -11,26 +12,38 @@ class Project(models.Model):
     _inherit = 'project.project'
 
     def _get_expenses_profitability_items(self, with_action=True):
-        expenses_read_group = self.env['hr.expense']._read_group(
-            [('sheet_id.state', 'in', ['post', 'done']), ('analytic_distribution', 'in', self.account_id.ids)],
-            groupby=['sale_order_id', 'product_id', 'currency_id'],
-            aggregates=['id:array_agg', 'untaxed_amount_currency:sum'],
+        if not self.analytic_account_id:
+            return {}
+        can_see_expense = with_action and self.user_has_groups('hr_expense.group_hr_expense_team_approver')
+        query = self.env['hr.expense']._search([('state', 'in', ['approved', 'done'])])
+        query.add_where(
+            SQL(
+                "%s && %s",
+                [str(self.analytic_account_id.id)],
+                self.env['hr.expense']._query_analytic_accounts(),
+            )
         )
+        query_string, query_param = query.select('sale_order_id', 'product_id', 'currency_id', 'array_agg(id) as ids', 'SUM(untaxed_amount_currency) as untaxed_amount_currency')
+        query_string = f"{query_string} GROUP BY sale_order_id, product_id, currency_id"
+        self._cr.execute(query_string, query_param)
+        expenses_read_group = [expense for expense in self._cr.dictfetchall()]
         if not expenses_read_group:
             return {}
         expenses_per_so_id = {}
         expense_ids = []
         dict_amount_per_currency = defaultdict(lambda: 0.0)
-        can_see_expense = with_action and self.env.user.has_group('hr_expense.group_hr_expense_team_approver')
-        for sale_order, product, currency, ids, untaxed_amount_currency_sum in expenses_read_group:
-            expenses_per_so_id.setdefault(sale_order.id, {})[product.id] = ids
+        for res in expenses_read_group:
+            so_id = res['sale_order_id']
+            product_id = res['product_id']
+            expenses_per_so_id.setdefault(so_id, {})[product_id] = res['ids']
             if can_see_expense:
-                expense_ids.extend(ids)
-            dict_amount_per_currency[currency] += untaxed_amount_currency_sum
+                expense_ids.extend(res['ids'])
+            dict_amount_per_currency[res['currency_id']] += res['untaxed_amount_currency']
 
         amount_billed = 0.0
-        for currency, untaxed_amount_currency_sum in dict_amount_per_currency.items():
-            amount_billed += currency._convert(untaxed_amount_currency_sum, self.currency_id, self.company_id, round=False)
+        for currency_id in dict_amount_per_currency:
+            currency = self.env['res.currency'].browse(currency_id).with_prefetch(dict_amount_per_currency)
+            amount_billed += currency._convert(dict_amount_per_currency[currency_id], self.currency_id, self.company_id)
 
         sol_read_group = self.env['sale.order.line'].sudo()._read_group(
             [
@@ -90,13 +103,16 @@ class Project(models.Model):
 
     def _get_already_included_profitability_invoice_line_ids(self):
         move_line_ids = super()._get_already_included_profitability_invoice_line_ids()
-        expenses_read_group = self.env['hr.expense']._read_group(
-            [('sheet_id.state', 'in', ['post', 'done']), ('analytic_distribution', 'in', self.account_id.ids)],
-            groupby=['sale_order_id'],
-            aggregates=['__count'],
-        )
+        query = self.env['hr.expense']._search([('state', 'in', ['approved', 'done'])])
+        query.add_where('hr_expense.analytic_distribution ? %s', [str(self.analytic_account_id.id)])
+        query.order = None
+        query_string, query_param = query.select('sale_order_id')
+        query_string = f"{query_string} GROUP BY sale_order_id"
+        self._cr.execute(query_string, query_param)
+        expenses_read_group = list(self._cr.dictfetchall())
         if not expenses_read_group:
             return move_line_ids
-        for sale_order, count in expenses_read_group:
+        for res in expenses_read_group:
+            sale_order = self.env['sale.order'].browse(res['sale_order_id'])
             move_line_ids.extend(sale_order.invoice_ids.mapped('invoice_line_ids').ids)
         return move_line_ids

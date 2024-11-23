@@ -7,8 +7,8 @@ from odoo import Command
 class TestCommonSalePurchaseNoChart(TestSaleCommon):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref=None):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         uom_unit = cls.env.ref('uom.product_uom_unit')
         uom_dozen = cls.env.ref('uom.product_uom_dozen')

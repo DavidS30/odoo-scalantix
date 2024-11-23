@@ -16,6 +16,7 @@ _logger = logging.getLogger(__name__)
 # Holds the maximum amount of invoices that can be sent in a single submission. Should most likely not change.
 # Using a constant makes it easy to patch during testing to avoid needing to create 100+ invoices.
 SUBMISSION_MAX_SIZE = 100
+MAX_SUBMISSION_UPDATE = 25
 # An invalid invoice is considered as cancelled by the platform.
 CANCELLED_STATES = {'invalid', 'cancelled'}
 
@@ -461,15 +462,17 @@ class AccountMove(models.Model):
         # Use _notify_progress to ensure that we continue if all batches have not been done in time..
         total_submissions_to_process = len(invoices.mapped('l10n_my_edi_submission_uid'))
         submission_processed = 0
-        self.env['ir.cron']._notify_progress(done=submission_processed, remaining=total_submissions_to_process - submission_processed)
         for company, company_invoices in invoices_per_company.items():
-            if not company.l10n_my_edi_proxy_user_id or not company_invoices:
+            if not company.l10n_my_edi_proxy_user_id:
                 continue
 
             # We will group the current company invoices per submission_uid as we will query the api this way.
-            company_invoice_per_submission_uid = invoices_per_company[company].grouped('l10n_my_edi_submission_uid')
+            company_invoice_per_submission_uid = company_invoices.grouped('l10n_my_edi_submission_uid')
             # That done, we're ready to process the submissions.
             for submission_uid, invoices in company_invoice_per_submission_uid.items():
+                if submission_processed >= MAX_SUBMISSION_UPDATE:  # We don't want to spend too long processing submissions in one go.
+                    break
+
                 error, status_fetch_result = self._l10n_my_get_submission_status(submission_uid, company.l10n_my_edi_proxy_user_id)
                 if error:
                     raise UserError(error)  # We do not expect errors here so raising is a correct solution.
@@ -484,10 +487,11 @@ class AccountMove(models.Model):
                         message=_('This invoice has been %(status)s for reason: %(reason)s', status=invoice_result['status'], reason=invoice_result['reason']) if invoice_result.get('reason') else None,
                     )
                 submission_processed += 1
-                self.env['ir.cron']._notify_progress(done=submission_processed, remaining=total_submissions_to_process - submission_processed)
                 # Commit if we can, in case an issue arises later.
                 if self._can_commit():
                     self._cr.commit()
+        if total_submissions_to_process > submission_processed:
+            self.env.ref('l10n_my_edi.ir_cron_myinvois_sync')._trigger()
 
     @api.model
     def _l10n_my_get_submission_status(self, submission_uid, proxy_user):
@@ -643,7 +647,7 @@ class AccountMove(models.Model):
         """ Try to cancel the moves in self if allowed by the lock date. """
         for move in self:
             try:
-                move._check_fiscal_lock_dates()
+                move._check_fiscalyear_lock_date()
                 move.line_ids._check_tax_lock_date()
                 move.button_cancel()
             except UserError as e:

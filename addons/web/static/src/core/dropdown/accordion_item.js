@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { Component, onPatched, useState } from "@odoo/owl";
 
 export const ACCORDION = Symbol("Accordion");

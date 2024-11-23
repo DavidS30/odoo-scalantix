@@ -5,7 +5,6 @@ import { registry } from "@web/core/registry";
 import { useEffect, useRef } from "@odoo/owl";
 
 class DescriptionPageField extends CharField {
-    static template = "survey.DescriptionPageField";
     setup() {
         super.setup();
         const inputRef = useRef("input");
@@ -22,6 +21,7 @@ class DescriptionPageField extends CharField {
         this.env.openRecord(this.props.record);
     }
 }
+DescriptionPageField.template = "survey.DescriptionPageField";
 
 registry.category("fields").add("survey_description_page", {
     ...charField,

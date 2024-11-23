@@ -16,7 +16,6 @@ import {
     descendants,
     isVisibleTextNode,
     nodeSize,
-    getTraversedNodes,
 } from '../utils/utils.js';
 
 Text.prototype.oEnter = function (offset) {
@@ -38,6 +37,19 @@ HTMLElement.prototype.oEnter = function (offset, firstSplit = true) {
     let didSplit = false;
     if (isUnbreakable(this)) {
         throw UNBREAKABLE_ROLLBACK_CODE;
+    }
+    if (
+        !this.textContent &&
+        ['BLOCKQUOTE', 'PRE'].includes(this.parentElement.nodeName) &&
+        !this.nextSibling
+    ) {
+        const parent = this.parentElement;
+        const index = childNodeIndex(this);
+        if (this.previousElementSibling) {
+            this.remove();
+            return parent.oEnter(index, !didSplit);
+        }
+        return parent.oEnter(index + 1, !didSplit);
     }
     let restore;
     if (firstSplit) {
@@ -102,7 +114,7 @@ HTMLElement.prototype.oEnter = function (offset, firstSplit = true) {
  */
 HTMLHeadingElement.prototype.oEnter = function () {
     const newEl = HTMLElement.prototype.oEnter.call(this, ...arguments);
-    if (!descendants(newEl).some(isVisibleTextNode)) {
+    if (newEl && !descendants(newEl).some(isVisibleTextNode)) {
         const node = setTagName(newEl, 'P');
         node.replaceChildren(document.createElement('br'));
         setCursorStart(node);
@@ -152,9 +164,7 @@ HTMLQuoteElement.prototype.oEnter = HTMLHeadingElement.prototype.oEnter;
  */
 HTMLLIElement.prototype.oEnter = function () {
     // If not empty list item, regular block split
-    const traverseNodes = getTraversedNodes(this);
-    const isContainUnbreakable = traverseNodes.some(isUnbreakable);
-    if (this.textContent || isContainUnbreakable) {
+    if (this.textContent || this.querySelector('table')) {
         const node = HTMLElement.prototype.oEnter.call(this, ...arguments);
         if (node.classList.contains('o_checked')) {
             toggleClass(node, 'o_checked');

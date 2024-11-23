@@ -1,16 +1,14 @@
 /** @odoo-module **/
 
 import { _t } from "@web/core/l10n/translation";
-import { user } from "@web/core/user";
 import { useService } from "@web/core/utils/hooks";
 import { Component, status } from "@odoo/owl";
 
 export class SendSMSButton extends Component {
-    static template = "sms.SendSMSButton";
-    static props = ["*"];
     setup() {
         this.action = useService("action");
-        this.title = _t("Send SMS");
+        this.user = useService("user");
+        this.title = _t("Send SMS Text Message");
     }
     get phoneHref() {
         return "sms:" + this.props.record.data[this.props.name].replace(/\s+/g, "");
@@ -25,7 +23,7 @@ export class SendSMSButton extends Component {
                 res_model: "sms.composer",
                 views: [[false, "form"]],
                 context: {
-                    ...user.context,
+                    ...this.user.context,
                     default_res_model: this.props.record.resModel,
                     default_res_id: this.props.record.resId,
                     default_number_field_name: this.props.name,
@@ -43,3 +41,5 @@ export class SendSMSButton extends Component {
         );
     }
 }
+SendSMSButton.template = "sms.SendSMSButton";
+SendSMSButton.props = ["*"];

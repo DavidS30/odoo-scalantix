@@ -20,6 +20,11 @@ label.o_wbooth_category_unavailable {
         position: absolute;
     }
 
+    & > input + div {
+        opacity: .4;
+        border: 3px solid $o-gray-600;
+    }
+
     &:not(.o_wbooth_category_unavailable) > input + div {
         cursor: pointer;
     }
@@ -30,9 +35,7 @@ label.o_wbooth_category_unavailable {
 
     & > input:checked + div,
     &:hover > input:checked + div {
-        --o-border-color: #{$primary};
-
-        box-shadow: 0 0 0 ($border-width * 2) $primary;
+        opacity: 1;
     }
 
     & img {
@@ -49,23 +52,33 @@ label.o_wbooth_category_unavailable {
         visibility: hidden;
         position: absolute;
     }
-
     & > input + label {
-        padding: map-get($spacers, 2) map-get($spacers, 3);
-        border: $card-border-width solid $card-border-color;
-        border-radius: $btn-border-radius;
-        background: $card-bg;
-        color: $card-color;
+        opacity: .4;
+        padding: 1rem;
+        border: 1px solid $o-gray-600;
+    }
+
+    &:hover > input + label  {
+        opacity: 1;
     }
 
     & > input:checked + label,
     &:hover > input:checked + label {
-        --o-border-color: #{$primary};
-
-            box-shadow: 0 0 0 ($border-width) $primary;
+        opacity: 1;
+        background-color: $o-gray-600;
+        color: $o-white;
     }
+
 }
 
 .o_wevent_booth_category {
     background-color: $o-wevent-bg-color-light;
+}
+
+.o_wevent_booth_order_progress {
+    li {
+        &.o_current_stage {
+            font-weight: bold;
+        }
+    }
 }

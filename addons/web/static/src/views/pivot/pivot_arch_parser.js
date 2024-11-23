@@ -1,5 +1,7 @@
-import { exprToBoolean } from "@web/core/utils/strings";
+/** @odoo-module **/
+
 import { visitXML } from "@web/core/utils/xml";
+import { archParseBoolean } from "@web/views/utils";
 
 export class PivotArchParser {
     parse(arch) {
@@ -16,7 +18,7 @@ export class PivotArchParser {
             switch (node.tagName) {
                 case "pivot": {
                     if (node.hasAttribute("disable_linking")) {
-                        archInfo.disableLinking = exprToBoolean(
+                        archInfo.disableLinking = archParseBoolean(
                             node.getAttribute("disable_linking")
                         );
                     }
@@ -27,7 +29,7 @@ export class PivotArchParser {
                         archInfo.title = node.getAttribute("string");
                     }
                     if (node.hasAttribute("display_quantity")) {
-                        archInfo.displayQuantity = exprToBoolean(
+                        archInfo.displayQuantity = archParseBoolean(
                             node.getAttribute("display_quantity")
                         );
                     }

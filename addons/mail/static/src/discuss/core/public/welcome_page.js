@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { Component, useRef, useState, onMounted } from "@odoo/owl";
 
 import { browser } from "@web/core/browser/browser";
@@ -6,23 +8,23 @@ import { sprintf } from "@web/core/utils/strings";
 import { _t } from "@web/core/l10n/translation";
 
 export class WelcomePage extends Component {
-    static props = ["proceed?"];
+    static props = ["data?", "proceed?"];
     static template = "mail.WelcomePage";
 
     setup() {
-        super.setup();
         this.isClosed = false;
         this.store = useState(useService("mail.store"));
-        this.ui = useState(useService("ui"));
+        this.rpc = useService("rpc");
+        this.personaService = useService("mail.persona");
         this.state = useState({
-            userName: "Guest",
+            userName: this.props.data?.discussPublicViewData?.guest_name || _t("Guest"),
             audioStream: null,
             videoStream: null,
         });
         this.audioRef = useRef("audio");
         this.videoRef = useRef("video");
         onMounted(() => {
-            if (this.store.discuss_public_thread.defaultDisplayMode === "video_full_screen") {
+            if (this.props.data.channelData.defaultDisplayMode === "video_full_screen") {
                 this.enableMicrophone();
                 this.enableVideo();
             }
@@ -36,8 +38,8 @@ export class WelcomePage extends Component {
     }
 
     joinChannel() {
-        if (this.store.self.type === "guest") {
-            this.store.self.updateGuestName(this.state.userName.trim());
+        if (this.store.guest) {
+            this.personaService.updateGuestName(this.store.self, this.state.userName.trim());
         }
         browser.localStorage.setItem("discuss_call_preview_join_mute", !this.state.audioStream);
         browser.localStorage.setItem(
@@ -126,6 +128,6 @@ export class WelcomePage extends Component {
         }
     }
     getLoggedInAsText() {
-        return sprintf(_t("Logged in as %s"), this.store.self.name);
+        return sprintf(_t("Logged in as %s"), this.store.user.name);
     }
 }

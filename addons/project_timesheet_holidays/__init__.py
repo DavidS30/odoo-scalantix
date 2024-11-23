@@ -2,6 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from . import models
+from odoo import _
 
 
 def post_init(env):
@@ -19,7 +20,7 @@ def post_init(env):
         if not company.internal_project_id:
             if not internal_projects_by_company_dict:
                 internal_projects_by_company_read = project.search_read([
-                    ('name', '=', env._('Internal')),
+                    ('name', '=', _('Internal')),
                     ('allow_timesheets', '=', True),
                     ('company_id', 'in', companies.ids),
                 ], ['company_id', 'id'])
@@ -27,7 +28,7 @@ def post_init(env):
             project_id = internal_projects_by_company_dict.get(company.id, False)
             if not project_id:
                 project_id = project.create({
-                    'name': env._('Internal'),
+                    'name': _('Internal'),
                     'allow_timesheets': True,
                     'company_id': company.id,
                     'type_ids': type_ids,
@@ -35,7 +36,7 @@ def post_init(env):
             company.write({'internal_project_id': project_id})
         if not company.leave_timesheet_task_id:
             task = company.env['project.task'].create({
-                'name': env._('Time Off'),
+                'name': _('Time Off'),
                 'project_id': company.internal_project_id.id,
                 'active': True,
                 'company_id': company.id,

@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { _t } from "@web/core/l10n/translation";
 import { useInputField } from "../input_field_hook";
@@ -15,11 +17,7 @@ export class UrlField extends Component {
     };
 
     setup() {
-        useInputField({ getValue: () => this.value });
-    }
-
-    get value() {
-        return this.props.record.data[this.props.name] || "";
+        useInputField({ getValue: () => this.props.record.data[this.props.name] || "" });
     }
 
     get formattedHref() {

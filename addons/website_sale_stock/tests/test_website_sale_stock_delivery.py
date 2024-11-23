@@ -5,7 +5,7 @@ from odoo.tests import tagged
 from odoo.addons.payment.tests.common import PaymentCommon
 from odoo.addons.sale.tests.common import SaleCommon
 from odoo.addons.website.tools import MockRequest
-from odoo.addons.website_sale.controllers.delivery import Delivery
+from odoo.addons.website_sale.controllers.delivery import WebsiteSaleDelivery
 from odoo.exceptions import ValidationError
 
 
@@ -14,7 +14,7 @@ class TestWebsiteSaleStockDeliveryController(PaymentCommon, SaleCommon):
     def setUp(self):
         super().setUp()
         self.website = self.env.ref('website.default_website')
-        self.Controller = Delivery()
+        self.Controller = WebsiteSaleDelivery()
 
     def test_validate_payment_with_no_available_delivery_method(self):
         """
@@ -24,7 +24,7 @@ class TestWebsiteSaleStockDeliveryController(PaymentCommon, SaleCommon):
         storable_product = self.env['product.product'].create({
             'name': 'Storable Product',
             'sale_ok': True,
-            'is_storable': True,
+            'type': 'product',
             'website_published': True,
         })
         carriers = self.env['delivery.carrier'].search([])

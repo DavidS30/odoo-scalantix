@@ -7,7 +7,6 @@ from odoo import http
 from odoo.http import request
 from odoo.tools import file_open
 from odoo.addons.mail.models.discuss.mail_guest import add_guest_to_context
-from odoo.addons.mail.tools.discuss import Store
 
 
 class RtcController(http.Controller):
@@ -71,10 +70,8 @@ class RtcController(http.Controller):
         member = channel._find_or_create_member_for_self()
         if not member:
             raise NotFound()
-        store = Store()
         # sudo: discuss.channel.rtc.session - member of current user can join call
-        member.sudo()._rtc_join_call(store, check_rtc_session_ids=check_rtc_session_ids)
-        return store.get_result()
+        return member.sudo()._rtc_join_call(check_rtc_session_ids=check_rtc_session_ids)
 
     @http.route("/mail/rtc/channel/leave_call", methods=["POST"], type="json", auth="public")
     @add_guest_to_context
@@ -86,7 +83,7 @@ class RtcController(http.Controller):
         if not member:
             raise NotFound()
         # sudo: discuss.channel.rtc.session - member of current user can leave call
-        member.sudo()._rtc_leave_call()
+        return member.sudo()._rtc_leave_call()
 
     @http.route("/mail/rtc/channel/cancel_call_invitation", methods=["POST"], type="json", auth="public")
     @add_guest_to_context
@@ -99,9 +96,9 @@ class RtcController(http.Controller):
         if not channel:
             raise NotFound()
         # sudo: discuss.channel.rtc.session - can cancel invitations in accessible channel
-        channel.sudo()._rtc_cancel_invitations(member_ids=member_ids)
+        return channel.sudo()._rtc_cancel_invitations(member_ids=member_ids)
 
-    @http.route("/mail/rtc/audio_worklet_processor", methods=["GET"], type="http", auth="public", readonly=True)
+    @http.route("/mail/rtc/audio_worklet_processor", methods=["GET"], type="http", auth="public")
     def audio_worklet_processor(self):
         """Returns a JS file that declares a WorkletProcessor class in
         a WorkletGlobalScope, which means that it cannot be added to the
@@ -130,11 +127,12 @@ class RtcController(http.Controller):
             ]
             channel_member_sudo.channel_id.rtc_session_ids.filtered_domain(domain).write({})  # update write_date
         current_rtc_sessions, outdated_rtc_sessions = channel_member_sudo._rtc_sync_sessions(check_rtc_session_ids)
-        return (
-            Store(member.channel_id, {"rtcSessions": Store.many(current_rtc_sessions, "ADD")})
-            .add(
-                member.channel_id,
-                {"rtcSessions": Store.many(outdated_rtc_sessions, "DELETE", only_id=True)},
-            )
-            .get_result()
-        )
+        return {
+            "rtcSessions": [
+                ("ADD", [rtc_session_sudo._mail_rtc_session_format() for rtc_session_sudo in current_rtc_sessions]),
+                (
+                    "DELETE",
+                    [{"id": missing_rtc_session_sudo.id} for missing_rtc_session_sudo in outdated_rtc_sessions],
+                ),
+            ]
+        }

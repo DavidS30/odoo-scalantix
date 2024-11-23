@@ -3,13 +3,13 @@
 
 import logging
 
-from odoo.tests import HttpCase, tagged, loaded_demo_data
+from odoo.tests import HttpCase, tagged
 
 _logger = logging.getLogger(__name__)
 
 
 @tagged('-at_install', 'post_install')
-class TestSaleTimesheetUi(HttpCase):
+class TestUi(HttpCase):
 
     @classmethod
     def setUpClass(cls):
@@ -38,10 +38,8 @@ class TestSaleTimesheetUi(HttpCase):
             .create({'group_project_milestone': True}) \
             .execute()
 
-    def test_ui(self):
-        if not loaded_demo_data(self.env):
-            _logger.warning("This test relies on demo data. To be rewritten independently of demo data for accurate and reliable results.")
-            return
+        admin = cls.env.ref('base.user_admin')
+        admin.employee_id.hourly_cost = 75
 
-        self.env['product.pricelist'].with_context(active_test=False).search([]).unlink()
-        self.start_tour('/odoo', 'sale_timesheet_tour', login='admin', timeout=100)
+    def test_ui(self):
+        self.start_tour('/web', 'sale_timesheet_tour', login='admin', timeout=100)

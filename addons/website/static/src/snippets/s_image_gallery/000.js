@@ -60,15 +60,11 @@ const GalleryWidget = publicWidget.Widget.extend({
         };
 
         const milliseconds = this.el.dataset.interval || false;
-        const lightboxTemplate = this.$target[0].dataset.vcss === "002" ?
-            "website.gallery.s_image_gallery_mirror.lightbox" :
-            "website.gallery.slideshow.lightbox";
-        this.$modal = $(renderToElement(lightboxTemplate, {
+        this.$modal = $(renderToElement('website.gallery.slideshow.lightbox', {
             images: imageEls,
             index: currentImageIndex,
             dim: dimensions,
             interval: milliseconds || 0,
-            ride: !milliseconds ? "false" : "carousel",
             id: uniqueId("slideshow_"),
         }));
         this.__onModalKeydown = this._onModalKeydown.bind(this);

@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.osv import expression
 
 class ProductTag(models.Model):
     _name = 'product.tag'
     _description = 'Product Tag'
-    _order = 'sequence, id'
 
     def _get_default_template_id(self):
         return self.env['product.template'].browse(self.env.context.get('product_template_id'))
@@ -16,7 +15,6 @@ class ProductTag(models.Model):
         return self.env['product.product'].browse(self.env.context.get('product_variant_id'))
 
     name = fields.Char(string="Name", required=True, translate=True)
-    sequence = fields.Integer(default=10)
     color = fields.Char(string="Color", default='#3C3C3C')
     product_template_ids = fields.Many2many(
         string="Product Templates",
@@ -45,9 +43,12 @@ class ProductTag(models.Model):
         for tag in self:
             tag.product_ids = tag.product_template_ids.product_variant_ids | tag.product_product_ids
 
+    @api.returns(None, lambda value: value[0])
     def copy_data(self, default=None):
-        vals_list = super().copy_data(default=default)
-        return [dict(vals, name=self.env._("%s (copy)", tag.name)) for tag, vals in zip(self, vals_list)]
+        default = default or {}
+        if not default.get('name'):
+            default['name'] = _('%s (copy)', self.name)
+        return super().copy_data(default=default)
 
     def _search_product_ids(self, operator, operand):
         if operator in expression.NEGATIVE_TERM_OPERATORS:

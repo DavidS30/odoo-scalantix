@@ -1,31 +1,11 @@
 /* @odoo-module */
 
 import { usePopover } from "@web/core/popover/popover_hook";
-import { user } from "@web/core/user";
 import { formatNumber, useNewAllocationRequest } from "@hr_holidays/views/hooks";
 import { useService } from "@web/core/utils/hooks";
 import { Component, onWillRender } from "@odoo/owl";
 
 export class TimeOffCardPopover extends Component {
-    static template = "hr_holidays.TimeOffCardPopover";
-    static props = [
-        "allocated",
-        "accrual_bonus",
-        "approved",
-        "planned",
-        "left",
-        "warning",
-        "closest",
-        "request_unit",
-        "exceeding_duration",
-        "close?",
-        "allows_negative",
-        "max_allowed_negative",
-        "onClickNewAllocationRequest?",
-        "errorLeaves",
-        "accrualExcess",
-    ];
-
     setup() {
         this.actionService = useService("action");
     }
@@ -43,17 +23,33 @@ export class TimeOffCardPopover extends Component {
     }
 }
 
-export class TimeOffCard extends Component {
-    static template = "hr_holidays.TimeOffCard";
-    static props = ["name", "data", "requires_allocation", "employeeId", "holidayStatusId"];
+TimeOffCardPopover.template = "hr_holidays.TimeOffCardPopover";
+TimeOffCardPopover.props = [
+    "allocated",
+    "accrual_bonus",
+    "approved",
+    "planned",
+    "left",
+    "warning",
+    "closest",
+    "request_unit",
+    "exceeding_duration",
+    "close?",
+    "allows_negative",
+    "max_allowed_negative",
+    "onClickNewAllocationRequest?",
+    "errorLeaves",
+    "accrualExcess",
+];
 
+export class TimeOffCard extends Component {
     setup() {
         this.popover = usePopover(TimeOffCardPopover, {
             position: "bottom",
             popoverClass: "bg-view",
         });
         this.newAllocationRequest = useNewAllocationRequest();
-        this.lang = user.lang;
+        this.lang = this.env.services.user.lang;
         this.formatNumber = formatNumber;
         const { data } = this.props;
         this.errorLeaves = Object.values(data.virtual_excess_data).map((data) => data.leave_id);
@@ -110,6 +106,9 @@ export class TimeOffCard extends Component {
     }
 }
 
-export class TimeOffCardMobile extends TimeOffCard {
-    static template = "hr_holidays.TimeOffCardMobile";
-}
+TimeOffCard.template = "hr_holidays.TimeOffCard";
+TimeOffCard.props = ["name", "data", "requires_allocation", "employeeId", "holidayStatusId"];
+
+export class TimeOffCardMobile extends TimeOffCard {}
+
+TimeOffCardMobile.template = "hr_holidays.TimeOffCardMobile";

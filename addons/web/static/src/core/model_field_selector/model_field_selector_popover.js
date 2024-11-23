@@ -1,6 +1,7 @@
+/** @odoo-module **/
+
 import { Component, onWillStart, useEffect, useRef, useState } from "@odoo/owl";
 import { debounce } from "@web/core/utils/timing";
-import { _t } from "@web/core/l10n/translation";
 import { fuzzyLookup } from "@web/core/utils/search";
 import { KeepLast } from "@web/core/utils/concurrency";
 import { sortBy } from "@web/core/utils/arrays";
@@ -40,10 +41,7 @@ class Page {
     get title() {
         const prefix = this.previousPage?.previousPage ? "... > " : "";
         const title = this.previousPage?.selectedField.string || "";
-        if (prefix.length || title.length) {
-            return `${prefix}${title}`;
-        }
-        return _t("Select a field");
+        return `${prefix}${title}`;
     }
 
     focus(direction) {
@@ -227,7 +225,7 @@ export class ModelFieldSelectorPopover extends Component {
         }
         this.keepLast.add(Promise.resolve());
         this.state.page.selectedName = field.name;
-        this.props.update(this.state.page.path, field);
+        this.props.update(this.state.page.path);
         this.props.close(true);
     }
 

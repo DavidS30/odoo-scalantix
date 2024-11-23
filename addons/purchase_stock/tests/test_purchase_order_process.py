@@ -38,7 +38,7 @@ class TestPurchaseOrderProcess(PurchaseTestCommon):
         """
         product = self.env['product.product'].create({
             'name': 'Product with packaging',
-            'is_storable': True,
+            'type': 'product',
         })
 
         packaging = self.env['product.packaging'].create({

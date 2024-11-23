@@ -20,7 +20,6 @@ class AccountTax(models.Model):
             ('isr', "ISR"),
             ('iva', "IVA"),
             ('ieps', "IEPS"),
-            ('local', "Local"),
         ],
         string="SAT Tax Type",
         compute="_compute_l10n_mx_tax_type",

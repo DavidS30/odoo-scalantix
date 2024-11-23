@@ -1,3 +1,6 @@
+/** @odoo-module **/
+
+import { _t } from "@web/core/l10n/translation";
 import { useService, useAutofocus } from '@web/core/utils/hooks';
 import { useNestedSortable } from "@web/core/utils/nested_sortable";
 import wUtils from '@website/js/utils';
@@ -29,18 +32,9 @@ const useControlledInput = (initialValue, validate) => {
 };
 
 export class MenuDialog extends Component {
-    static template = "website.MenuDialog";
-    static components = { WebsiteDialog };
-    static props = {
-        name: { type: String, optional: true },
-        url: { type: String, optional: true },
-        isMegaMenu: { type: Boolean, optional: true },
-        save: Function,
-        close: Function,
-    };
-
     setup() {
         this.website = useService('website');
+        this.title = _t("Add a menu item");
         useAutofocus();
 
         this.name = useControlledInput(this.props.name, value => !!value);
@@ -75,18 +69,17 @@ export class MenuDialog extends Component {
         }
     }
 }
+MenuDialog.template = 'website.MenuDialog';
+MenuDialog.props = {
+    name: { type: String, optional: true },
+    url: { type: String, optional: true },
+    isMegaMenu: { type: Boolean, optional: true },
+    save: Function,
+    close: Function,
+};
+MenuDialog.components = { WebsiteDialog };
 
 class MenuRow extends Component {
-    static template = "website.MenuRow";
-    static props = {
-        menu: Object,
-        edit: Function,
-        delete: Function,
-    };
-    static components = {
-        MenuRow,
-    };
-
     edit() {
         this.props.edit(this.props.menu.fields['id']);
     }
@@ -95,19 +88,24 @@ class MenuRow extends Component {
         this.props.delete(this.props.menu.fields['id']);
     }
 }
+MenuRow.props = {
+    menu: Object,
+    edit: Function,
+    delete: Function,
+};
+MenuRow.template = 'website.MenuRow';
+MenuRow.components = {
+    MenuRow,
+};
 
 export class EditMenuDialog extends Component {
-    static template = "website.EditMenuDialog";
-    static components = {
-        MenuRow,
-        WebsiteDialog,
-    };
-    static props = ["rootID?", "close", "save?"];
-
     setup() {
         this.orm = useService('orm');
         this.website = useService('website');
         this.dialogs = useService('dialog');
+
+        this.title = _t("Edit Menu");
+        this.saveButton = _t("Save");
 
         this.menuEditor = useRef('menu-editor');
 
@@ -264,3 +262,8 @@ export class EditMenuDialog extends Component {
         }
     }
 }
+EditMenuDialog.template = 'website.EditMenuDialog';
+EditMenuDialog.components = {
+    MenuRow,
+    WebsiteDialog,
+};

@@ -5,7 +5,6 @@ from dateutil.relativedelta import relativedelta
 from freezegun import freeze_time
 
 from odoo import Command
-from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo.addons.account.tests.test_account_move_send import TestAccountMoveSendCommon
 from odoo.exceptions import UserError
 from odoo.tests import tagged
@@ -18,9 +17,8 @@ CONTACT_PROXY_METHOD = 'odoo.addons.l10n_my_edi.models.account_edi_proxy_user.Ac
 class L10nMyEDITestSubmission(TestAccountMoveSendCommon):
 
     @classmethod
-    @AccountTestInvoicingCommon.setup_country('my')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref='my'):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         # We can reuse this invoice for the flow tests.
         cls.basic_invoice = cls.init_invoice(
@@ -256,7 +254,7 @@ class L10nMyEDITestSubmission(TestAccountMoveSendCommon):
         send_and_print = self.create_send_and_print(self.submission_invoice)
         with patch(CONTACT_PROXY_METHOD, new=self._test_08_mock), \
              patch('odoo.addons.l10n_my_edi.models.account_move.SUBMISSION_MAX_SIZE', 2):
-            send_and_print.action_send_and_print(force_synchronous=True)
+            send_and_print.action_send_and_print()
 
         # we have 10 invoices, with a max size of 2 we expect 5 different submissions.
         self.assertEqual(self.submission_count, 5)

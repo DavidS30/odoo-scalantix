@@ -37,7 +37,8 @@ class Rating(models.Model):
         for model, model_data in self._classify_by_model().items():
             records = self.env[model].browse(model_data['record_ids'])
             try:
-                records.check_access('write')
+                records.check_access_rights('write')
+                records.check_access_rule('write')
             except exceptions.AccessError as e:
                 raise exceptions.AccessError(
                     _("Updating rating comment require write access on related record")

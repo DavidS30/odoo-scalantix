@@ -8,8 +8,8 @@ from odoo.tests import Form, tagged
 class StockMoveInvoice(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref=None):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         cls.ProductProduct = cls.env['product.product']
         cls.SaleOrder = cls.env['sale.order']
@@ -104,6 +104,7 @@ class StockMoveInvoice(AccountTestInvoicingCommon):
         serial_numbers = self.env['stock.lot'].create([{
             'name': str(x),
             'product_id': self.product_cable_management_box.id,
+            'company_id': self.env.company.id,
         } for x in range(5)])
 
         self.sale_prepaid = self.SaleOrder.create({
@@ -162,7 +163,9 @@ class StockMoveInvoice(AccountTestInvoicingCommon):
         self.assertEqual(sum([line.quantity for line in so.picking_ids.move_ids]), 2)
         so.picking_ids.move_ids[0].quantity = 1
         so.picking_ids.move_ids[0].picked = True
-        Form.from_action(self.env, so.picking_ids.button_validate()).save().process()
+        backorder_wizard_dict = so.picking_ids.button_validate()
+        backorder_wizard = Form(self.env[backorder_wizard_dict['res_model']].with_context(backorder_wizard_dict['context'])).save()
+        backorder_wizard.process()
         self.assertEqual(len(so.picking_ids), 2)
         self.assertEqual(sum([line.quantity for line in so.picking_ids.move_ids]), 2)
 
@@ -205,8 +208,7 @@ class StockMoveInvoice(AccountTestInvoicingCommon):
         # Return picking
         return_form = Form(self.env["stock.return.picking"].with_context(active_id=sale_order.picking_ids.id, active_model="stock.picking"))
         return_wizard = return_form.save()
-        return_wizard.product_return_moves.quantity = 2
-        action = return_wizard.action_create_returns()
+        action = return_wizard.create_returns()
         return_picking = self.env["stock.picking"].browse(action["res_id"])
 
         # add new product so new picking is created

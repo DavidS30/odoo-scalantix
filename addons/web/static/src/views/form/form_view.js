@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { RelationalModel } from "@web/model/relational_model/relational_model";
 import { FormRenderer } from "./form_renderer";
@@ -7,6 +9,8 @@ import { FormCompiler } from "./form_compiler";
 
 export const formView = {
     type: "form",
+    display_name: "Form",
+    multiRecord: false,
     searchMenuTypes: [],
     Controller: FormController,
     Renderer: FormRenderer,

@@ -14,21 +14,19 @@ QUnit.test("Display notification for media device permission on barcode scanning
         return Promise.reject(new DOMException("", "NotAllowedError"));
     };
 
-    class BarcodeScan extends Component {
-        static template = xml`
-            <div>
-                <BarcodeScanner onBarcodeScanned="(ev) => this.onBarcodeScanned(ev)"/>
-            </div>
-        `;
-        static components = { BarcodeScanner };
-        static props = ["*"];
-    }
+    class BarcodeScan extends Component {}
+    BarcodeScan.components = { BarcodeScanner };
+    BarcodeScan.template = xml`
+        <div>
+            <BarcodeScanner onBarcodeScanned="(ev) => this.onBarcodeScanned(ev)"/>
+        </div>
+    `;
 
     const target = getFixture();
     const { env } = await createWebClient({});
     await mount(BarcodeScan, target, { env });
 
     await document.querySelector('.o_mobile_barcode').click();
-    await contains(".modal-body", { text: "Unable to access cameraCould not start scanning. Odoo needs your authorization first." });
-    await document.querySelector('.modal-header button[aria-label="Close"]').click();
+    await contains(".o_notification", { text: "Could not start scanning. Odoo needs your authorization first." });
+
 })

@@ -1,13 +1,15 @@
-import { Component } from "@odoo/owl";
+/* @odoo-module */
+
+import { Component, useState } from "@odoo/owl";
 import { Typing } from "@mail/discuss/typing/common/typing";
+import { useService } from "@web/core/utils/hooks";
 
 export class ImStatus extends Component {
-    static props = ["persona?", "className?", "style?", "member?", "size?"];
+    static props = ["persona", "className?", "style?", "thread?"];
     static template = "mail.ImStatus";
-    static defaultProps = { className: "", style: "", size: "lg" };
+    static defaultProps = { className: "", style: "" };
     static components = { Typing };
-
-    get persona() {
-        return this.props.persona ?? this.props.member?.persona;
+    setup() {
+        this.typingService = useState(useService("discuss.typing"));
     }
 }

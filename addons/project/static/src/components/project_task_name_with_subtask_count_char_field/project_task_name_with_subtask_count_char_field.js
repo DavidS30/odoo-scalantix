@@ -10,7 +10,7 @@ export class ProjectTaskNameWithSubtaskCountCharField extends CharField {
 export const projectTaskNameWithSubtaskCountCharField = {
     ...charField,
     component: ProjectTaskNameWithSubtaskCountCharField,
-    fieldDependencies: [
+    fieldsDependencies: [
         { name: "subtask_count", type: "integer" },
         { name: "closed_subtask_count", type: "integer" },
     ],

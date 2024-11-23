@@ -504,7 +504,7 @@ class AccountMove(models.Model):
         self.l10n_vn_edi_invoice_state = 'canceled'
 
         try:
-            self._check_fiscal_lock_dates()
+            self._check_fiscalyear_lock_date()
             self.line_ids._check_tax_lock_date()
 
             self.button_cancel()
@@ -715,9 +715,9 @@ class AccountMove(models.Model):
         """ Create and return the tax breakdown of the current invoice. """
         self.ensure_one()
 
-        def grouping_key_generator(base_line, tax_data):
+        def grouping_key_generator(base_line, tax_values):
             # Requirement is to generate a tax breakdown per taxPercentage
-            return {'tax_percentage': tax_data['tax'].amount or -2}
+            return {'tax_percentage': tax_values['tax_repartition_line'].tax_id.amount or -2}
 
         tax_breakdowns = []
 

@@ -99,14 +99,6 @@ html, body {
     height: 100%;
 }
 
-pre {    
-    padding: map-get($spacers, 2) map-get($spacers, 3);
-    border: $border-width solid $border-color;
-    border-radius: $border-radius;
-    background-color: $gray-100;
-    color: $gray-900;
-}
-
 *[contenteditable=true] {
     outline: none;
 }
@@ -119,6 +111,23 @@ pre {
 }
 .editor_enable .css_editable_mode_hidden {
     display: none !important;
+}
+.note-toolbar {
+    margin-left: 0 !important;
+}
+.note-popover .popover > .arrow {
+    display: none;
+}
+
+.note-popover .popover, .note-editor {
+    .dropdown-menu .dropdown-item {
+        > i {
+            visibility: hidden;
+        }
+        &.checked > i {
+            visibility: visible;
+        }
+    }
 }
 
 /* ----- GENERIC LAYOUTING HELPERS ---- */
@@ -481,6 +490,9 @@ a.o_underline {
 
 @include media-breakpoint-down(md) {
     odoo-wysiwyg-container {
+        .panel-heading.note-toolbar {
+            overflow-x: auto;
+        }
         .btn-group {
             position: static;
         }
@@ -544,6 +556,10 @@ blockquote {
     border-left: 5px solid;
     border-color: map-get($grays, '300');
     font-style: italic;
+}
+
+pre {
+    white-space: pre-wrap;
 }
 
 // Extend bootstrap to create background and text utilities for some colors
@@ -982,12 +998,4 @@ section, .oe_img_bg, [data-oe-shape-data] {
     ul.o_checklist>li:not(.oe-nested)::before {
         top: 0px!important;
     }
-}
-
-code.o_inline_code {
-    padding: .2em .4em;
-    border-radius: $border-radius;
-    background-color: var(--WebEditor__inlineCode-bg, #{$gray-200});
-    font-size: 85%;
-    color: $gray-900;
 }

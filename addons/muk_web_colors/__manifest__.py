@@ -4,12 +4,12 @@
     'description': '''
         This module gives you options to customize the theme colors.
     ''',
-    'version': '18.0.1.0.6',
+    'version': '17.0.1.0.5',
     'category': 'Tools/UI',
     'license': 'LGPL-3', 
     'author': 'MuK IT',
     'website': 'http://www.mukit.at',
-    'live_test_url': 'https://my.mukit.at/r/f6m',
+    'live_test_url': 'https://mukit.at/demo',
     'contributors': [
         'Mathias Markl <mathias.markl@mukit.at>',
     ],

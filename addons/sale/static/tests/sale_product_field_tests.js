@@ -51,17 +51,9 @@ QUnit.module("Fields", (hooks) => {
                             type: "many2one",
                             relation: "product.template",
                         },
-                        product_id: {
-                            string: "Product",
-                            type: "many2one",
-                            relation: "product.product",
-                        },
-                        name: {
-                            string: "Description",
-                            type: "char",
-                        }
                     },
-                    records: [],
+                    records: [
+                    ],
                 },
                 'product.template': {
                     fields: {
@@ -73,18 +65,9 @@ QUnit.module("Fields", (hooks) => {
                     ],
                     methods:  {
                         get_single_product_variant() {
-                            return Promise.resolve({product_id: 14, product_name: 'desk'});
+                            return Promise.resolve({product_id: 12});
                         }
                     }
-                },
-                'product.product': {
-                    fields: {
-                        display_name: { string: "Partner Type", type: "char" },
-                        name: { string: "Partner Type", type: "char" },
-                    },
-                    records: [
-                        { id: 14, display_name: "desk" },
-                    ],
                 },
                 user: {
                     fields: {
@@ -121,11 +104,9 @@ QUnit.module("Fields", (hooks) => {
                 <form>
                     <sheet>
                         <field name="order_line">
-                            <list editable="bottom">
-                                <field name="product_template_id" widget="sol_product_many2one"/>
-                                <field name="product_id" optional="hide"/>
-                                <field name="name" optional="show"/>
-                            </list>
+                            <tree editable="bottom" >
+                                <field name="product_template_id" widget="sol_product_many2one" />
+                            </tree>
                         </field>
                     </sheet>
                 </form>`,

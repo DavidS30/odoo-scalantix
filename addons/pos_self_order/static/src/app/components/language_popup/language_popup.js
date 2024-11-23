@@ -1,12 +1,11 @@
+/** @odoo-module */
+
 import { Component } from "@odoo/owl";
 import { useSelfOrder } from "@pos_self_order/app/self_order_service";
 import { cookie } from "@web/core/browser/cookie";
 
 export class LanguagePopup extends Component {
     static template = "pos_self_order.LanguagePopup";
-    static props = {
-        close: Function,
-    };
 
     setup() {
         this.selfOrder = useSelfOrder();

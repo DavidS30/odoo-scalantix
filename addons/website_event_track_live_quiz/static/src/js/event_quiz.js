@@ -1,6 +1,5 @@
 /** @odoo-module **/
 
-import { rpc } from "@web/core/network/rpc";
 import Quiz from "@website_event_track_quiz/js/event_quiz";
 
 var WebsiteEventTrackSuggestionQuiz = Quiz.include({
@@ -37,7 +36,7 @@ var WebsiteEventTrackSuggestionQuiz = Quiz.include({
 
     _getTrackSuggestion: function () {
         var self = this;
-        return rpc('/event_track/get_track_suggestion', {
+        return this.rpc('/event_track/get_track_suggestion', {
             track_id: this.track.id,
         }).then(function (suggestion) {
             self.nextSuggestion = suggestion;

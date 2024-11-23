@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { useSequential } from "@mail/utils/common/hooks";
 import { useState, onWillUnmount, markup } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
@@ -61,9 +63,9 @@ export function searchHighlight(searchTerm, target) {
     return markup(htmlDoc.body.innerHTML);
 }
 
-/** @param {import('models').Thread} thread */
+/** @param {import('@mail/core/common/thread_model').Thread} thread */
 export function useMessageSearch(thread) {
-    const store = useService("mail.store");
+    const threadService = useService("mail.thread");
     const sequential = useSequential();
     const state = useState({
         thread,
@@ -71,7 +73,7 @@ export function useMessageSearch(thread) {
             if (this.searchTerm) {
                 this.searching = true;
                 const data = await sequential(() =>
-                    store.search(this.searchTerm, this.thread, before)
+                    threadService.search(this.searchTerm, this.thread, before)
                 );
                 if (!data) {
                     return;

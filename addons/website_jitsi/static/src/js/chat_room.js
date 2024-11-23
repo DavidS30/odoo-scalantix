@@ -3,12 +3,16 @@
 import publicWidget from "@web/legacy/js/public/public_widget";
 import { renderToElement } from "@web/core/utils/render";
 import { utils as uiUtils } from "@web/core/ui/ui_service";
-import { rpc } from "@web/core/network/rpc";
 
 publicWidget.registry.ChatRoom = publicWidget.Widget.extend({
     selector: '.o_wjitsi_room_widget',
     events: {
         'click .o_wjitsi_room_link': '_onChatRoomClick',
+    },
+
+    init() {
+        this._super(...arguments);
+        this.rpc = this.bindService("rpc");
     },
 
     /**
@@ -60,7 +64,7 @@ publicWidget.registry.ChatRoom = publicWidget.Widget.extend({
         if (this.checkFull) {
             // maybe we didn't refresh the page for a while and so we might join a room
             // which is full, so we perform a RPC call to verify that we can really join
-            let isChatRoomFull = await rpc('/jitsi/is_full', { room_name: this.roomName });
+            let isChatRoomFull = await this.rpc('/jitsi/is_full', { room_name: this.roomName });
 
             if (isChatRoomFull) {
                 window.location.reload();
@@ -200,7 +204,7 @@ publicWidget.registry.ChatRoom = publicWidget.Widget.extend({
       * @param {boolean} joined, true if someone joined the room
       */
     _updateParticipantCount: async function (count, joined) {
-        await rpc('/jitsi/update_status', {
+        await this.rpc('/jitsi/update_status', {
             room_name: this.roomName,
             participant_count: count,
             joined: joined,

@@ -23,9 +23,10 @@ This module adds several features to the Point of Sale that are specific to rest
         'views/pos_order_views.xml',
         'views/pos_restaurant_views.xml',
         'views/res_config_settings_views.xml',
+        'data/pos_restaurant_data.xml',
     ],
     'demo': [
-        'data/demo_data.xml',
+        'data/pos_restaurant_demo.xml',
     ],
     'installable': True,
     'application': True,

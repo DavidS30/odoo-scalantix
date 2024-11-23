@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { _t } from "@web/core/l10n/translation";
 import { formatMonetary } from "../formatters";
@@ -5,9 +7,8 @@ import { parseMonetary } from "../parsers";
 import { useInputField } from "../input_field_hook";
 import { useNumpadDecimal } from "../numpad_decimal_hook";
 import { standardFieldProps } from "../standard_field_props";
-import { nbsp } from "@web/core/utils/strings";
 
-import { Component, useState, useEffect } from "@odoo/owl";
+import { Component } from "@odoo/owl";
 import { getCurrency } from "@web/core/currency";
 
 export class MonetaryField extends Component {
@@ -26,15 +27,8 @@ export class MonetaryField extends Component {
     };
 
     setup() {
-        this.inputRef = useInputField(this.inputOptions);
-        this.state = useState({ value: undefined });
-        this.nbsp = nbsp;
+        useInputField(this.inputOptions);
         useNumpadDecimal();
-        useEffect(() => {
-            if (this.inputRef?.el) {
-                this.state.value = this.inputRef.el.value;
-            }
-        });
     }
 
     get inputOptions() {
@@ -87,10 +81,6 @@ export class MonetaryField extends Component {
             currencyId: this.currencyId,
             noSymbol: !this.props.readonly || this.props.hideSymbol,
         });
-    }
-
-    onInput(ev) {
-        this.state.value = ev.target.value;
     }
 }
 

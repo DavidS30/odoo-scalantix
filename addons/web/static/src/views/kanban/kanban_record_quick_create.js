@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { parseXML } from "@web/core/utils/xml";
 import { useHotkey } from "@web/core/hotkeys/hotkey_hook";
@@ -12,7 +14,7 @@ import {
     useState,
     useSubEnv,
 } from "@odoo/owl";
-import { RPCError } from "@web/core/network/rpc";
+import { RPCError } from "@web/core/network/rpc_service";
 import { extractFieldsFromArchInfo } from "@web/model/relational_model/utils";
 import { formView } from "../form/form_view";
 import { getDefaultConfig } from "../view";
@@ -35,7 +37,7 @@ const ACTION_SELECTORS = [
     ".o-kanban-button-new",
 ];
 
-export class KanbanQuickCreateController extends Component {
+class KanbanQuickCreateController extends Component {
     static props = {
         Model: Function,
         Renderer: Function,
@@ -231,7 +233,7 @@ export class KanbanRecordQuickCreate extends Component {
     }
 
     async getQuickCreateProps(props) {
-        let quickCreateFields = { fields: DEFAULT_QUICK_CREATE_FIELDS };
+        let quickCreateFields = DEFAULT_QUICK_CREATE_FIELDS;
         let quickCreateForm = DEFAULT_QUICK_CREATE_VIEW;
         let quickCreateRelatedModels = {};
 
@@ -241,7 +243,7 @@ export class KanbanRecordQuickCreate extends Component {
                 resModel: props.group.resModel,
                 views: [[false, "form"]],
             });
-            quickCreateFields = { fields: fields };
+            quickCreateFields = fields;
             quickCreateForm = views.form;
             quickCreateRelatedModels = relatedModels;
         }
@@ -261,7 +263,7 @@ export class KanbanRecordQuickCreate extends Component {
             resModel: props.group.resModel,
             onValidate: props.onValidate,
             onCancel: props.onCancel,
-            fields: quickCreateFields.fields,
+            fields: quickCreateFields,
             context: props.group.context,
             archInfo,
         };

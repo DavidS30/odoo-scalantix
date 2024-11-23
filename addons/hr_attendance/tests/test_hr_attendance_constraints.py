@@ -73,7 +73,7 @@ class TestHrAttendance(TransactionCase):
             'check_in': time.strftime('%Y-%m-28 08:00'),
             'check_out': time.strftime('%Y-%m-28 09:00'),
         })
-        self.assertEqual(attendance_id.display_name, "01:00 (08:00 AM-09:00 AM)")
+        self.assertEqual(attendance_id.display_name, "01:00 : (08:00 AM-09:00 AM)")
         lang.time_format = "%H:%M:%S"
         attendance_id._compute_display_name()
-        self.assertEqual(attendance_id.display_name, "01:00 (08:00:00-09:00:00)")
+        self.assertEqual(attendance_id.display_name, "01:00 : (08:00:00-09:00:00)")

@@ -1,6 +1,8 @@
-import { exprToBoolean } from "@web/core/utils/strings";
+/** @odoo-module **/
+
 import { visitXML } from "@web/core/utils/xml";
 import { GROUPABLE_TYPES } from "@web/search/utils/misc";
+import { archParseBoolean } from "@web/views/utils";
 
 const MODES = ["bar", "line", "pie"];
 const ORDERS = ["ASC", "DESC", "asc", "desc", null];
@@ -12,18 +14,18 @@ export class GraphArchParser {
             switch (node.tagName) {
                 case "graph": {
                     if (node.hasAttribute("disable_linking")) {
-                        archInfo.disableLinking = exprToBoolean(
+                        archInfo.disableLinking = archParseBoolean(
                             node.getAttribute("disable_linking")
                         );
                     }
                     if (node.hasAttribute("stacked")) {
-                        archInfo.stacked = exprToBoolean(node.getAttribute("stacked"));
+                        archInfo.stacked = archParseBoolean(node.getAttribute("stacked"));
                     }
                     if (node.hasAttribute("cumulated")) {
-                        archInfo.cumulated = exprToBoolean(node.getAttribute("cumulated"));
+                        archInfo.cumulated = archParseBoolean(node.getAttribute("cumulated"));
                     }
                     if (node.hasAttribute("cumulated_start")) {
-                        archInfo.cumulatedStart = exprToBoolean(
+                        archInfo.cumulatedStart = archParseBoolean(
                             node.getAttribute("cumulated_start")
                         );
                     }

@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 import { useInputField } from "../input_field_hook";
@@ -51,6 +53,10 @@ export class FloatField extends Component {
         return this.props.inputType === "number" ? Number(value) : parseFloat(value);
     }
 
+    get digits() {
+        const fieldDigits = this.props.record.fields[this.props.name].digits;
+        return !this.props.digits && Array.isArray(fieldDigits) ? fieldDigits : this.props.digits;
+    }
     get formattedValue() {
         if (
             !this.props.formatNumber ||
@@ -58,18 +64,14 @@ export class FloatField extends Component {
         ) {
             return this.value;
         }
-        const options = {
-            digits: this.props.digits,
-            field: this.props.record.fields[this.props.name],
-        };
         if (this.props.humanReadable && !this.state.hasFocus) {
             return formatFloat(this.value, {
-                ...options,
+                digits: this.digits,
                 humanReadable: true,
                 decimals: this.props.decimals,
             });
         } else {
-            return formatFloat(this.value, { ...options, humanReadable: false });
+            return formatFloat(this.value, { digits: this.digits, humanReadable: false });
         }
     }
 

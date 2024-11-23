@@ -21,11 +21,7 @@ class PurchaseOrder(models.Model):
             purchase.mrp_production_count = len(purchase._get_mrp_productions())
 
     def _get_mrp_productions(self, **kwargs):
-        linked_mo = self.order_line.move_dest_ids.group_id.mrp_production_ids \
-                  | self.env['stock.move'].browse(self.order_line.move_ids._rollup_move_dests()).group_id.mrp_production_ids
-        group_mo = self.order_line.group_id.mrp_production_ids
-
-        return linked_mo | group_mo
+        return self.order_line.move_dest_ids.group_id.mrp_production_ids | self.order_line.move_ids.move_dest_ids.group_id.mrp_production_ids
 
     def action_view_mrp_productions(self):
         self.ensure_one()
@@ -43,7 +39,7 @@ class PurchaseOrder(models.Model):
             action.update({
                 'name': _("Manufacturing Source of %s", self.name),
                 'domain': [('id', 'in', mrp_production_ids)],
-                'view_mode': 'list,form',
+                'view_mode': 'tree,form',
             })
         return action
 

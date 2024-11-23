@@ -15691,8 +15691,6 @@ const SERVER_REQUEST = {
 };
 
 const SERVER_MESSAGE = {
-    /** Signals that the server wants to send a message to all the other members of that channel */
-    BROADCAST: "BROADCAST",
     /** Signals the clients that one of the session in their channel has left. */
     SESSION_LEAVE: "SESSION_LEAVE",
     /**  Signals the clients that the info (talking, mute,...) of one of the session in their channel has changed. */
@@ -15709,8 +15707,6 @@ const CLIENT_REQUEST = {
 };
 
 const CLIENT_MESSAGE = {
-    /** Signals that the client wants to send a message to all the other members of that channel */
-    BROADCAST: "BROADCAST",
     /** Signals that the client wants to change how it consumes a track (like pausing or ending the download) */
     CONSUMPTION_CHANGE: "CONSUMPTION_CHANGE",
     /** Signals that the info (talking, mute,...) of this client has changed. */
@@ -15749,7 +15745,7 @@ const DEFAULT_PRODUCER_OPTIONS = {
  */
 
 /**
- * @typedef {'audio' | 'camera' | 'screen' } streamType
+ * @typedef {'audio' | 'camera' | 'video' } streamType
  */
 
 const SFU_CLIENT_STATE = Object.freeze({
@@ -15866,31 +15862,16 @@ class SfuClient extends EventTarget {
     }
 
     /**
-     * @param message any JSON serializable object
-     */
-    broadcast(message) {
-        this._bus.send(
-            {
-                name: CLIENT_MESSAGE.BROADCAST,
-                payload: message,
-            },
-            { batch: true }
-        );
-    }
-
-    /**
      * @param {string} url
      * @param {string} jsonWebToken
      * @param {Object} [options]
-     * @param {string} [options.channelUUID]
      * @param {[]} [options.iceServers]
      */
-    async connect(url, jsonWebToken, { channelUUID, iceServers } = {}) {
+    async connect(url, jsonWebToken, { iceServers } = {}) {
         // saving the options for so that the parameters are saved for reconnection attempts
         this._url = url.replace(/^http/, "ws"); // makes sure the url is a websocket url
         this._jsonWebToken = jsonWebToken;
         this._iceServers = iceServers;
-        this._channelUUID = channelUUID;
         this._connectRetryDelay = INITIAL_RECONNECT_DELAY;
         this._device = this._createDevice();
         await this._connect();
@@ -15935,7 +15916,8 @@ class SfuClient extends EventTarget {
      * @param {boolean} [param0.needRefresh] true if the server should refresh the local info from all sessions of this channel
      */
     updateInfo(info, { needRefresh } = {}) {
-        this._bus?.send(
+        this._info = info;
+        this._bus.send(
             {
                 name: CLIENT_MESSAGE.INFO_CHANGE,
                 payload: { info, needRefresh },
@@ -15976,7 +15958,7 @@ class SfuClient extends EventTarget {
         if (!hasChanged) {
             return;
         }
-        this._bus?.send(
+        this._bus.send(
             {
                 name: CLIENT_MESSAGE.CONSUMPTION_CHANGE,
                 payload: { sessionId, states },
@@ -16118,9 +16100,7 @@ class SfuClient extends EventTarget {
             webSocket.addEventListener(
                 "open",
                 () => {
-                    webSocket.send(
-                        JSON.stringify({ channelUUID: this._channelUUID, jwt: this._jsonWebToken })
-                    );
+                    webSocket.send(JSON.stringify(this._jsonWebToken));
                 },
                 { once: true }
             );
@@ -16231,7 +16211,7 @@ class SfuClient extends EventTarget {
     /**
      * dispatches an event, intended for the client
      *
-     * @param { "disconnect" | "info_change" | "track" | "error" | "broadcast"} name
+     * @param { "disconnect" | "info_change" | "track" | "error"} name
      * @param [payload]
      * @fires SfuClient#update
      */
@@ -16280,9 +16260,6 @@ class SfuClient extends EventTarget {
      */
     async _handleMessage({ name, payload }) {
         switch (name) {
-            case SERVER_MESSAGE.BROADCAST:
-                this._updateClient("broadcast", payload);
-                break;
             case SERVER_MESSAGE.SESSION_LEAVE:
                 {
                     const { sessionId } = payload;
@@ -16356,7 +16333,7 @@ export { SFU_CLIENT_STATE, SfuClient };
 
 
 export const __info__ = {
-    date: '2024-08-26T05:07:14.489Z',
-    hash: 'fcd3031',
+    date: '2024-01-10T07:37:26.440Z',
+    hash: 'beafcc2',
     url: 'https://github.com/odoo/sfu',
 };

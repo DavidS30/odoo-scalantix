@@ -3,19 +3,19 @@
 # 	* base_install_request
 # 
 # Translators:
-# Anders Wallenquist <anders.wallenquist@vertel.se>, 2024
-# Robin Calvin, 2024
-# Haojun Zou <apollo_zhj@msn.com>, 2024
-# Martin Trigaux, 2024
-# Lasse L, 2024
+# Haojun Zou <apollo_zhj@msn.com>, 2023
+# Robin Calvin, 2023
+# Martin Trigaux, 2023
+# Anders Wallenquist <anders.wallenquist@vertel.se>, 2023
+# Lasse L, 2023
 # Jakob Krabbe <jakob.krabbe@vertel.se>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:55+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Jakob Krabbe <jakob.krabbe@vertel.se>, 2024\n"
 "Language-Team: Swedish (https://app.transifex.com/odoo/teams/41243/sv/)\n"
 "MIME-Version: 1.0\n"
@@ -37,7 +37,7 @@ msgid ""
 "            <t t-out=\"object.body_html\"></t>\n"
 "        </blockquote>\n"
 "        <br><br>\n"
-"        <a style=\"background-color:#875A7B; padding:8px 16px 8px 16px; text-decoration:none; color:#fff; border-radius:5px\" t-attf-href=\"/odoo/{{ object.module_id.id }}/action-base_install_request.action_base_module_install_review?menu_id={{ ctx['menu_id'] }}\">Review Request</a>\n"
+"        <a style=\"background-color:#875A7B; padding:8px 16px 8px 16px; text-decoration:none; color:#fff; border-radius:5px\" t-attf-href=\"/web?#action=base_install_request.action_base_module_install_review&amp;active_id={{ object.module_id.id }}&amp;menu_id={{ ctx['menu_id'] }}\">Review Request</a>\n"
 "        <br><br>\n"
 "        Thanks,\n"
 "        <t t-if=\"not is_html_empty(object.user_id.signature)\">\n"
@@ -51,22 +51,22 @@ msgid ""
 msgstr ""
 "<div style=\"margin: 0px; padding: 0px;\">\n"
 "    <p style=\"margin: 0px; padding: 0px; font-size: 13px;\">\n"
-"        Hej,\n"
+"        Hej!\n"
 "        <br><br>\n"
-"        <span style=\"font-weight: bold;\" t-out=\"object.user_id.name\"></span> har sökt att aktivera  <span style=\"font-weight: bold;\" t-out=\"object.module_id.shortdesc\"></span> modulen. Denna modul är inkluderad i er prenumeration. Den har <span style=\"color: #875A7B; font-weight: bold;\">ingen extra kostnad </span>, men en administratörsrättigheter krävs för att aktivera den.\n"
-"        <br><br>\n"
+"        <span style=\"font-weight: bold;\" t-out=\"object.user_id.name\"></span> har begärt att få aktivera modulen <span style=\"font-weight: bold;\" t-out=\"object.module_id.shortdesc\"></span>. Denna modul ingår i din prenumeration. Den har <span style=\"color: #875A7B; font-weight: bold;\">ingen extra kostnad</span>, men en administratörsroll krävs för att aktivera den.\n"
+"       <br><br>\n"
 "        <blockquote>\n"
 "            <t t-out=\"object.body_html\"></t>\n"
 "        </blockquote>\n"
-"        <br><br>\n"
-"        <a style=\"background-color:#875A7B; padding:8px 16px 8px 16px; text-decoration:none; color:#fff; border-radius:5px\" t-attf-href=\"/odoo/{{ object.module_id.id }}/action-base_install_request.action_base_module_install_review?menu_id={{ ctx['menu_id'] }}\">Visa önskan </a>\n"
-"        <br><br>\n"
-"        Med vänlig hälsning,\n"
+"       <br><br>\n"
+"       <a style=\"background-color:#875A7B; padding:8px 16px 8px 16px; text-decoration:none; color:#fff; border-radius:5px\" t-attf-href=\"/web?#action=base_install_request.action_base_module_install_review&amp;active_id={{ object.module_id.id }}&amp;menu_id={{ ctx['menu_id'] }}\">Begäran om granskning</a>\n"
+"       <br><br>\n"
+"        Med vänliga hälsningar\n"
 "        <t t-if=\"not is_html_empty(object.user_id.signature)\">\n"
 "            <br><br>\n"
 "            <t t-out=\"object.user_id.signature or ''\">--<br>Mitchell Admin</t>\n"
 "        </t>\n"
-"        <br><br>\n"
+"       <br><br>\n"
 "    </p>\n"
 "</div>\n"
 "            "
@@ -74,6 +74,7 @@ msgstr ""
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/models/ir_module_module.py:0
+#, python-format
 msgid "Activation Request of \"%s\""
 msgstr "Begäran om aktivering av \"%s\""
 
@@ -174,6 +175,7 @@ msgstr "Ingen extra kostnad, denna applikation är gratis."
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/wizard/base_module_install_request.py:0
+#, python-format
 msgid "No module selected."
 msgstr "Ingen modul vald."
 
@@ -201,6 +203,7 @@ msgstr "Följande appar kommer att installeras:"
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/wizard/base_module_install_request.py:0
+#, python-format
 msgid "The module is already installed."
 msgstr "Modulen är redan installerad."
 
@@ -232,6 +235,7 @@ msgstr "Du håller på att installera en extra applikation"
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/wizard/base_module_install_request.py:0
+#, python-format
 msgid "Your request has been successfully sent"
 msgstr "Din förfrågan har skickats med framgång"
 

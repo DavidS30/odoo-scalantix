@@ -5,18 +5,19 @@
         This module offers a mobile compatible design for Odoo Community. 
         Furthermore it allows the user to define some design preferences.
     ''',
-    'version': '18.0.1.2.3',
+    'version': '17.0.1.2.1',
     'category': 'Themes/Backend', 
     'license': 'LGPL-3', 
     'author': 'MuK IT',
     'website': 'http://www.mukit.at',
-    'live_test_url': 'https://my.mukit.at/r/f6m',
+    'live_test_url': 'https://mukit.at/demo',
     'contributors': [
         'Mathias Markl <mathias.markl@mukit.at>',
     ],
     'depends': [
         'muk_web_chatter',
         'muk_web_dialog',
+        'muk_web_appsbar',
         'muk_web_colors',
     ],
     'excludes': [
@@ -40,11 +41,6 @@
             ),
         ],
         'web.assets_backend': [
-            (
-                'after',
-                'web/static/src/webclient/webclient.js',
-                'muk_web_theme/static/src/webclient/appsmenu/app_menu_service.js',
-            ),
             'muk_web_theme/static/src/webclient/**/*.xml',
             'muk_web_theme/static/src/webclient/**/*.scss',
             'muk_web_theme/static/src/webclient/**/*.js',

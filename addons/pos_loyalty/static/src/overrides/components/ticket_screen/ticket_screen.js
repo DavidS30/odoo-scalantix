@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { TicketScreen } from "@point_of_sale/app/screens/ticket_screen/ticket_screen";
 import { useService } from "@web/core/utils/hooks";
@@ -9,7 +11,7 @@ import { patch } from "@web/core/utils/patch";
 patch(TicketScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        this.notification = useService("notification");
+        this.notification = useService("pos_notification");
     },
     _onUpdateSelectedOrderline() {
         const order = this.getSelectedOrder();
@@ -17,7 +19,7 @@ patch(TicketScreen.prototype, {
             return this.numberBuffer.reset();
         }
         const selectedOrderlineId = this.getSelectedOrderlineId();
-        const orderline = order.lines.find((line) => line.id == selectedOrderlineId);
+        const orderline = order.orderlines.find((line) => line.id == selectedOrderlineId);
         if (orderline && this._isEWalletGiftCard(orderline)) {
             this._showNotAllowedRefundNotification();
             return this.numberBuffer.reset();
@@ -26,7 +28,7 @@ patch(TicketScreen.prototype, {
     },
     _prepareAutoRefundOnOrder(order) {
         const selectedOrderlineId = this.getSelectedOrderlineId();
-        const orderline = order.lines.find((line) => line.id == selectedOrderlineId);
+        const orderline = order.orderlines.find((line) => line.id == selectedOrderlineId);
         if (this._isEWalletGiftCard(orderline)) {
             this._showNotAllowedRefundNotification();
             return false;
@@ -42,15 +44,12 @@ patch(TicketScreen.prototype, {
         );
     },
     _isEWalletGiftCard(orderline) {
-        const linkedProgramIds = this.pos.models["loyalty.program"].getBy(
-            "trigger_product_ids",
-            orderline.product_id.id
-        );
+        const linkedProgramIds = this.pos.productId2ProgramIds[orderline.product.id];
         if (linkedProgramIds) {
             return linkedProgramIds.length > 0;
         }
         if (orderline.is_reward_line) {
-            const reward = orderline.reward_id;
+            const reward = this.pos.reward_by_id[orderline.reward_id];
             const program = reward && reward.program_id;
             if (program && ["gift_card", "ewallet"].includes(program.program_type)) {
                 return true;

@@ -15,7 +15,7 @@ class ResCompany(models.Model):
             ('other', "Other"),
         ])
 
-    def _run_payment_onboarding_step(self, menu_id=None):
+    def _run_payment_onboarding_step(self, menu_id):
         """ Install the suggested payment modules and configure the providers.
 
         It's checked that the current company has a Chart of Account.

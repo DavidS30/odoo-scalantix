@@ -96,13 +96,13 @@ QUnit.module("SurveyQuestionTriggerWidget", (hooks) => {
             arch: `
                 <form>
                     <field name="question_and_page_ids">  
-                        <list>
+                        <tree>
                             <field name="sequence" widget="handle"/>
                             <field name="title"/>
                             <field name="triggering_question_ids" invisible="1"/>
                             <field name="triggering_answer_ids" invisible="1" widget="many2many_tags"/> <!-- widget to fetch display_name -->
                             <widget name="survey_question_trigger"/>
-                        </list>
+                        </tree>
                     </field>
                 </form>
             `,

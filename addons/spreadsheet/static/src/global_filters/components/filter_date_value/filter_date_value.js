@@ -1,4 +1,4 @@
-/** @ts-check */
+/** @odoo-module */
 
 import { Component, onWillUpdateProps } from "@odoo/owl";
 import { DateTimeInput } from "@web/core/datetime/datetime_input";
@@ -6,12 +6,6 @@ import { monthsOptions } from "@spreadsheet/assets_backend/constants";
 import { QUARTER_OPTIONS } from "@web/search/utils/dates";
 
 const { DateTime } = luxon;
-
-/**
- * @typedef {Object} DateOption
- * @property {string} id
- * @property {string | import("@spreadsheet").LazyTranslatedString} description
- */
 
 export class DateFilterValue extends Component {
     static template = "spreadsheet_edition.DateFilterValue";
@@ -36,7 +30,7 @@ export class DateFilterValue extends Component {
         /** @type {number|undefined} */
         this.yearOffset = props.yearOffset;
         // date should be undefined if we don't have the yearOffset
-        /** @type {import("@web/core/l10n/dates").DateTime|undefined} */
+        /** @type {DateTime|undefined} */
         this.date =
             this.yearOffset !== undefined
                 ? DateTime.local().plus({ year: this.yearOffset })
@@ -46,6 +40,7 @@ export class DateFilterValue extends Component {
     /**
      * Returns a list of time options to choose from according to the requested
      * type. Each option contains its (translated) description.
+     * see getPeriodOptions
      *
      * @returns {Array<Object>}
      */

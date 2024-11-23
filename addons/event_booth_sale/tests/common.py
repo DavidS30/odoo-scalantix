@@ -20,8 +20,7 @@ class TestEventBoothSaleCommon(TestEventBoothCommon):
             'description_sale': 'Mighty Booth Description',
             'list_price': 20,
             'standard_price': 60.0,
-            'type': 'service',
-            'service_tracking': 'event_booth',
+            'detailed_type': 'event_booth',
         })
         (cls.event_booth_category_1 + cls.event_booth_category_2).write({
             'product_id': cls.event_booth_product.id,
@@ -37,6 +36,7 @@ class TestEventBoothSaleCommon(TestEventBoothCommon):
         })
         cls.test_pricelist_with_discount_included = cls.env['product.pricelist'].sudo().create({
             'name': 'Test Pricelist',
+            'discount_policy': 'with_discount',
             'item_ids': [
                 Command.create({
                     'compute_price': 'percentage',

@@ -1,10 +1,11 @@
+/* @odoo-module */
+
 import { SuggestedRecipient } from "@mail/core/web/suggested_recipient";
 
 import { Component, useState } from "@odoo/owl";
 
 /**
  * @typedef {Object} Props
- * @property {function} onSuggestedRecipientAdded
  * @property {import("models").Thread} thread
  * @property {string} className
  * @property {string} styleString
@@ -13,11 +14,12 @@ import { Component, useState } from "@odoo/owl";
 export class SuggestedRecipientsList extends Component {
     static template = "mail.SuggestedRecipientsList";
     static components = { SuggestedRecipient };
-    static props = ["thread", "className?", "styleString?", "onSuggestedRecipientAdded"];
+    static props = ["thread", "className", "styleString"];
 
     setup() {
-        super.setup();
-        this.state = useState({ showMore: false });
+        this.state = useState({
+            showMore: false,
+        });
     }
 
     get suggestedRecipients() {

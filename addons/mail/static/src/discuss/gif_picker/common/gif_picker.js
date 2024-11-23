@@ -1,9 +1,10 @@
+/* @odoo-module */
+
 import { Component, onWillStart, useState, useEffect } from "@odoo/owl";
 import { useOnBottomScrolled, useSequential } from "@mail/utils/common/hooks";
-import { user } from "@web/core/user";
+
 import { useService, useAutofocus } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
-import { rpc } from "@web/core/network/rpc";
 
 /**
  * @typedef {Object} TenorCategory
@@ -50,9 +51,10 @@ export class GifPicker extends Component {
     static props = ["PICKERS?", "className?", "close?", "onSelect", "state?"];
 
     setup() {
-        super.setup();
+        this.rpc = useService("rpc");
         this.orm = useService("orm");
         this.store = useState(useService("mail.store"));
+        this.userService = useService("user");
         this.sequential = useSequential();
         useAutofocus();
         useOnBottomScrolled(
@@ -101,7 +103,7 @@ export class GifPicker extends Component {
         onWillStart(() => {
             this.loadCategories();
         });
-        if (this.store.self.type === "partner") {
+        if (!this.store.guest) {
             onWillStart(() => {
                 this.loadFavorites();
             });
@@ -142,15 +144,11 @@ export class GifPicker extends Component {
 
     async loadCategories() {
         try {
-            let { language, region } = new Intl.Locale(user.lang);
-            if (!region && language === "sr") {
-                region = "RS";
-            }
-            const { tags } = await rpc(
+            const { tags } = await this.rpc(
                 "/discuss/gif/categories",
                 {
-                    country: region,
-                    locale: `${language}_${region}`,
+                    country: this.userService.lang.slice(3, 5),
+                    locale: this.userService.lang,
                 },
                 { silent: true }
             );
@@ -178,13 +176,9 @@ export class GifPicker extends Component {
             return;
         }
         try {
-            let { language, region } = new Intl.Locale(user.lang);
-            if (!region && language === "sr") {
-                region = "RS";
-            }
             const params = {
-                country: region,
-                locale: `${language}_${region}`,
+                country: this.userService.lang.slice(3, 5),
+                locale: this.userService.lang,
                 search_term: this.searchTerm,
             };
             if (this.next) {
@@ -192,7 +186,7 @@ export class GifPicker extends Component {
             }
             const res = await this.sequential(() => {
                 this.state.loadingGif = true;
-                const res = rpc("/discuss/gif/search", params, {
+                const res = this.rpc("/discuss/gif/search", params, {
                     silent: true,
                 });
                 this.state.loadingGif = false;
@@ -260,14 +254,18 @@ export class GifPicker extends Component {
             if (index >= 0) {
                 this.state.favorites.gifs.splice(index, 1);
             }
-            await rpc("/discuss/gif/remove_favorite", { tenor_gif_id: gif.id }, { silent: true });
+            await this.rpc(
+                "/discuss/gif/remove_favorite",
+                { tenor_gif_id: gif.id },
+                { silent: true }
+            );
         }
     }
 
     async loadFavorites() {
         this.state.loadingGif = true;
         try {
-            const [results] = await rpc(
+            const [results] = await this.rpc(
                 "/discuss/gif/favorites",
                 { offset: this.offset },
                 { silent: true }

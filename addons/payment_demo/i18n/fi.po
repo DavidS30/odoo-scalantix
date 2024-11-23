@@ -3,21 +3,21 @@
 # 	* payment_demo
 # 
 # Translators:
+# Martin Trigaux, 2023
+# Miika Nissi <miika.nissi@tawasta.fi>, 2023
+# Kari Lindgren <kari.lindgren@emsystems.fi>, 2023
+# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2023
+# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2023
+# Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2023
 # Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2024
-# Kari Lindgren <kari.lindgren@emsystems.fi>, 2024
-# Miika Nissi <miika.nissi@tawasta.fi>, 2024
-# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2024
-# Martin Trigaux, 2024
-# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2024
-# Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:56+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
-"Last-Translator: Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"Last-Translator: Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2024\n"
 "Language-Team: Finnish (https://app.transifex.com/odoo/teams/41243/fi/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -35,14 +35,28 @@ msgid ""
 "                    <option value=\"pending\" title=\"Payment processing\">\n"
 "                        Pending\n"
 "                    </option>\n"
-"                    <option value=\"cancel\" title=\"Payment cancelled by customer\">\n"
-"                        Cancelled\n"
+"                    <option value=\"cancel\" title=\"Payment canceled by customer\">\n"
+"                        Canceled\n"
 "                    </option>\n"
 "                    <option value=\"error\" title=\"Processing error\">\n"
 "                        Error\n"
 "                    </option>\n"
 "                </select>"
 msgstr ""
+"<select id=\"simulated_payment_state\" class=\"form-select\">\n"
+"                    <option value=\"done\" title=\"Onnistunut maksu\">\n"
+"                        Onnistunut\n"
+"                    </option>\n"
+"                    <option value=\"pending\" title=\"Maksun käsittely\">\n"
+"                        Vireillä\n"
+"                    </option>\n"
+"                    <option value=\"cancel\" title=\"Asiakas on keskeyttänyt maksun\">\n"
+"                        Peruutettu\n"
+"                    </option>\n"
+"                    <option value=\"error\" title=\"Käsittelyvirhe\">\n"
+"                        Virhe\n"
+"                    </option>\n"
+"                </select>"
 
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.express_inline_form
@@ -142,7 +156,6 @@ msgstr "Vahvistettu"
 
 #. module: payment_demo
 #: model:ir.model.fields.selection,name:payment_demo.selection__payment_provider__code__demo
-#: model:payment.method,name:payment_demo.payment_method_demo
 msgid "Demo"
 msgstr "Demo"
 
@@ -154,6 +167,7 @@ msgstr "Demo Express Checkout"
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_provider.py:0
+#, python-format
 msgid "Demo providers should never be enabled."
 msgstr "Demo-tarjoajia ei pitäisi koskaan ottaa käyttöön."
 
@@ -165,12 +179,14 @@ msgstr "Virhe"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
+#, python-format
 msgid "No delivery method is available."
 msgstr ""
 
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
+#, python-format
 msgid "No transaction found matching reference %s."
 msgstr "Viitettä %s vastaavaa tapahtumaa ei löytynyt."
 
@@ -202,6 +218,7 @@ msgstr "Maksutapahtuma"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/payment_demo_mixin.js:0
+#, python-format
 msgid "Payment processing failed"
 msgstr "Maksun käsittely epäonnistui"
 
@@ -214,8 +231,9 @@ msgstr "Tällä maksutavalla suoritetut maksut <b>onnistuvat</b>."
 #: model_terms:ir.ui.view,arch_db:payment_demo.token_inline_form
 msgid ""
 "Payments made with this payment method will be automatically "
-"<b>cancelled</b>."
+"<b>canceled</b>."
 msgstr ""
+"Tällä maksutavalla suoritetut maksut <b>peruutetaan</b> automaattisesti."
 
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.token_inline_form
@@ -263,6 +281,7 @@ msgstr "Tämän maksupalveluntarjoajan tekninen koodi."
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
+#, python-format
 msgid "The transaction is not linked to a token."
 msgstr "Transaktio ei ole sidottu valtuutuskoodiin."
 
@@ -274,6 +293,7 @@ msgstr "Julkaisematon"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
+#, python-format
 msgid "Validation Error"
 msgstr "Tarkistusvirhe"
 
@@ -285,5 +305,6 @@ msgstr "XXXX XXXX XXXX XXXX XXXX XXXX"
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
+#, python-format
 msgid "You selected the following demo payment status: %s"
 msgstr "Olet valinnut seuraavan demomaksutilanteen: %s"

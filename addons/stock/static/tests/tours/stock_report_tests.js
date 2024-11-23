@@ -1,31 +1,29 @@
 /** @odoo-module **/
-
+    
     import { registry } from "@web/core/registry";
 
     registry.category("web_tour.tours").add('test_stock_route_diagram_report', {
+        test: true,
         steps: () => [
-        {
-            trigger: ".o_breadcrumb",
-        },
     {
         trigger: '.o_kanban_record',
-        run: "click",
+        extra_trigger: '.o_breadcrumb',
     },
     {
         trigger: '.nav-item > a:contains("Inventory")',
-        run: "click",
     },
     {
         trigger: '.btn[id="stock.view_diagram_button"]',
-        run: "click",
     },
     {
-        trigger: ':iframe .o_report_stock_rule',
+        trigger: 'iframe .o_report_stock_rule',
+        isCheck: true,
     },
     ]});
 
 
 registry.category("web_tour.tours").add('test_multiple_warehouses_filter', {
+    test: true,
     steps: () => [
         // Add (Warehouse A or Warehouse B) to the filter
         {
@@ -35,10 +33,10 @@ registry.category("web_tour.tours").add('test_multiple_warehouses_filter', {
         },
         {
             trigger: '.o_searchview_input',
-            run: 'edit warehouse',
+            run: 'text warehouse',
         },
         {
-            trigger: '.o_menu_item.dropdown-item:contains("Search Warehouse for:") a.o_expand > i',
+            trigger: '.o_menu_item.dropdown-item:contains("Warehouse") a.o_expand > i',
             run: 'click',
         },
         {
@@ -47,10 +45,10 @@ registry.category("web_tour.tours").add('test_multiple_warehouses_filter', {
         },
         {
             trigger: '.o_searchview_input',
-            run: 'edit warehouse',
+            run: 'text warehouse',
         },
         {
-            trigger: '.o_menu_item.dropdown-item:contains("Search Warehouse for:") a.o_expand > i',
+            trigger: '.o_menu_item.dropdown-item:contains("Warehouse") a.o_expand > i',
             run: 'click',
         },
         {
@@ -59,7 +57,7 @@ registry.category("web_tour.tours").add('test_multiple_warehouses_filter', {
         },
         // Go to product page
         {
-            trigger: '.o_kanban_record:has(span:contains("AAProduct"))',
+            trigger: '.oe_kanban_card:has(.o_kanban_record_title span:contains("Product A"))',
             run: 'click',
         },
         // Forecast page should load correctly
@@ -74,6 +72,7 @@ registry.category("web_tour.tours").add('test_multiple_warehouses_filter', {
         {
             trigger: '.o_graph_view',
             content: 'Wait for the Forecast page to load.',
+            extra_trigger: '.o_graph_view',
             run: () => {},
         },
     ],

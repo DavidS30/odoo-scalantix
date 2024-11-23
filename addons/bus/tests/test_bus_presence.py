@@ -11,6 +11,7 @@ from ..models.bus_presence import PRESENCE_OUTDATED_TIMER
 class TestBusPresence(HttpCase):
     def test_bus_presence_auto_vacuum(self):
         user = new_test_user(self.env, login="bob_user")
+        # presence is outdated
         more_than_away_timer_ago = datetime.now() - timedelta(seconds=PRESENCE_OUTDATED_TIMER + 1)
         more_than_away_timer_ago = more_than_away_timer_ago.replace(microsecond=0)
         with freeze_time(more_than_away_timer_ago):

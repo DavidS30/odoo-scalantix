@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from odoo.tools import html2plaintext
 
 from odoo import Command
-from odoo.tests import Form, tagged
 from odoo.exceptions import AccessError
+from odoo.tests.common import Form, tagged
 from odoo.addons.stock.tests.test_report import TestReportsCommon
 from odoo.addons.sale.tests.common import TestSaleCommon
 
@@ -179,9 +179,9 @@ class TestSaleStockReports(TestReportsCommon):
 
         # While 'other' can see these SO on the report, they shouldn't be able to access them.
         with self.assertRaises(AccessError):
-            sale_order.with_user(other).check_access('read')
+            sale_order.with_user(other).check_access_rule('read')
         with self.assertRaises(AccessError):
-            draft.with_user(other).check_access('read')
+            draft.with_user(other).check_access_rule('read')
 
 
 @tagged('post_install', '-at_install')
@@ -192,12 +192,12 @@ class TestSaleStockInvoices(TestSaleCommon):
         self.env.ref('base.group_user').write({'implied_ids': [(4, self.env.ref('stock.group_production_lot').id)]})
         self.product_by_lot = self.env['product.product'].create({
             'name': 'Product By Lot',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'lot',
         })
         self.product_by_usn = self.env['product.product'].create({
             'name': 'Product By USN',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'serial',
         })
         self.warehouse = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1)
@@ -205,14 +205,17 @@ class TestSaleStockInvoices(TestSaleCommon):
         lot = self.env['stock.lot'].create({
             'name': 'LOT0001',
             'product_id': self.product_by_lot.id,
+            'company_id': self.env.company.id,
         })
         self.usn01 = self.env['stock.lot'].create({
             'name': 'USN0001',
             'product_id': self.product_by_usn.id,
+            'company_id': self.env.company.id,
         })
         self.usn02 = self.env['stock.lot'].create({
             'name': 'USN0002',
             'product_id': self.product_by_usn.id,
+            'company_id': self.env.company.id,
         })
         self.env['stock.quant']._update_available_quantity(self.product_by_lot, self.stock_location, 10, lot_id=lot)
         self.env['stock.quant']._update_available_quantity(self.product_by_usn, self.stock_location, 1, lot_id=self.usn01)
@@ -368,6 +371,7 @@ class TestSaleStockInvoices(TestSaleCommon):
         lot02, lot03 = self.env['stock.lot'].create([{
             'name': name,
             'product_id': self.product_by_lot.id,
+            'company_id': self.env.company.id,
         } for name in ['LOT0002', 'LOT0003']])
         self.env['stock.quant']._update_available_quantity(self.product_by_lot, self.stock_location, 8, lot_id=lot02)
         self.env['stock.quant']._update_available_quantity(self.product_by_lot, self.stock_location, 2, lot_id=lot03)
@@ -389,8 +393,7 @@ class TestSaleStockInvoices(TestSaleCommon):
         # Return delivery01 (-> 10 x LOT0001)
         return_form = Form(self.env['stock.return.picking'].with_context(active_ids=[delivery01.id], active_id=delivery01.id, active_model='stock.picking'))
         return_wizard = return_form.save()
-        return_wizard.product_return_moves.quantity = 10
-        action = return_wizard.action_create_returns()
+        action = return_wizard.create_returns()
         pick_return = self.env['stock.picking'].browse(action['res_id'])
 
         move_form = Form(pick_return.move_ids, view='stock.view_stock_move_operations')
@@ -404,8 +407,7 @@ class TestSaleStockInvoices(TestSaleCommon):
         # Return pick_return
         return_form = Form(self.env['stock.return.picking'].with_context(active_ids=[pick_return.id], active_id=pick_return.id, active_model='stock.picking'))
         return_wizard = return_form.save()
-        return_wizard.product_return_moves.quantity = 10
-        action = return_wizard.action_create_returns()
+        action = return_wizard.create_returns()
         delivery02 = self.env['stock.picking'].browse(action['res_id'])
 
         # Deliver 3 x LOT0002
@@ -416,7 +418,9 @@ class TestSaleStockInvoices(TestSaleCommon):
             line.quantity = 3
         move_form.save()
         delivery02.move_ids.picked = True
-        Form.from_action(self.env, delivery02.button_validate()).save().process()
+        action = delivery02.button_validate()
+        wizard = Form(self.env[action['res_model']].with_context(action['context'])).save()
+        wizard.process()
 
         # Invoice 2 x P
         invoice01 = so._create_invoices()
@@ -500,8 +504,7 @@ class TestSaleStockInvoices(TestSaleCommon):
         # recieve the returned product
         stock_return_picking_form = Form(self.env['stock.return.picking'].with_context(active_ids=picking.ids, active_id=picking.sorted().ids[0], active_model='stock.picking'))
         return_wiz = stock_return_picking_form.save()
-        return_wiz.product_return_moves.quantity = 2
-        res = return_wiz.action_create_returns()
+        res = return_wiz.create_returns()
         pick_return = self.env['stock.picking'].browse(res['res_id'])
 
         move_form = Form(pick_return.move_ids, view='stock.view_stock_move_operations')

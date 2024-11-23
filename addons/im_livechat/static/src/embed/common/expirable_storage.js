@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { browser } from "@web/core/browser/browser";
 
 const BASE_STORAGE_KEY = "EXPIRABLE_STORAGE";
@@ -5,10 +7,7 @@ const CLEAR_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 function cleanupExpirableStorage() {
     const now = Date.now();
-    // Next line is for testing compatibility as for..in is not supported by
-    // the `MockStorage` class.
-    const keys = browser.localStorage.items?.keys() ?? Object.keys(browser.localStorage);
-    for (const key of keys) {
+    for (const key of Object.keys(browser.localStorage)) {
         if (key.startsWith(BASE_STORAGE_KEY)) {
             const item = JSON.parse(browser.localStorage.getItem(key));
             if (item.expires && item.expires < now) {

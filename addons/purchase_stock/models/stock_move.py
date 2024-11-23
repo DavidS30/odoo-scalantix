@@ -69,12 +69,8 @@ class StockMove(models.Model):
                 # Adjust unit price to account for discounts before adding taxes.
                 adjusted_unit_price = invoice_line.price_unit * (1 - (invoice_line.discount / 100)) if invoice_line.discount else invoice_line.price_unit
                 if invoice_line.tax_ids:
-                    invoice_line_value = invoice_line.tax_ids.compute_all(
-                        adjusted_unit_price,
-                        currency=invoice_line.currency_id,
-                        quantity=invoice_line.quantity,
-                        rounding_method="round_globally",
-                    )['total_void']
+                    invoice_line_value = invoice_line.tax_ids.with_context(round=False).compute_all(
+                        adjusted_unit_price, currency=invoice_line.currency_id, quantity=invoice_line.quantity)['total_void']
                 else:
                     invoice_line_value = adjusted_unit_price * invoice_line.quantity
                 total_invoiced_value += invoice_line.currency_id._convert(
@@ -100,9 +96,7 @@ class StockMove(models.Model):
             # https://github.com/odoo/odoo/blob/2f789b6863407e63f90b3a2d4cc3be09815f7002/addons/stock/models/stock_move.py#L36
             price_unit = order.currency_id._convert(
                 price_unit, order.company_id.currency_id, order.company_id, fields.Date.context_today(self), round=False)
-        if self.product_id.lot_valuated:
-            return dict.fromkeys(self.lot_ids, price_unit)
-        return {self.env['stock.lot']: price_unit}
+        return price_unit
 
     def _generate_valuation_lines_data(self, partner_id, qty, debit_value, credit_value, debit_account_id, credit_account_id, svl_id, description):
         """ Overridden from stock_account to support amount_currency on valuation lines generated from po
@@ -170,13 +164,13 @@ class StockMove(models.Model):
         """
         am_vals_list = super()._account_entry_move(qty, description, svl_id, cost)
         returned_move = self.origin_returned_move_id
-        pdiff_exists = bool((self | returned_move).stock_valuation_layer_ids.stock_valuation_layer_ids.account_move_line_id)
+        move = (self | returned_move).with_prefetch(self._prefetch_ids)
+        pdiff_exists = bool(move.stock_valuation_layer_ids.stock_valuation_layer_ids.account_move_line_id)
 
         if not am_vals_list or not self.purchase_line_id or pdiff_exists or float_is_zero(qty, precision_rounding=self.product_id.uom_id.rounding):
             return am_vals_list
 
         layer = self.env['stock.valuation.layer'].browse(svl_id)
-        returned_move = self.origin_returned_move_id
 
         if returned_move and self._is_out() and self._is_returned(valued_type='out'):
             returned_layer = returned_move.stock_valuation_layer_ids.filtered(lambda svl: not svl.stock_valuation_layer_id)[:1]
@@ -201,6 +195,12 @@ class StockMove(models.Model):
         am_vals_list.append(vals)
 
         return am_vals_list
+
+    def _prepare_extra_move_vals(self, qty):
+        vals = super(StockMove, self)._prepare_extra_move_vals(qty)
+        vals['purchase_line_id'] = self.purchase_line_id.id
+        vals['created_purchase_line_ids'] = [Command.set(self.created_purchase_line_ids.ids)]
+        return vals
 
     def _prepare_move_split_vals(self, uom_qty):
         vals = super(StockMove, self)._prepare_move_split_vals(uom_qty)
@@ -255,7 +255,7 @@ class StockMove(models.Model):
 
     def _is_purchase_return(self):
         self.ensure_one()
-        return self.location_dest_id.usage == "supplier" or (self.origin_returned_move_id and self.location_dest_id == self.env.ref('stock.stock_location_inter_company', raise_if_not_found=False))
+        return self.location_dest_id.usage == "supplier" or self.location_dest_id == self.env.ref('stock.stock_location_inter_wh', raise_if_not_found=False)
 
     def _get_all_related_aml(self):
         # The back and for between account_move and account_move_line is necessary to catch the

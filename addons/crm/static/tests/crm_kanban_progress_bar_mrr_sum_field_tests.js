@@ -1,7 +1,8 @@
 /** @odoo-module */
 
+import { registry } from "@web/core/registry";
+import { makeFakeUserService } from "@web/../tests/helpers/mock_services";
 import { makeView, setupViewRegistries } from "@web/../tests/views/helpers";
-import { patchUserWithCleanup } from "@web/../tests/helpers/mock_services";
 import {
     click,
     dragAndDrop,
@@ -11,6 +12,8 @@ import {
     patchWithCleanup,
 } from '@web/../tests/helpers/utils';
 import { AnimatedNumber } from "@web/views/view_components/animated_number";
+
+const serviceRegistry = registry.category("services");
 
 let target;
 let serverData;
@@ -45,8 +48,8 @@ QUnit.module('Crm Kanban Progressbar', {
                         display_name: { string: 'Name', type: 'char' },
                         bar: {string: "Bar", type: "boolean"},
                         activity_state: {string: "Activity State", type: "char"},
-                        expected_revenue: { string: 'Revenue', type: 'integer', sortable: true, aggregator: 'sum' },
-                        recurring_revenue_monthly: { string: 'Recurring Revenue', type: 'integer', sortable: true, aggregator: 'sum' },
+                        expected_revenue: { string: 'Revenue', type: 'integer', sortable: true },
+                        recurring_revenue_monthly: { string: 'Recurring Revenue', type: 'integer',  sortable: true },
                         stage_id: { string: 'Stage', type: 'many2one', relation: 'crm.stage' },
                         user_id: { string: 'Salesperson', type: 'many2one', relation: 'res.users' },
                     },
@@ -64,7 +67,11 @@ QUnit.module('Crm Kanban Progressbar', {
         };
         target = getFixture();
         setupViewRegistries();
-        patchUserWithCleanup({ hasGroup: (group) => group === "crm.group_use_recurring_revenues" });
+        serviceRegistry.add(
+            "user",
+            makeFakeUserService((group) => group === "crm.group_use_recurring_revenues"),
+            { force: true },
+        );
     },
 }, function () {
     QUnit.test("Progressbar: do not show sum of MRR if recurring revenues is not enabled", async function (assert) {
@@ -77,12 +84,15 @@ QUnit.module('Crm Kanban Progressbar', {
             groupBy: ['stage_id'],
             arch: `
                 <kanban js_class="crm_kanban">
+                    <field name="stage_id"/>
+                    <field name="expected_revenue"/>
+                    <field name="recurring_revenue_monthly"/>
                     <field name="activity_state"/>
                     <progressbar field="activity_state" colors='{"planned": "success", "today": "warning", "overdue": "danger"}' sum_field="expected_revenue" recurring_revenue_sum_field="recurring_revenue_monthly"/>
                     <templates>
-                        <t t-name="card" class="flex-row justify-content-between">
-                            <field name="name" class="p-2"/>
-                            <field name="recurring_revenue_monthly" class="p-2"/>
+                        <t t-name="kanban-box">
+                            <div><field name="name"/></div>
+                            <div><field name="recurring_revenue_monthly"/></div>
                         </t>
                     </templates>
                 </kanban>`,
@@ -103,12 +113,15 @@ QUnit.module('Crm Kanban Progressbar', {
             groupBy: ['stage_id'],
             arch: `
                 <kanban js_class="crm_kanban">
+                    <field name="stage_id"/>
+                    <field name="expected_revenue"/>
+                    <field name="recurring_revenue_monthly"/>
                     <field name="activity_state"/>
                     <progressbar field="activity_state" colors='{"planned": "success", "today": "warning", "overdue": "danger"}' sum_field="expected_revenue" recurring_revenue_sum_field="recurring_revenue_monthly"/>
                     <templates>
-                        <t t-name="card" class="flex-row justify-content-between">
-                            <field name="name" class="p-2"/>
-                            <field name="recurring_revenue_monthly" class="p-2"/>
+                        <t t-name="kanban-box">
+                            <div><field name="name"/></div>
+                            <div><field name="recurring_revenue_monthly"/></div>
                         </t>
                     </templates>
                 </kanban>`,
@@ -131,13 +144,16 @@ QUnit.module('Crm Kanban Progressbar', {
             groupBy: ['bar'],
             arch: `
                 <kanban js_class="crm_kanban">
+                    <field name="stage_id"/>
+                    <field name="expected_revenue"/>
+                    <field name="recurring_revenue_monthly"/>
                     <field name="activity_state"/>
                     <progressbar field="activity_state" colors='{"planned": "success", "today": "warning", "overdue": "danger"}' sum_field="expected_revenue" recurring_revenue_sum_field="recurring_revenue_monthly"/>
                     <templates>
-                        <t t-name="card" class="flex-row justify-content-between">
-                            <field name="name" class="p-2"/>
-                            <field name="expected_revenue" class="p-2"/>
-                            <field name="recurring_revenue_monthly" class="p-2"/>
+                        <t t-name="kanban-box">
+                            <div><field name="name"/></div>
+                            <div><field name="expected_revenue"/></div>
+                            <div><field name="recurring_revenue_monthly"/></div>
                         </t>
                     </templates>
                 </kanban>`,
@@ -179,13 +195,16 @@ QUnit.module('Crm Kanban Progressbar', {
             groupBy: ['stage_id'],
             arch: `
                 <kanban js_class="crm_kanban">
+                    <field name="stage_id"/>
+                    <field name="expected_revenue"/>
+                    <field name="recurring_revenue_monthly"/>
                     <field name="activity_state"/>
                     <progressbar field="activity_state" colors='{"planned": "success", "today": "warning", "overdue": "danger"}' sum_field="expected_revenue" recurring_revenue_sum_field="recurring_revenue_monthly"/>
                     <templates>
-                        <t t-name="card" class="flex-row justify-content-between">
-                            <field name="name" class="p-2"/>
-                            <field name="expected_revenue" class="p-2"/>
-                            <field name="recurring_revenue_monthly" class="p-2"/>
+                        <t t-name="kanban-box">
+                            <div><field name="name"/></div>
+                            <div><field name="expected_revenue"/></div>
+                            <div><field name="recurring_revenue_monthly"/></div>
                         </t>
                     </templates>
                 </kanban>`,

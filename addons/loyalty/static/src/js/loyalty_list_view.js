@@ -7,8 +7,6 @@ import { useService } from "@web/core/utils/hooks";
 import { Component, onWillStart } from "@odoo/owl";
 
 export class LoyaltyActionHelper extends Component {
-    static template = "loyalty.LoyaltyActionHelper";
-    static props = ["noContentHelp"];
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
@@ -38,13 +36,13 @@ export class LoyaltyActionHelper extends Component {
         this.action.doAction(action);
     }
 };
+LoyaltyActionHelper.template = "loyalty.LoyaltyActionHelper";
 
-export class LoyaltyListRenderer extends ListRenderer {
-    static template = "loyalty.LoyaltyListRenderer";
-    static components = {
-        ...LoyaltyListRenderer.components,
-        LoyaltyActionHelper,
-    };
+export class LoyaltyListRenderer extends ListRenderer {};
+LoyaltyListRenderer.template = "loyalty.LoyaltyListRenderer";
+LoyaltyListRenderer.components = {
+    ...LoyaltyListRenderer.components,
+    LoyaltyActionHelper,
 };
 
 export const LoyaltyListView = {

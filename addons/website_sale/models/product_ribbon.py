@@ -1,21 +1,19 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import fields, models
+from odoo import api, fields, models, tools
 
 
 class ProductRibbon(models.Model):
-    _name = 'product.ribbon'
-    _description = "Product ribbon"
+    _name = "product.ribbon"
+    _description = 'Product ribbon'
 
-    name = fields.Char(string="Ribbon Name", required=True, translate=True, size=20)
-    bg_color = fields.Char(string="Background Color", required=True, default='#000000')
-    text_color = fields.Char(string="Text Color", required=True, default='#FFFFFF')
-    position = fields.Selection(
-        string='Position',
-        selection=[('left', "Left"), ('right', "Right")],
-        required=True,
-        default='left',
-    )
+    @api.depends('html')
+    def _compute_display_name(self):
+        for ribbon in self:
+            ribbon.display_name = f'{tools.html2plaintext(ribbon.html)} (#{ribbon.id})'
 
-    def _get_position_class(self):
-        return 'o_ribbon_left' if self.position == 'left' else 'o_ribbon_right'
+    html = fields.Html(string='Ribbon html', required=True, translate=True, sanitize=False)
+    bg_color = fields.Char(string='Ribbon background color', required=False)
+    text_color = fields.Char(string='Ribbon text color', required=False)
+    html_class = fields.Char(string='Ribbon class', required=True, default='')

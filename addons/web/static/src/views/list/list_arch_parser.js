@@ -1,10 +1,11 @@
-import { exprToBoolean } from "@web/core/utils/strings";
-import { visitXML } from "@web/core/utils/xml";
-import { combineModifiers } from "@web/model/relational_model/utils";
-import { stringToOrderBy } from "@web/search/utils/order_by";
+/** @odoo-module */
+
 import { Field } from "@web/views/fields/field";
-import { getActiveActions, getDecoration, processButton } from "@web/views/utils";
+import { visitXML } from "@web/core/utils/xml";
+import { stringToOrderBy } from "@web/search/utils/order_by";
+import { archParseBoolean, getActiveActions, getDecoration, processButton } from "@web/views/utils";
 import { encodeObjectForTemplate } from "@web/views/view_compiler";
+import { combineModifiers } from "@web/model/relational_model/utils";
 import { Widget } from "@web/views/widgets/widget";
 
 export class GroupListArchParser {
@@ -53,7 +54,7 @@ export class ListArchParser {
         const widgetNodes = {};
         let widgetNextId = 0;
         const columns = [];
-        const fields = models[modelName].fields;
+        const fields = models[modelName];
         let buttonId = 0;
         const groupBy = {
             buttons: {},
@@ -78,8 +79,7 @@ export class ListArchParser {
                     type: "button",
                     id: buttonId++,
                 };
-                const width = button.attrs.width;
-                if (buttonGroup && !width) {
+                if (buttonGroup) {
                     buttonGroup.buttons.push(button);
                     buttonGroup.column_invisible = combineModifiers(
                         buttonGroup.column_invisible,
@@ -95,10 +95,6 @@ export class ListArchParser {
                         column_invisible: node.getAttribute("column_invisible"),
                     };
                     columns.push(buttonGroup);
-                    if (width) {
-                        buttonGroup.attrs = { width };
-                        buttonGroup = undefined;
-                    }
                 }
             } else if (node.tagName === "field") {
                 const fieldInfo = this.parseFieldNode(node, models, modelName);
@@ -118,10 +114,8 @@ export class ListArchParser {
                     className: node.getAttribute("class"), // for oe_edit_only and oe_read_only
                     optional: node.getAttribute("optional") || false,
                     type: "field",
-                    fieldType: fieldInfo.type,
                     hasLabel: !(
-                        fieldInfo.field.label === false ||
-                        exprToBoolean(fieldInfo.attrs.nolabel) === true
+                        archParseBoolean(fieldInfo.attrs.nolabel) || fieldInfo.field.noLabel
                     ),
                     label: (fieldInfo.widget && label && label.toString()) || fieldInfo.string,
                 });
@@ -152,7 +146,7 @@ export class ListArchParser {
                 groupBy.buttons[fieldName] = groupByArchInfo.buttons;
                 groupBy.fields[fieldName] = {
                     fieldNodes: groupByArchInfo.fieldNodes,
-                    fields: models[coModelName].fields,
+                    fields: models[coModelName],
                 };
                 return false;
             } else if (node.tagName === "header") {
@@ -181,21 +175,29 @@ export class ListArchParser {
                     }
                 }
                 return false;
-            } else if ("list" === node.tagName) {
+            } else if (["tree", "list"].includes(node.tagName)) {
                 const activeActions = {
                     ...getActiveActions(xmlDoc),
-                    exportXlsx: exprToBoolean(xmlDoc.getAttribute("export_xlsx"), true),
+                    exportXlsx: archParseBoolean(xmlDoc.getAttribute("export_xlsx"), true),
                 };
                 treeAttr.activeActions = activeActions;
 
                 treeAttr.className = xmlDoc.getAttribute("class") || null;
-                treeAttr.editable = xmlDoc.getAttribute("editable");
+                let editableAttr = xmlDoc.getAttribute("editable");
+                // FIXME: supported values for the editable attribute are normally "top"/"bottom".
+                // However, form views aren't validated, and a few x2many list have editable="1".
+                // In master, we'll throw to enforce valid values, but in 17, let's fallback on
+                // "bottom".
+                if (editableAttr && !["top", "bottom"].includes(editableAttr)) {
+                    editableAttr = archParseBoolean(editableAttr) ? "bottom" : null;
+                }
+                treeAttr.editable = editableAttr;
                 treeAttr.multiEdit = activeActions.edit
-                    ? exprToBoolean(node.getAttribute("multi_edit") || "")
+                    ? archParseBoolean(node.getAttribute("multi_edit") || "")
                     : false;
 
                 treeAttr.openFormView = treeAttr.editable
-                    ? exprToBoolean(xmlDoc.getAttribute("open_form_view") || "")
+                    ? archParseBoolean(xmlDoc.getAttribute("open_form_view") || "")
                     : false;
 
                 const limitAttr = node.getAttribute("limit");
@@ -207,7 +209,7 @@ export class ListArchParser {
                 const groupsLimitAttr = node.getAttribute("groups_limit");
                 treeAttr.groupsLimit = groupsLimitAttr && parseInt(groupsLimitAttr, 10);
 
-                treeAttr.noOpen = exprToBoolean(node.getAttribute("no_open") || "");
+                treeAttr.noOpen = archParseBoolean(node.getAttribute("no_open") || "");
                 treeAttr.rawExpand = xmlDoc.getAttribute("expand");
                 treeAttr.decorations = getDecoration(xmlDoc);
 

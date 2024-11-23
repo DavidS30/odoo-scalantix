@@ -7,9 +7,8 @@ from odoo.tests import tagged
 class TestUBLAU(TestUBLCommon):
 
     @classmethod
-    @TestUBLCommon.setup_country('au')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref="au"):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         cls.partner_1 = cls.env['res.partner'].create({
             'name': "partner_1",
@@ -22,7 +21,7 @@ class TestUBLAU(TestUBLCommon):
             'country_id': cls.env.ref('base.au').id,
             'bank_ids': [(0, 0, {'acc_number': '000099998B57'})],
             'ref': 'ref_partner_1',
-            'invoice_edi_format': 'ubl_a_nz',
+            'ubl_cii_format': 'ubl_a_nz',
         })
 
         cls.partner_2 = cls.env['res.partner'].create({
@@ -34,7 +33,7 @@ class TestUBLAU(TestUBLCommon):
             'country_id': cls.env.ref('base.au').id,
             'bank_ids': [(0, 0, {'acc_number': '93999574162167'})],
             'ref': 'ref_partner_2',
-            'invoice_edi_format': 'ubl_a_nz',
+            'ubl_cii_format': 'ubl_a_nz',
         })
 
         cls.tax_10 = cls.env['account.tax'].create({
@@ -44,6 +43,16 @@ class TestUBLAU(TestUBLCommon):
             'type_tax_use': 'sale',
             'country_id': cls.env.ref('base.au').id,
         })
+
+    @classmethod
+    def setup_company_data(cls, company_name, chart_template):
+        # OVERRIDE
+        res = super().setup_company_data(
+            company_name,
+            chart_template=chart_template,
+            country_id=cls.env.ref("base.au").id,
+        )
+        return res
 
     ####################################################
     # Test export - import
@@ -173,10 +182,8 @@ class TestUBLAU(TestUBLCommon):
         self._assert_imported_invoice_from_file(
             subfolder='tests/test_files/from_odoo',
             filename='a_nz_out_invoice.xml',
-            invoice_vals={
-                'currency_id': self.other_currency.id,
-                'amount_total': 2950.2,
-                'amount_tax': 268.2,
-                'invoice_lines': [{'price_subtotal': x} for x in (1782, 1000, -100)]
-            },
+            amount_total=2950.2,
+            amount_tax=268.2,
+            list_line_subtotals=[1782, 1000, -100],
+            currency_id=self.currency_data['currency'].id
         )

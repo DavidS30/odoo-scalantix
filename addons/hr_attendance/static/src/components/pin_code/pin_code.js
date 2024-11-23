@@ -4,13 +4,6 @@ import { Component, onWillStart, useState, onWillDestroy } from "@odoo/owl";
 import { browser } from "@web/core/browser/browser";
 
 export class KioskPinCode extends Component {
-    static template = "hr_attendance.KioskPinConfirm";
-    static props = {
-        employeeData: { type: Object },
-        onClickBack: { type: Function },
-        onPinConfirm: { type: Function },
-    };
-
     setup() {
         this.padButtons = [
             ...Array.from({ length: 9 }, (_, i) => [i + 1]), // [[1], ..., [9]]
@@ -70,3 +63,11 @@ export class KioskPinCode extends Component {
         }
     }
 }
+
+KioskPinCode.props = {
+    employeeData : {type: Object},
+    onClickBack: {type: Function},
+    onPinConfirm: {type: Function}
+}
+
+KioskPinCode.template = "hr_attendance.KioskPinConfirm";

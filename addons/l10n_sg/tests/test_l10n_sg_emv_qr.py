@@ -11,9 +11,8 @@ class TestL10nSGEmvQrCode(AccountTestInvoicingCommon):
     """ Test the generation of the EMV QR Code on invoices """
 
     @classmethod
-    @AccountTestInvoicingCommon.setup_country('sg')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref='sg'):
+        super().setUpClass(chart_template_ref=chart_template_ref)
         cls.company_data['company'].qr_code = True
         cls.company_data['company'].partner_id.update({
             'country_id': cls.env.ref('base.sg').id,

@@ -2,7 +2,7 @@
 
 import { Component, onWillStart, markup } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
-import { rpc } from "@web/core/network/rpc";
+import { useService } from "@web/core/utils/hooks";
 import { formatDuration } from "@web/core/l10n/dates";
 
 export class ExhibitorConnectClosedDialog extends Component {
@@ -13,6 +13,8 @@ export class ExhibitorConnectClosedDialog extends Component {
     };
 
     setup() {
+        this.rpc = useService("rpc");
+
         onWillStart(() => this.fetchSponsor());
     }
 
@@ -20,7 +22,7 @@ export class ExhibitorConnectClosedDialog extends Component {
      * @private
      */
     async fetchSponsor() {
-        const sponsorData = await rpc(
+        const sponsorData = await this.rpc(
             `/event_sponsor/${encodeURIComponent(this.props.sponsorId)}/read`
         );
         // empty string on falsy so markup doesn't create a "false" string

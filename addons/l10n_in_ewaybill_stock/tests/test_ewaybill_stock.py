@@ -1,25 +1,33 @@
 from freezegun import freeze_time
 
+from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo import _
 from odoo.fields import Command
 from odoo.tests import tagged
 
-from odoo.addons.l10n_in.tests.common import L10nInTestInvoicingCommon
-
 
 @tagged('post_install', '-at_install', 'post_install_l10n')
-class TestStockEwaybill(L10nInTestInvoicingCommon):
+class TestStockEwaybill(AccountTestInvoicingCommon):
 
     @classmethod
     def setUpClass(cls):
-        super().setUpClass()
-
+        super().setUpClass(chart_template_ref='in')
+        cls.env.company.write({
+            'state_id': cls.env.ref('base.state_in_gj').id,
+            'zip': '380004'
+        })
         cls.env.user.groups_id += cls.env.ref('stock.group_stock_manager')
-        cls.product_a.standard_price = 500.00
+        cls.sgst_sale_5 = cls.env["account.chart.template"].ref("sgst_sale_5")
+        cls.product_a.write({
+            "l10n_in_hsn_code": "01111",
+            'taxes_id': [Command.set(cls.sgst_sale_5.ids)],
+            'standard_price': 500.00
+        })
         cls.partner_a.write({
             'vat': '27DJMPM8965E1ZE',
             'l10n_in_gst_treatment': 'regular',
-            'state_id': cls.state_in_mh.id,
+            'state_id': cls.env.ref("base.state_in_mh").id,
+            'country_id': cls.env.ref('base.in').id,
             'zip': '431122'
         })
 
@@ -51,10 +59,10 @@ class TestStockEwaybill(L10nInTestInvoicingCommon):
         self.assertRecordValues(ewaybill, [{
             'state': 'pending',
             'display_name': _('Pending'),
-            'fiscal_position_id': self.fp_in_inter_state.id,
+            'fiscal_position_id': self.env['account.chart.template'].ref('fiscal_position_in_inter_state').id,
         }])
-        ewaybill.fiscal_position_id = self.fp_in_inter_state
-        self.assertEqual(ewaybill.move_ids[0].ewaybill_tax_ids, self.igst_sale_5)
+        ewaybill.fiscal_position_id = self.env['account.chart.template'].ref('fiscal_position_in_inter_state')
+        self.assertEqual(ewaybill.move_ids[0].ewaybill_tax_ids, self.env['account.chart.template'].ref('igst_sale_5'))
         expected_json = {
             'supplyType': 'O',
             'subSupplyType': '10',
@@ -63,25 +71,25 @@ class TestStockEwaybill(L10nInTestInvoicingCommon):
             'transDistance': '0',
             'docNo': 'compa/OUT/00001',
             'docDate': '26/04/2024',
-            'fromGstin': '24AAGCC7144L6ZE',
+            'fromGstin': 'URP',
             'toGstin': '27DJMPM8965E1ZE',
-            'fromTrdName': 'Default Company',
-            'toTrdName': 'Partner Intra State',
+            'fromTrdName': 'company_1_data',
+            'toTrdName': 'partner_a',
             'fromStateCode': 24,
             'toStateCode': 27,
-            'fromAddr1': 'Khodiyar Chowk',
-            'toAddr1': 'Karansinhji Rd',
-            'fromAddr2': 'Sala Number 3',
-            'toAddr2': 'Karanpara',
-            'fromPlace': 'Amreli',
-            'toPlace': 'Rajkot',
-            'fromPincode': 365220,
+            'fromAddr1': '',
+            'toAddr1': '',
+            'fromAddr2': '',
+            'toAddr2': '',
+            'fromPlace': '',
+            'toPlace': '',
+            'fromPincode': 380004,
             'toPincode': 431122,
             'actToStateCode': 27,
             'actFromStateCode': 24,
             'itemList': [{
                 'productName': 'product_a',
-                'hsnCode': '111111',
+                'hsnCode': '01111',
                 'productDesc': 'product_a',
                 'quantity': 5.0,
                 'qtyUnit': 'UNT',
@@ -121,28 +129,28 @@ class TestStockEwaybill(L10nInTestInvoicingCommon):
           'transDistance': '0',
           'docNo': 'compa/OUT/00002',
           'docDate': '26/04/2024',
-          'fromGstin': '24AAGCC7144L6ZE',
+          'fromGstin': 'URP',
           'toGstin': '27DJMPM8965E1ZE',
-          'fromTrdName': 'Default Company',
-          'toTrdName': 'Partner Intra State',
+          'fromTrdName': 'company_1_data',
+          'toTrdName': 'partner_a',
           'fromStateCode': 24,
           'toStateCode': 27,
-          'fromAddr1': 'Khodiyar Chowk',
-          'toAddr1': 'Karansinhji Rd',
-          'fromAddr2': 'Sala Number 3',
-          'toAddr2': 'Karanpara',
-          'fromPlace': 'Amreli',
-          'toPlace': 'Rajkot',
-          'fromPincode': 365220,
+          'fromAddr1': '',
+          'toAddr1': '',
+          'fromAddr2': '',
+          'toAddr2': '',
+          'fromPlace': '',
+          'toPlace': '',
+          'fromPincode': 380004,
           'toPincode': 431122,
           'actToStateCode': 27,
           'actFromStateCode': 24,
           'transporterId': '27DJMPM8965E1ZE',
-          'transporterName': 'Partner Intra State',
+          'transporterName': 'partner_a',
           'itemList': [
             {
               'productName': 'product_a',
-              'hsnCode': '111111',
+              'hsnCode': '01111',
               'productDesc': 'product_a',
               'quantity': 5.0,
               'qtyUnit': 'UNT',

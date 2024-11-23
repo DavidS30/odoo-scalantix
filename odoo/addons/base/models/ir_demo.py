@@ -17,5 +17,5 @@ class IrDemo(models.TransientModel):
         return {
             'type': 'ir.actions.act_url',
             'target': 'self',
-            'url': '/odoo',
+            'url': '/web',
         }

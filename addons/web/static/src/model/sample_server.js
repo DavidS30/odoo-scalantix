@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {
     deserializeDate,
     deserializeDateTime,
@@ -288,7 +290,19 @@ export class SampleServer {
                 return [...new Set(ids)];
             }
             case "selection": {
-                return this._getRandomSelectionValue(modelName, field);
+                // I hoped we wouldn't have to implement such special cases, but here it is.
+                // If this (mail) field is set, 'Warning' is displayed instead of the last
+                // activity, and we don't want to see a bunch of 'Warning's in a list. In the
+                // future, if we have to implement several special cases like that, we'll setup
+                // a proper hook to allow external modules to define extensions of this function.
+                // For now, as we have only one use case, I guess that doing it here is fine.
+                if (fieldName === "activity_exception_decoration") {
+                    return false;
+                }
+                if (field.selection.length > 0) {
+                    return this._getRandomArrayEl(field.selection)[0];
+                }
+                return false;
             }
             default:
                 return false;
@@ -337,17 +351,6 @@ export class SampleServer {
      */
     _getRandomInt(max) {
         return Math.floor(Math.random() * max);
-    }
-
-    /**
-     * @private
-     * @returns {string}
-     */
-    _getRandomSelectionValue(modelName, field) {
-        if (field.selection.length > 0) {
-            return this._getRandomArrayEl(field.selection)[0];
-        }
-        return false;
     }
 
     /**
@@ -464,8 +467,8 @@ export class SampleServer {
         for (const measureSpec of params.fields || Object.keys(fields)) {
             const matches = measureSpec.match(MEASURE_SPEC_REGEX);
             let { fieldName, aggregateFunction, measure } = (matches && matches.groups) || {};
-            if (!aggregateFunction && fieldName in fields && fields[fieldName].aggregator) {
-                aggregateFunction = fields[fieldName].aggregator;
+            if (!aggregateFunction && fieldName in fields && fields[fieldName].group_operator) {
+                aggregateFunction = fields[fieldName].group_operator;
                 measure = fieldName;
             }
             if (!fieldName && !measure) {
@@ -581,11 +584,8 @@ export class SampleServer {
             const groups = this.existingGroups;
             const group = groups[searchReadNumber++ % groups.length];
             result = {
-                records: this._mockRead({
-                    model: params.model,
-                    args: [group.__recordIds, fields],
-                }),
-                length: group.__recordIds.length,
+                records: group.__data.records,
+                length: group.__data.records.length,
             };
         } else {
             const model = this.data[params.model];
@@ -750,7 +750,6 @@ export class SampleServer {
         const groupBy = fullGroupBy.split(":")[0];
         const groupByField = this.data[params.model].fields[groupBy];
         const records = this.data[params.model].records;
-        const fields = params.fields.map((aggregate_spec) => aggregate_spec.split(":")[0])
         for (const g of groups) {
             const recordsInGroup = records.filter((r) => {
                 if (["date", "datetime"].includes(groupByField.type)) {
@@ -762,14 +761,20 @@ export class SampleServer {
                 }
                 return r[groupBy] === g[fullGroupBy];
             });
-            for (const field of fields) {
+            for (const field of params.fields) {
                 const fieldType = this.data[params.model].fields[field].type;
                 if (["integer, float", "monetary"].includes(fieldType)) {
                     g[field] = recordsInGroup.reduce((acc, r) => acc + r[field], 0);
                 }
             }
             g[`${groupBy}_count`] = recordsInGroup.length;
-            g.__recordIds = recordsInGroup.map((r) => r.id);
+            g.__data = {
+                records: this._mockRead({
+                    model: params.model,
+                    args: [recordsInGroup.map((r) => r.id), params.fields],
+                }),
+                length: recordsInGroup.length,
+            };
         }
     }
 }
@@ -833,8 +838,7 @@ export function buildSampleORM(resModel, fields, user) {
         const { groupby: groupBy } = kwargs;
         return sampleServer.mockRpc({ method, model, args, ...kwargs, groupBy });
     };
-    const sampleORM = new ORM(user);
-    sampleORM.rpc = fakeRPC;
+    const sampleORM = new ORM(fakeRPC, user);
     sampleORM.isSample = true;
     sampleORM.setGroups = (groups) => sampleServer.setExistingGroups(groups);
     return sampleORM;

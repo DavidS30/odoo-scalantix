@@ -1,17 +1,17 @@
+/** @odoo-module **/
+
+import { helpers } from "@odoo/o-spreadsheet";
+
+const { createCurrencyFormat } = helpers;
+
 /**
- * Return the currency cleaned from useless info and from the `code` field to be used to generate
- * a default currency format.
- *
  * @param {object} currency
- * @returns {object}
+ * @returns {string}
  */
-export function createDefaultCurrency(currency) {
-    if (!currency) {
-        return undefined;
-    }
-    return {
+export function createDefaultCurrencyFormat(currency) {
+    return createCurrencyFormat({
         symbol: currency.symbol,
         position: currency.position,
         decimalPlaces: currency.decimalPlaces,
-    };
+    });
 }

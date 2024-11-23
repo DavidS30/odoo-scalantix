@@ -9,7 +9,7 @@ class ReportMoOverview(models.AbstractModel):
     def _get_extra_replenishments(self, product):
         res = super()._get_extra_replenishments(product)
         domain = [('state', 'in', ['draft', 'sent', 'to approve']), ('product_id', '=', product.id)]
-        warehouse_id = self.env.context.get('warehouse_id', False)
+        warehouse_id = self.env.context.get('warehouse', False)
         if warehouse_id:
             warehouse_id = warehouse_id if isinstance(warehouse_id, list) else [warehouse_id]
             domain += [('order_id.picking_type_id.warehouse_id', 'in', warehouse_id)]
@@ -34,13 +34,8 @@ class ReportMoOverview(models.AbstractModel):
 
     def _format_extra_replenishment(self, po_line, quantity, production_id=False):
         po = po_line.order_id
-        price = po_line.taxes_id.compute_all(
-            po_line.price_unit,
-            currency=po.currency_id,
-            quantity=quantity,
-            product=po_line.product_id,
-            partner=po.partner_id,
-            rounding_method="round_globally",
+        price = po_line.taxes_id.with_context(round=False).compute_all(
+            po_line.price_unit, currency=po.currency_id, quantity=quantity, product=po_line.product_id, partner=po.partner_id
         )['total_void']
         return {
             '_name': 'purchase.order',
@@ -87,13 +82,9 @@ class ReportMoOverview(models.AbstractModel):
         if move_in and move_in.purchase_line_id:
             po_line = move_in.purchase_line_id
             po = po_line.order_id
-            price = po_line.taxes_id.compute_all(
-                po_line.price_unit,
-                currency=po.currency_id,
-                quantity=uom_id._compute_quantity(quantity, move_in.purchase_line_id.product_uom),
-                product=po_line.product_id,
-                partner=po.partner_id,
-                rounding_method='round_globally',
+            price = po_line.taxes_id.with_context(round=False).compute_all(
+                po_line.price_unit, currency=po.currency_id, quantity=uom_id._compute_quantity(quantity, move_in.purchase_line_id.product_uom),
+                product=po_line.product_id, partner=po.partner_id
             )['total_void']
             price = po_line.currency_id._convert(price, currency, (move_in.company_id or self.env.company), fields.Date.today())
             return currency.round(price)

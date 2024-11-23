@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo.tests import Form
+from odoo.tests.common import Form
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.addons.stock.tests.test_report import TestReportsCommon
 
@@ -314,7 +314,8 @@ class TestPurchaseStockReports(TestReportsCommon):
         receipt01 = po.picking_ids
         receipt01_move = receipt01.move_ids
         receipt01_move.quantity = 6
-        Form.from_action(self.env, receipt01.button_validate()).save().process()
+        action = receipt01.button_validate()
+        Form(self.env[action['res_model']].with_context(action['context'])).save().process()
 
         data = self.env['vendor.delay.report'].read_group(
             [('partner_id', '=', self.partner.id)],
@@ -358,7 +359,8 @@ class TestPurchaseStockReports(TestReportsCommon):
         receipt01_move = receipt01.move_ids
         receipt01_move.quantity = 6
         receipt01_move.picked = True
-        Form.from_action(self.env, receipt01.button_validate()).save().process_cancel_backorder()
+        action = receipt01.button_validate()
+        Form(self.env[action['res_model']].with_context(action['context'])).save().process_cancel_backorder()
 
         data = self.env['vendor.delay.report'].read_group(
             [('partner_id', '=', self.partner.id)],

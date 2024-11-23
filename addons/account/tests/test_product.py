@@ -9,8 +9,8 @@ from odoo.tests.common import new_test_user
 class TestProduct(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref=None):
+        super().setUpClass(chart_template_ref)
         cls.internal_user = new_test_user(
             cls.env,
             login="internal_user",

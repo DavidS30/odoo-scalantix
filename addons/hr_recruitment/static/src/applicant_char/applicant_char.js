@@ -6,7 +6,6 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 
 export class ApplicantCharField extends CharField {
-    static template = "hr_recruitment.ApplicantCharField";
     setup() {
         super.setup();
 
@@ -27,6 +26,7 @@ export class ApplicantCharField extends CharField {
         }
     }
 }
+ApplicantCharField.template = "hr_recruitment.ApplicantCharField";
 
 export const applicantCharField = {
     ...charField,

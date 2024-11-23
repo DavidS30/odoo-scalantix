@@ -1,7 +1,8 @@
+
 declare module "models" {
 
     export interface Message {
-        pinned_at: string,
+        pinnedAt: string,
     }
 
     export interface Thread {

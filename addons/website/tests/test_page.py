@@ -294,7 +294,7 @@ class WithContext(HttpCase):
         # Set another page (/page_1) as homepage
         website.write({
             'homepage_url': self.page.url,
-            'domain': self.base_url(),
+            'domain': f"http://{HOST}:{config['http_port']}",
         })
         assert self.page.url != '/'
 
@@ -324,7 +324,7 @@ class WithContext(HttpCase):
         # If one has set the `homepage_url` to a specific page URL..
         website.write({
             'name': 'Test Website',
-            'domain': self.base_url(),
+            'domain': f'http://{HOST}:{config["http_port"]}',
             'homepage_url': test_page.url,
         })
         home_url_full = website.domain + '/'
@@ -363,7 +363,7 @@ class WithContext(HttpCase):
         website = self.env['website'].browse([1])
         website.write({
             'name': 'Test Website',
-            'domain': self.base_url(),
+            'domain': f'http://{HOST}:{config["http_port"]}',
             'homepage_url': False,
         })
         contactus_url = '/contactus'
@@ -520,36 +520,6 @@ class WithContext(HttpCase):
             self.assertEqual(canonical_url, f'{self.base_url()}/fr/page_1')
             self.assertEqual(alternate_en_url, f'{self.base_url()}/page_1')
             self.assertEqual(alternate_fr_url, f'{self.base_url()}/fr/page_1')
-
-    def test_alternate_hreflang(self):
-        website = self.env['website'].browse(1)
-        lang_en = self.env.ref('base.lang_en')
-        lang_fr = self.env['res.lang']._activate_lang('fr_FR')
-        with MockRequest(self.env, website=website):
-            # Only one region per lang, the hreflang should be the short code
-            website.language_ids = [Command.set((lang_en + lang_fr).ids)]
-            langs = self.env['res.lang']._get_frontend()
-            self.assertEqual(langs['en_US']['hreflang'], 'en')
-            self.assertEqual(langs['fr_FR']['hreflang'], 'fr')
-            # Multiple regions per lang, one lang from the same region should be
-            # the short code, others should keep the full code
-            lang_be = self.env['res.lang']._activate_lang('fr_BE')
-            lang_ca = self.env['res.lang']._activate_lang('fr_CA')
-            website.language_ids = [Command.set((lang_en + lang_fr + lang_be + lang_ca).ids)]
-            langs = self.env['res.lang']._get_frontend()
-            self.assertEqual(langs['en_US']['hreflang'], 'en')
-            self.assertEqual(langs['fr_FR']['hreflang'], 'fr-fr')
-            self.assertEqual(langs['fr_BE']['hreflang'], 'fr')
-            self.assertEqual(langs['fr_CA']['hreflang'], 'fr-ca')
-            # Special case for es_419: if there is multiple regions for spanish,
-            # including es_419, es_419 should be the one shortened
-            lang_es = self.env['res.lang']._activate_lang('es_ES')
-            lang_419 = self.env['res.lang']._activate_lang('es_419')
-            website.language_ids = [Command.set((lang_en + lang_es + lang_419).ids)]
-            langs = self.env['res.lang']._get_frontend()
-            self.assertEqual(langs['en_US']['hreflang'], 'en')
-            self.assertEqual(langs['es_ES']['hreflang'], 'es-es')
-            self.assertEqual(langs['es_419']['hreflang'], 'es')
 
     def test_07_not_authorized(self):
         # Create page that requires specific user role.

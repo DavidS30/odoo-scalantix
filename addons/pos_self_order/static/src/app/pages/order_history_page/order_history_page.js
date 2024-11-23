@@ -1,11 +1,11 @@
+/** @odoo-module */
+
 import { Component, useState } from "@odoo/owl";
 import { useSelfOrder } from "@pos_self_order/app/self_order_service";
 import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
-import { deserializeDateTime } from "@web/core/l10n/dates";
 export class OrdersHistoryPage extends Component {
     static template = "pos_self_order.OrdersHistoryPage";
-    static props = {};
 
     async setup() {
         this.selfOrder = useSelfOrder();
@@ -17,18 +17,13 @@ export class OrdersHistoryPage extends Component {
         await this.loadOrder();
     }
 
-    getOrderDate(order) {
-        return deserializeDateTime(order.date_order).toFormat("dd/MM/yyyy");
-    }
     async loadOrder() {
         await this.selfOrder.getOrdersFromServer();
         this.state.loadingProgress = false;
     }
 
     get orders() {
-        return this.selfOrder.models["pos.order"]
-            .filter((o) => o.access_token)
-            .sort((a, b) => b.id - a.id);
+        return this.selfOrder.orders.filter((o) => o.access_token).sort((a, b) => b.id - a.id);
     }
 
     get lines() {
@@ -61,7 +56,7 @@ export class OrdersHistoryPage extends Component {
 
     editOrder(order) {
         if (order.state === "draft") {
-            this.selfOrder.selectedOrderUuid = order.uuid;
+            this.selfOrder.editedOrder = order;
             this.router.navigate("cart");
         }
     }

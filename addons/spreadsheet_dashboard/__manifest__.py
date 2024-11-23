@@ -3,7 +3,7 @@
 {
     "name": "Spreadsheet dashboard",
     "version": "1.0",
-    "category": "Productivity/Dashboard",
+    "category": "Hidden",
     "summary": "Spreadsheet",
     "description": "Spreadsheet",
     "depends": ["spreadsheet"],
@@ -28,8 +28,14 @@
             "spreadsheet_dashboard/static/src/assets/**/*.js",
             "spreadsheet_dashboard/static/src/**/*.scss",
         ],
-        'web.assets_unit_tests': [
+        "web.qunit_suite_tests": [
             "spreadsheet_dashboard/static/tests/**/*",
+            ("remove", "spreadsheet_dashboard/static/tests/mobile/**/*.js"),
+        ],
+        "web.qunit_mobile_suite_tests": [
+            "spreadsheet_dashboard/static/tests/mobile/**/*.js",
+            "spreadsheet_dashboard/static/tests/utils/**/*.js",
+            ("include", "spreadsheet.o_spreadsheet"),
         ],
     },
 }

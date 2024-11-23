@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 import { parseFloat as oParseFloat } from "@web/views/fields/parsers";
 import { barcodeService } from "@barcodes/barcode_service";
 import { registry } from "@web/core/registry";
@@ -54,16 +56,16 @@ const getDefaultConfig = () => ({
  * - Write more integration tests. NumberPopup can be used as test component.
  */
 class NumberBuffer extends EventBus {
-    static serviceDependencies = ["mail.sound_effects", "localization"];
+    static serviceDependencies = ["sound", "localization"];
     constructor() {
         super();
         this.setup(...arguments);
     }
-    setup(services) {
+    setup({ sound, localization }) {
         this.isReset = false;
         this.bufferHolderStack = [];
-        this.sound = services["mail.sound_effects"];
-        this.defaultDecimalPoint = services.localization.decimalPoint;
+        this.sound = sound;
+        this.defaultDecimalPoint = localization.decimalPoint;
         window.addEventListener("keyup", this._onKeyboardInput.bind(this));
     }
     /**

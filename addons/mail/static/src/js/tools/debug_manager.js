@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 
@@ -6,7 +8,7 @@ export function manageMessages({ component, env }) {
     if (!resId) {
         return null; // No record
     }
-    const description = _t("Messages");
+    const description = _t("Manage Messages");
     return {
         type: "item",
         description,
@@ -29,8 +31,7 @@ export function manageMessages({ component, env }) {
                 },
             });
         },
-        sequence: 130,
-        section: "record",
+        sequence: 325,
     };
 }
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import werkzeug
@@ -50,7 +51,7 @@ class WebsiteBackend(http.Controller):
             raise werkzeug.exceptions.Forbidden()
 
         return {
-            model: request.env[model].has_access('create')
+            model: request.env[model].check_access_rights('create', raise_exception=False)
             for model in models
         }
 

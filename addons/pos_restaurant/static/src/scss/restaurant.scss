@@ -8,6 +8,16 @@
     -webkit-line-clamp: 2;
 }
 
+/* ------ NARROWER SCREEN ------ */
+@media screen and (max-width: 768px) {
+    .splitbill-screen.screen .main {
+        flex-flow: column nowrap;
+    }
+    .splitbill-screen.screen .main .controls {
+        border-top: dashed 1px rgb(215,215,215);
+        flex: none;
+    }
+}
 
 .tip-screen .pos-receipt-container {
     display: none;
@@ -54,6 +64,11 @@
     }
 }
 
-.submit-order {
-    min-height: 70px;
+.multiprint-flex {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.multiprint-flex .product-quantity {
+    margin-right: 50px;
 }

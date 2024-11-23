@@ -9,24 +9,22 @@ Odoo Web tours.
 ========================
 
 """,
-    'version': '1.0',
+    'version': '0.1',
     'depends': ['web'],
     'data': [
         'security/ir.model.access.csv',
-        'views/tour_views.xml',
-        'views/res_users_views.xml',
+        'security/ir.rule.csv',
+        'views/tour_views.xml'
     ],
     'assets': {
         'web.assets_backend': [
             'web_tour/static/src/**/*',
-            'web/static/lib/hoot-dom/**/*',
         ],
         'web.assets_frontend': [
             'web_tour/static/src/tour_pointer/**/*',
             'web_tour/static/src/tour_service/**/*',
-            'web/static/lib/hoot-dom/**/*',
         ],
-        'web.assets_unit_tests': [
+        'web.qunit_suite_tests': [
             'web_tour/static/tests/**/*',
         ],
     },

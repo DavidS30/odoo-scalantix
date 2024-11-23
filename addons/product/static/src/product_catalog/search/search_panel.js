@@ -5,11 +5,6 @@ import { useState } from "@odoo/owl";
 
 
 export class ProductCatalogSearchPanel extends SearchPanel {
-    static subTemplates = {
-        ...SearchPanel.subTemplates,
-        filtersGroup: "ProductCatalogSearchPanel.FiltersGroup",
-    };
-
     setup() {
         super.setup();
 
@@ -53,4 +48,9 @@ export class ProductCatalogSearchPanel extends SearchPanel {
             this.toggleFilterValue(filterId, id, { currentTarget });
         })
     }
+}
+
+ProductCatalogSearchPanel.subTemplates = {
+    ...SearchPanel.subTemplates,
+    filtersGroup: "ProductCatalogSearchPanel.FiltersGroup",
 }

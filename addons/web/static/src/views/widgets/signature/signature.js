@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 import { registry } from "@web/core/registry";
 import { SignatureDialog } from "@web/core/signature/signature_dialog";
 import { useService } from "@web/core/utils/hooks";
@@ -51,7 +53,7 @@ export class SignatureWidget extends Component {
     }
 
     async uploadSignature({ signatureImage }) {
-        const file = signatureImage.split(",")[1];
+        const file = signatureImage[1];
         const { model, resModel, resId } = this.props.record;
 
         await this.env.services.orm.write(resModel, [resId], {

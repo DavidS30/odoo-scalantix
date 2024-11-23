@@ -8,7 +8,6 @@
     'depends': [
         'account',
     ],
-    'auto_install': ['account'],
     'description': """
     Rwandan localisation containing:
     - COA

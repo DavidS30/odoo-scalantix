@@ -8,10 +8,10 @@
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-25 08:39+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Thi Huong Nguyen, 2024\n"
 "Language-Team: Vietnamese (https://app.transifex.com/odoo/teams/41243/vi/)\n"
 "MIME-Version: 1.0\n"
@@ -23,30 +23,35 @@ msgstr ""
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
-msgid "%(count)s Electronic invoicing error(s)"
-msgstr "%(count)s lỗi lập hoá đơn điện tử"
+#, python-format
+msgid " Electronic invoicing error(s)"
+msgstr "(Các) lỗi lập hoá đơn điện tử"
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
-msgid "%(count)s Electronic invoicing info(s)"
-msgstr "%(count)s thông tin lập hoá đơn điện tử"
+#, python-format
+msgid " Electronic invoicing info(s)"
+msgstr "(Các) thông tin lập hoá đơn điện tử"
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
-msgid "%(count)s Electronic invoicing warning(s)"
-msgstr "%(count)s cảnh báo lập hoá đơn điện tử"
+#, python-format
+msgid " Electronic invoicing warning(s)"
+msgstr "(Các) cảnh báo lập hoá đơn điện tử"
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid "A cancellation of the EDI has been requested."
 msgstr "Việc hủy bỏ EDI đã được yêu cầu."
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid "A request for cancellation of the EDI has been called off."
 msgstr "Yêu cầu hủy bỏ EDI đã bị hủy bỏ."
 
@@ -102,6 +107,7 @@ msgstr "Đã hủy"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_journal.py:0
+#, python-format
 msgid ""
 "Cannot deactivate (%s) on this journal because not all documents are "
 "synchronized"
@@ -165,6 +171,7 @@ msgstr "EDI: Thực hiện các thao tác dịch vụ web"
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_blocking_level
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_blocking_level
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_blocking_level
 msgid "Edi Blocking Level"
 msgstr "Mức độ chặn EDI"
 
@@ -176,18 +183,21 @@ msgstr "Nội dung EDI"
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_document_ids
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_document_ids
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_document_ids
 msgid "Edi Document"
-msgstr "Chứng từ EDI"
+msgstr "Edi Document"
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_error_count
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_error_count
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_error_count
 msgid "Edi Error Count"
-msgstr "Số lỗi EDI"
+msgstr "Edi Error Count"
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_error_message
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_error_message
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_error_message
 msgid "Edi Error Message"
 msgstr "Thông báo lỗi EID"
 
@@ -199,26 +209,30 @@ msgstr "Định dạng Edi"
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_show_abandon_cancel_button
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_show_abandon_cancel_button
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_show_abandon_cancel_button
 msgid "Edi Show Abandon Cancel Button"
-msgstr "Edi Hiển thị bỏ nút Hủy"
+msgstr "Edi Show Abandon Cancel Button"
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_show_cancel_button
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_show_cancel_button
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_show_cancel_button
 msgid "Edi Show Cancel Button"
-msgstr "Edi Hiển thị nút Hủy"
+msgstr "Edi Show Cancel Button"
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_show_force_cancel_button
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_show_force_cancel_button
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_show_force_cancel_button
 msgid "Edi Show Force Cancel Button"
 msgstr "Edi Hiện nút Bắt buộc hủy"
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_web_services_to_process
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_web_services_to_process
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_web_services_to_process
 msgid "Edi Web Services To Process"
-msgstr "Dịch vụ web Edi cần xử lý"
+msgstr "Edi Web Services To Process"
 
 #. module: account_edi
 #: model:ir.model,name:account_edi.model_account_edi_document
@@ -230,6 +244,7 @@ msgstr "Tài liệu điện tử cho account.move"
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_state
 #: model:ir.model.fields,field_description:account_edi.field_account_journal__edi_format_ids
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_state
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_state
 msgid "Electronic invoicing"
 msgstr "Hóa đơn điện tử"
 
@@ -263,6 +278,7 @@ msgstr "Định dạng tên"
 #. module: account_edi
 #: model:ir.model.fields,help:account_edi.field_account_bank_statement_line__edi_error_count
 #: model:ir.model.fields,help:account_edi.field_account_move__edi_error_count
+#: model:ir.model.fields,help:account_edi.field_account_payment__edi_error_count
 msgid "How many EDIs are in error for this move?"
 msgstr "Có bao nhiêu EDI bị lỗi trong bút toán này?"
 
@@ -281,6 +297,7 @@ msgstr "Thông tin"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid ""
 "Invalid invoice configuration:\n"
 "\n"
@@ -326,7 +343,7 @@ msgstr "Tên"
 #. module: account_edi
 #: model:ir.model.constraint,message:account_edi.constraint_account_edi_document_unique_edi_document_by_move_by_format
 msgid "Only one edi document by move by format"
-msgstr "Chỉ một chứng từ EDI theo bút toán theo định dạng"
+msgstr "Only one edi document by move by format"
 
 #. module: account_edi
 #: model_terms:ir.ui.view,arch_db:account_edi.view_move_form_inherit
@@ -372,6 +389,7 @@ msgstr "Trạng thái"
 #. module: account_edi
 #: model:ir.model.fields,help:account_edi.field_account_bank_statement_line__edi_state
 #: model:ir.model.fields,help:account_edi.field_account_move__edi_state
+#: model:ir.model.fields,help:account_edi.field_account_payment__edi_state
 msgid "The aggregated state of all the EDIs with web-service of this move"
 msgstr ""
 "Trạng thái tổng hợp của tất cả các EDI kèm dịch vụ web của bút toán này"
@@ -382,12 +400,13 @@ msgid ""
 "The file generated by edi_format_id when the invoice is posted (and this "
 "document is processed)."
 msgstr ""
-"Tệp được tạo bởi edi_format_id khi hóa đơn được ghi sổ (và chứng từ này được"
-" xử lý)."
+"The file generated by edi_format_id when the invoice is posted (and this "
+"document is processed)."
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/wizard/account_resequence.py:0
+#, python-format
 msgid ""
 "The following documents have already been sent and cannot be resequenced: %s"
 msgstr ""
@@ -413,12 +432,14 @@ msgstr "Mã này đã tồn tại"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_edi_document.py:0
+#, python-format
 msgid "This document is being sent by another process already. "
 msgstr "Chứng từ này đang được gửi bởi một quá trình khác."
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid ""
 "This invoice was canceled while the EDIs %s still had a pending cancellation"
 " request."
@@ -446,22 +467,24 @@ msgstr "Cảnh báo"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid ""
 "You can't edit the following journal entry %s because an electronic document"
 " has already been sent. Please use the 'Request EDI Cancellation' button "
 "instead."
 msgstr ""
-"Bạn không thể chỉnh sửa bút toán sau %s vì chứng từ điện tử đã được gửi đi. "
-"Thay vào đó, vui lòng sử dụng nút 'Yêu cầu hủy EDI'."
+"You can't edit the following journal entry %s because an electronic document"
+" has already been sent. Please use the 'Request EDI Cancellation' button "
+"instead."
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/ir_attachment.py:0
+#, python-format
 msgid ""
 "You can't unlink an attachment being an EDI document sent to the government."
 msgstr ""
-"Bạn không thể hủy liên kết tệp đính kèm là chứng từ EDI được gửi tới chính "
-"phủ."
+"You can't unlink an attachment being an EDI document sent to the government."
 
 #. module: account_edi
 #: model_terms:ir.ui.view,arch_db:account_edi.view_move_form_inherit

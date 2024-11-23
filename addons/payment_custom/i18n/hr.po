@@ -3,14 +3,15 @@
 # 	* payment_custom
 # 
 # Translators:
+# Martin Trigaux, 2024
 # Bole <bole@dajmi5.com>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:56+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Bole <bole@dajmi5.com>, 2024\n"
 "Language-Team: Croatian (https://app.transifex.com/odoo/teams/41243/hr/)\n"
 "MIME-Version: 1.0\n"
@@ -20,14 +21,14 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
 
 #. module: payment_custom
-#: model_terms:ir.ui.view,arch_db:payment_custom.custom_state_header
+#: model_terms:ir.ui.view,arch_db:payment_custom.custom_transaction_status
 msgid ""
 "<small class=\"text-center text-wrap lh-sm\">Scan me in your banking "
 "app</small>"
 msgstr ""
 
 #. module: payment_custom
-#: model_terms:ir.ui.view,arch_db:payment_custom.custom_state_header
+#: model_terms:ir.ui.view,arch_db:payment_custom.custom_transaction_status
 msgid "<strong class=\"mt-auto\">Communication: </strong>"
 msgstr ""
 
@@ -39,7 +40,7 @@ msgstr "Šifra"
 #. module: payment_custom
 #: model:ir.model.fields.selection,name:payment_custom.selection__payment_provider__code__custom
 msgid "Custom"
-msgstr "Prilagođeno"
+msgstr "Prilagođen"
 
 #. module: payment_custom
 #: model:ir.model.fields,field_description:payment_custom.field_payment_provider__custom_mode
@@ -49,7 +50,7 @@ msgstr ""
 #. module: payment_custom
 #: model:ir.model.fields,field_description:payment_custom.field_payment_provider__qr_code
 msgid "Enable QR Codes"
-msgstr ""
+msgstr "Omogući QR kodove"
 
 #. module: payment_custom
 #: model:ir.model.fields,help:payment_custom.field_payment_provider__qr_code
@@ -57,18 +58,19 @@ msgid "Enable the use of QR-codes when paying by wire transfer."
 msgstr ""
 
 #. module: payment_custom
-#: model_terms:ir.ui.view,arch_db:payment_custom.custom_state_header
+#: model_terms:ir.ui.view,arch_db:payment_custom.custom_transaction_status
 msgid "Finalize your payment"
 msgstr ""
 
 #. module: payment_custom
 #. odoo-python
 #: code:addons/payment_custom/models/payment_transaction.py:0
+#, python-format
 msgid "No transaction found matching reference %s."
 msgstr ""
 
 #. module: payment_custom
-#: model_terms:ir.ui.view,arch_db:payment_custom.custom_state_header
+#: model_terms:ir.ui.view,arch_db:payment_custom.custom_transaction_status
 msgid "OR"
 msgstr ""
 
@@ -95,6 +97,7 @@ msgstr ""
 #. module: payment_custom
 #. odoo-python
 #: code:addons/payment_custom/models/payment_transaction.py:0
+#, python-format
 msgid "The customer has selected %(provider_name)s to make the payment."
 msgstr ""
 
@@ -105,6 +108,5 @@ msgstr ""
 
 #. module: payment_custom
 #: model:ir.model.fields.selection,name:payment_custom.selection__payment_provider__custom_mode__wire_transfer
-#: model:payment.method,name:payment_custom.payment_method_wire_transfer
 msgid "Wire Transfer"
-msgstr ""
+msgstr "Bankovni nalog"

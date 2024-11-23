@@ -1,7 +1,9 @@
+/* @odoo-module */
+
 import { NavigableList } from "@mail/core/common/navigable_list";
 import { cleanTerm } from "@mail/utils/common/format";
 
-import { Component, useEffect, useRef, useState } from "@odoo/owl";
+import { Component, onMounted, useEffect, useRef, useState } from "@odoo/owl";
 
 import { getActiveHotkey } from "@web/core/hotkeys/hotkey_service";
 import { _t } from "@web/core/l10n/translation";
@@ -17,9 +19,9 @@ export class ChannelSelector extends Component {
     static template = "discuss.ChannelSelector";
 
     setup() {
-        super.setup();
         this.discussCoreCommonService = useState(useService("discuss.core.common"));
         this.store = useState(useService("mail.store"));
+        this.threadService = useState(useService("mail.thread"));
         this.suggestionService = useService("mail.suggestion");
         this.orm = useService("orm");
         this.sequential = useSequential();
@@ -30,6 +32,7 @@ export class ChannelSelector extends Component {
                 anchorRef: undefined,
                 position: "bottom-fit",
                 onSelect: (ev, option) => this.onSelect(option),
+                placeholder: _t("Loading"),
                 optionTemplate:
                     this.props.category.id === "channels"
                         ? "discuss.ChannelSelector.channel"
@@ -40,6 +43,9 @@ export class ChannelSelector extends Component {
         });
         this.inputRef = useRef("input");
         this.rootRef = useRef("root");
+        if (this.props.autofocus) {
+            onMounted(() => this.inputRef.el.focus());
+        }
         this.markEventHandled = markEventHandled;
         useEffect(
             () => {
@@ -57,14 +63,6 @@ export class ChannelSelector extends Component {
             },
             () => [this.state.value]
         );
-        useEffect(
-            (focus) => {
-                if (focus && this.inputRef.el) {
-                    this.inputRef.el.focus();
-                }
-            },
-            () => [this.props.autofocus]
-        );
     }
 
     async fetchSuggestions() {
@@ -72,7 +70,6 @@ export class ChannelSelector extends Component {
         if (cleanedTerm) {
             if (this.props.category.id === "channels") {
                 const domain = [
-                    ["parent_channel_id", "=", false],
                     ["channel_type", "=", "channel"],
                     ["name", "ilike", cleanedTerm],
                 ];
@@ -105,28 +102,28 @@ export class ChannelSelector extends Component {
                 return;
             }
             if (this.props.category.id === "chats") {
-                const data = await this.sequential(async () => {
+                const results = await this.sequential(async () => {
                     this.state.navigableListProps.isLoading = true;
-                    const data = await this.orm.call("res.partner", "im_search", [
+                    const res = await this.orm.call("res.partner", "im_search", [
                         cleanedTerm,
                         10,
                         this.state.selectedPartners,
                     ]);
                     this.state.navigableListProps.isLoading = false;
-                    return data;
+                    return res;
                 });
-                if (!data) {
+                if (!results) {
                     this.state.navigableListProps.options = [];
                     return;
                 }
-                const { Persona: partners = [] } = this.store.insert(data);
                 const suggestions = this.suggestionService
-                    .sortPartnerSuggestions(partners, cleanedTerm)
-                    .map((suggestion) => {
+                    .sortPartnerSuggestions(results, cleanedTerm)
+                    .map((data) => {
+                        this.store.Persona.insert({ ...data, type: "partner" });
                         return {
                             classList: "o-discuss-ChannelSelector-suggestion",
-                            label: suggestion.name,
-                            partner: suggestion,
+                            label: data.name,
+                            partner: data,
                         };
                     });
                 if (this.store.self.name.includes(cleanedTerm)) {
@@ -160,12 +157,11 @@ export class ChannelSelector extends Component {
                         this.store.internalUserGroupId,
                     ])
                     .then((data) => {
-                        const { Thread } = this.store.insert(data);
-                        const [channel] = Thread;
-                        channel.open();
+                        const channel = this.discussCoreCommonService.createChannelThread(data);
+                        this.threadService.open(channel);
                     });
             } else {
-                this.store.joinChannel(option.channelId, option.label);
+                this.threadService.joinChannel(option.channelId, option.label);
             }
             this.onValidate();
         }
@@ -186,7 +182,10 @@ export class ChannelSelector extends Component {
             if (selectedPartnerIds.length === 0) {
                 return;
             }
-            await this.discussCoreCommonService.startChat(selectedPartnerIds);
+            await this.discussCoreCommonService.startChat(
+                selectedPartnerIds,
+                this.env.inChatWindow
+            );
         }
         if (this.props.onValidate) {
             this.props.onValidate();

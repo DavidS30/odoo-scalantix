@@ -9,10 +9,10 @@ import { accessSurveysteps } from "./survey_tour_session_tools";
  * by going to the first question.
  */
 registry.category("web_tour.tours").add('test_survey_session_start_tour', {
-    url: "/odoo",
+    url: "/web",
+    test: true,
     steps: () => [].concat(accessSurveysteps, [{
     trigger: 'button[name="action_open_session_manager"]',
-    run: "click",
 }, {
     trigger: '.o_survey_session_attendees_count:contains("3")',
     run: function () {
@@ -32,9 +32,15 @@ registry.category("web_tour.tours").add('test_survey_session_start_tour', {
     }
 }, {
     trigger: '.o_survey_session_attendees_count.waitrpc:contains("3")',
+    isCheck: true
 }, {
     trigger: 'h1',
-    run: "press ArrowRight",
+    run: function () {
+        var e = $.Event('keydown');
+        e.key = "ArrowRight";
+        $(document).trigger(e); // start session
+    }
 }, {
     trigger: 'h1:contains("Nickname")',
+    run: function () {} // check first question is displayed
 }])});

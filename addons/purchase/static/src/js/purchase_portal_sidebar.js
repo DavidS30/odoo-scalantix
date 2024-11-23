@@ -14,7 +14,6 @@ publicWidget.registry.PurchasePortalSidebar = PortalSidebar.extend({
         this._super.apply(this, arguments);
         this.authorizedTextTag = ["em", "b", "i", "u"];
         this.spyWatched = $('body[data-target=".navspy"]');
-        this.orm = this.bindService("orm");
     },
     /**
      * @override

@@ -1,8 +1,8 @@
+/* @odoo-module */
+
 import { threadActionsRegistry } from "@mail/core/common/thread_actions";
-import { useComponent } from "@odoo/owl";
 
 import { _t } from "@web/core/l10n/translation";
-import { useService } from "@web/core/utils/hooks";
 
 threadActionsRegistry.add("expand-discuss", {
     condition(component) {
@@ -13,27 +13,18 @@ threadActionsRegistry.add("expand-discuss", {
             !component.ui.isSmall
         );
     },
-    setup() {
-        const component = useComponent();
-        component.actionService = useService("action");
-    },
     icon: "fa fa-fw fa-expand",
     name: _t("Open in Discuss"),
-    shouldClearBreadcrumbs(component) {
-        return false;
-    },
     open(component) {
+        component.threadService.setDiscussThread(component.thread);
         component.actionService.doAction(
             {
                 type: "ir.actions.client",
                 tag: "mail.action_discuss",
+                name: _t("Discuss"),
             },
-            {
-                clearBreadcrumbs: this.shouldClearBreadcrumbs(component),
-                additionalContext: { active_id: component.thread.id },
-            }
+            { clearBreadcrumbs: true }
         );
     },
-    sequence: 40,
-    sequenceGroup: 20,
+    sequence: 15,
 });

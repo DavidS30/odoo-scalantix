@@ -3,7 +3,7 @@
 
 from odoo import Command
 from odoo.exceptions import ValidationError
-from odoo.tests import TransactionCase
+from odoo.tests.common import Form, TransactionCase
 
 
 class StockGenerateCommon(TransactionCase):
@@ -14,7 +14,7 @@ class StockGenerateCommon(TransactionCase):
         Product = cls.env['product.product']
         cls.product_serial = Product.create({
             'name': 'Tracked by SN',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'serial',
         })
         cls.uom_unit = cls.env.ref('uom.product_uom_unit')
@@ -33,6 +33,8 @@ class StockGenerateCommon(TransactionCase):
             'name': 'Room B',
             'location_id': cls.warehouse.lot_stock_id.id,
         })
+
+        cls.Wizard = cls.env['stock.assign.serial']
 
     def get_new_move(self, nbre_of_lines=0, product=False):
         product = product or self.product_serial
@@ -66,7 +68,13 @@ class StockGenerateCommon(TransactionCase):
         nbre_of_lines = 5
         move = self.get_new_move(nbre_of_lines)
         move._do_unreserve()
-        move._generate_serial_numbers('001', nbre_of_lines)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='001',
+            default_next_serial_count=nbre_of_lines,
+        ))
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
 
         # Checks new move lines have the right SN
         generated_numbers = ['001', '002', '003', '004', '005']
@@ -85,7 +93,13 @@ class StockGenerateCommon(TransactionCase):
         # Case #1: Prefix, no suffix
         move = self.get_new_move(nbre_of_lines)
         move._do_unreserve()
-        move._generate_serial_numbers('bilou-87', nbre_of_lines)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='bilou-87',
+            default_next_serial_count=nbre_of_lines,
+        ))
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         # Checks all move lines have the right SN
         generated_numbers = [
             'bilou-87', 'bilou-88', 'bilou-89', 'bilou-90', 'bilou-91',
@@ -103,7 +117,13 @@ class StockGenerateCommon(TransactionCase):
         # Case #2: No prefix, suffix
         move = self.get_new_move(nbre_of_lines)
         move._do_unreserve()
-        move._generate_serial_numbers('005-ccc', nbre_of_lines)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='005-ccc',
+            default_next_serial_count=nbre_of_lines,
+        ))
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         # Checks all move lines have the right SN
         generated_numbers = [
             '005-ccc', '006-ccc', '007-ccc', '008-ccc', '009-ccc',
@@ -120,7 +140,13 @@ class StockGenerateCommon(TransactionCase):
 
         # Case #3: Prefix + suffix
         move = self.get_new_move(nbre_of_lines)
-        move._generate_serial_numbers('alpha-012-345-beta', nbre_of_lines)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='alpha-012-345-beta',
+            default_next_serial_count=nbre_of_lines,
+        ))
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         # Checks all move lines have the right SN
         generated_numbers = [
             'alpha-012-345-beta', 'alpha-012-346-beta', 'alpha-012-347-beta',
@@ -139,7 +165,13 @@ class StockGenerateCommon(TransactionCase):
 
         # Case #4: Prefix + suffix, identical number pattern
         move = self.get_new_move(nbre_of_lines)
-        move._generate_serial_numbers('BAV023B00001S00001', nbre_of_lines)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='BAV023B00001S00001',
+            default_next_serial_count=nbre_of_lines,
+        ))
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         # Checks all move lines have the right SN
         generated_numbers = [
             'BAV023B00001S00001', 'BAV023B00001S00002', 'BAV023B00001S00003',
@@ -160,11 +192,19 @@ class StockGenerateCommon(TransactionCase):
         """ Tries to generate some SN but with invalid initial number.
         """
         move = self.get_new_move(3)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='code-xxx',
+        ))
+
+        form_wizard.next_serial_count = 0
         # Must raise an exception because `next_serial_count` must be greater than 0.
         with self.assertRaises(ValidationError):
-            move._generate_serial_numbers('code-xxx', 0)
+            form_wizard.save()
 
-        move._generate_serial_numbers('code-xxx', 3)
+        form_wizard.next_serial_count = 3
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         self.assertEqual(move.move_line_ids.mapped('lot_name'), ["code-xxx0", "code-xxx1", "code-xxx2"])
 
     def test_generate_04_generate_in_multiple_time(self):
@@ -175,11 +215,24 @@ class StockGenerateCommon(TransactionCase):
         nbre_of_lines = 10
         move = self.get_new_move(nbre_of_lines)
         move._do_unreserve()
-        move._generate_serial_numbers('001', 3)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+        ))
+        # First assignment
+        form_wizard.next_serial_count = 3
+        form_wizard.next_serial_number = '001'
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         # Second assignment
-        move._generate_serial_numbers('bilou-64', 2)
+        form_wizard.next_serial_count = 2
+        form_wizard.next_serial_number = 'bilou-64'
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         # Third assignment
-        move._generate_serial_numbers('ro-1337-bot', 4)
+        form_wizard.next_serial_count = 4
+        form_wizard.next_serial_number = 'ro-1337-bot'
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
 
         # Checks all move lines have the right SN
         generated_numbers = [
@@ -211,7 +264,13 @@ class StockGenerateCommon(TransactionCase):
 
         # Checks a first time without putaway...
         move = self.get_new_move(nbre_of_lines)
-        move._generate_serial_numbers('001', nbre_of_lines)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+        ))
+        form_wizard.next_serial_count = nbre_of_lines
+        form_wizard.next_serial_number = '001'
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
 
         for move_line in move.move_line_ids:
             self.assertEqual(move_line.quantity, 1)
@@ -231,7 +290,13 @@ class StockGenerateCommon(TransactionCase):
         # Checks now with putaway...
         move = self.get_new_move(nbre_of_lines)
         move._do_unreserve()
-        move._generate_serial_numbers('001', nbre_of_lines)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+        ))
+        form_wizard.next_serial_count = nbre_of_lines
+        form_wizard.next_serial_number = '001'
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
 
         for move_line in move.move_line_ids:
             self.assertEqual(move_line.quantity, 1)
@@ -248,6 +313,7 @@ class StockGenerateCommon(TransactionCase):
         -> The test ensures that the destination locations are correct
         """
         stock_location = self.warehouse.lot_stock_id
+        self.env.user.write({'groups_id': [(4, self.env.ref('stock.group_stock_storage_categories').id)]})
         self.env.user.write({'groups_id': [(4, self.env.ref('stock.group_stock_multi_locations').id)]})
 
         # max 1 x product_serial
@@ -273,7 +339,6 @@ class StockGenerateCommon(TransactionCase):
             'location_out_id': stock_location.id,
             'product_id': self.product_serial.id,
             'storage_category_id': stor_category.id,
-            'sublocation': 'closest_location',
         })
 
         # Receive 1 x P
@@ -297,7 +362,13 @@ class StockGenerateCommon(TransactionCase):
         self.assertEqual(move.move_line_ids[0].location_dest_id, sub_loc_01)
         self.assertEqual(move.move_line_ids[1].location_dest_id, sub_loc_02)
 
-        move._generate_serial_numbers('001', 4)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='001',
+            default_next_serial_count=4,
+        ))
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
 
         self.assertRecordValues(move.move_line_ids, [
             {'quantity': 1, 'lot_name': '001', 'location_dest_id': sub_loc_01.id},
@@ -314,7 +385,7 @@ class StockGenerateCommon(TransactionCase):
         """
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lots',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'lot',
         })
         abc_lot_id = self.env['stock.lot'].create({
@@ -344,7 +415,6 @@ class StockGenerateCommon(TransactionCase):
             'default_location_id': receipt_picking.location_id.id,
             'default_location_dest_id': receipt_picking.location_dest_id.id,
             'default_product_id': product_lot.id,
-            'default_tracking': 'lot',
         }
         move_line_vals = self.env['stock.move'].action_generate_lot_line_vals(
             action_context, 'import', None, 0, 'abc;4\ndef'
@@ -363,7 +433,7 @@ class StockGenerateCommon(TransactionCase):
         """
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lots',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'serial',
         })
         sn_t1_01 = self.env['stock.lot'].create({'product_id': product_lot.id, 'name': 'sn-t1-01'})
@@ -394,10 +464,9 @@ class StockGenerateCommon(TransactionCase):
             'default_location_id': receipt_picking.location_id.id,
             'default_location_dest_id': receipt_picking.location_dest_id.id,
             'default_product_id': product_lot.id,
-            'default_tracking': 'serial',
         }
         move_line_vals = self.env['stock.move'].action_generate_lot_line_vals(
-            action_context, 'generate', 'sn-t1-01', 5, False
+            action_context, 'serial', 'sn-t1-01', 5, False
         )
         sn_t1_03, sn_t1_04, sn_t1_05 = self.env['stock.lot'].search(
             [('name', 'in', ['sn-t1-03', 'sn-t1-04', 'sn-t1-05']), ('product_id', '=', product_lot.id)]
@@ -411,7 +480,13 @@ class StockGenerateCommon(TransactionCase):
         ])
 
         # Test 'Assign Serial Numbers' action from the operation tree view
-        move._generate_serial_numbers('sn-t2-01', 5)
+        form_wizard = Form(self.env['stock.assign.serial'].with_context(
+            default_move_id=move.id,
+            default_next_serial_number='sn-t2-01',
+            default_next_serial_count=5
+        ))
+        wiz = form_wizard.save()
+        wiz.generate_serial_numbers()
         sn_t2_01, sn_t2_02, sn_t2_03, sn_t2_04, sn_t2_05 = self.env['stock.lot'].search([
             ('name', 'in', ['sn-t2-01', 'sn-t2-02', 'sn-t2-03', 'sn-t2-04', 'sn-t2-05']),
             ('product_id', '=', product_lot.id),

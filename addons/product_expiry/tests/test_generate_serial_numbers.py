@@ -4,6 +4,7 @@ from datetime import datetime
 from freezegun import freeze_time
 
 from odoo.addons.stock.tests.test_generate_serial_numbers import StockGenerateCommon
+from odoo.tests.common import Form
 from odoo.tools.misc import get_lang
 
 
@@ -23,10 +24,10 @@ class TestStockLot(StockGenerateCommon):
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lot Numbers',
             'tracking': 'lot',
-            'is_storable': True,
+            'type': 'product',
             'use_expiration_date': True,
         })
-        user_lang = self.env['res.lang'].browse([get_lang(self.env).id])
+        user_lang = get_lang(self.env)
         # Try first with the "day/month/year" date format.
         user_lang.date_format = "%d/%m/%y"
         list_lot_and_qty = [
@@ -71,9 +72,9 @@ class TestStockLot(StockGenerateCommon):
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lot Numbers',
             'tracking': 'lot',
-            'is_storable': True,
+            'type': 'product',
         })
-        user_lang = self.env['res.lang'].browse([get_lang(self.env).id])
+        user_lang = get_lang(self.env)
         # Try first with the "day/month/year" date format.
         user_lang.date_format = "%d/%m/%y"
         list_lot_and_qty = [
@@ -99,10 +100,10 @@ class TestStockLot(StockGenerateCommon):
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lot Numbers',
             'tracking': 'lot',
-            'is_storable': True,
+            'type': 'product',
             'use_expiration_date': True,
         })
-        user_lang = self.env['res.lang'].browse([get_lang(self.env).id])
+        user_lang = get_lang(self.env)
         # Month first in the system but day in the first place in the given dates.
         user_lang.date_format = "%m/%d/%y"
         list_lot_and_qty = [
@@ -145,7 +146,7 @@ class TestStockLot(StockGenerateCommon):
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lot Numbers',
             'tracking': 'lot',
-            'is_storable': True,
+            'type': 'product',
             'use_expiration_date': True,
         })
         list_lot_and_qty = [
@@ -171,7 +172,7 @@ class TestStockLot(StockGenerateCommon):
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lot Numbers',
             'tracking': 'lot',
-            'is_storable': True,
+            'type': 'product',
             'use_expiration_date': True,
         })
         list_lot_and_qty = [
@@ -227,10 +228,10 @@ class TestStockLot(StockGenerateCommon):
         product_lot = self.env['product.product'].create({
             'name': 'Tracked by Lot Numbers',
             'tracking': 'lot',
-            'is_storable': True,
+            'type': 'product',
             'use_expiration_date': True,
         })
-        user_lang = self.env['res.lang'].browse([get_lang(self.env).id])
+        user_lang = get_lang(self.env)
         user_lang.date_format = "%d/%m/%y"
         for lot_name in ["lot-001;20;4 Aug 2048", "lot-001\t04/08/2048\t20"]:
             move = self.get_new_move(product=product_lot)

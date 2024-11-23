@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { KanbanCompiler } from "@web/views/kanban/kanban_compiler";
+import { append, createElement } from "@web/core/utils/xml";
 
 export class ProjectTaskKanbanCompiler extends KanbanCompiler {
     setup() {
@@ -9,9 +10,9 @@ export class ProjectTaskKanbanCompiler extends KanbanCompiler {
             button: false,
             component: false,
         };
-        this.compilers.unshift(
-            { selector: 'widget[name="subtask_counter"]', fn: this.compileSubtaskListButton },
-            { selector: 'widget[name="subtask_kanban_list"]', fn: this.compileSubtaskListComponent },
+        this.compilers.push(
+            { selector: ".subtask_list_button", fn: this.compileSubtaskListButton },
+            { selector: "div.kanban_bottom_subtasks_section", fn: this.compileSubtaskListComponent },
         );
     }
 
@@ -21,7 +22,17 @@ export class ProjectTaskKanbanCompiler extends KanbanCompiler {
      */
     compileSubtaskListButton(el) {
         this.subtaskListComponentCompiled.button = true;
-        return this.compileWidget(el);
+        el.setAttribute("t-on-click", `() => __comp__.state.folded = !__comp__.state.folded`);
+        const compiled = createElement(el.nodeName);
+        for (const { name, value } of el.attributes) {
+            compiled.setAttribute(name, value);
+        }
+
+        for (const child of el.childNodes) {
+            append(compiled, this.compileNode(child));
+        }
+
+        return compiled;
     }
 
     /**
@@ -30,7 +41,19 @@ export class ProjectTaskKanbanCompiler extends KanbanCompiler {
      */
     compileSubtaskListComponent(el) {
         this.subtaskListComponentCompiled.component = true;
-        return this.compileWidget(el);
+        el.setAttribute("t-if", `!__comp__.state.folded and !selection_mode`);
+        const compiled = createElement(el.nodeName);
+        for (const { name, value } of el.attributes) {
+            compiled.setAttribute(name, value);
+        }
+        const listContainer = createElement('widget');
+        const listElemenent = createElement('SubtaskKanbanList');
+        listElemenent.setAttribute("record", '__comp__.props.record');
+
+        append(listContainer, listElemenent);
+        append(compiled, listContainer);
+
+        return compiled;
     }
 
     /**

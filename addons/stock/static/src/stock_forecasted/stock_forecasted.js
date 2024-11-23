@@ -11,19 +11,8 @@ import { ForecastedDetails } from "./forecasted_details";
 import { ForecastedHeader } from "./forecasted_header";
 import { ForecastedWarehouseFilter } from "./forecasted_warehouse_filter";
 import { Component, onWillStart, useState } from "@odoo/owl";
-import { standardActionServiceProps } from "@web/webclient/actions/action_service";
 
 export class StockForecasted extends Component {
-    static template = "stock.Forecasted";
-    static components = {
-        ControlPanel,
-        ForecastedButtons,
-        ForecastedWarehouseFilter,
-        ForecastedHeader,
-        View,
-        ForecastedDetails,
-    };
-    static props = { ...standardActionServiceProps };
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
@@ -47,35 +36,22 @@ export class StockForecasted extends Component {
         this.reportModelName = `stock.forecasted_product_${isTemplate ? "template" : "product"}`;
         this.warehouses.splice(0, this.warehouses.length);
         this.warehouses.push(...await this.orm.searchRead('stock.warehouse', [],['id', 'name', 'code']));
-        if (!this.context.warehouse_id) {
+        if (!this.context.warehouse) {
             this.updateWarehouse(this.warehouses[0].id);
         }
         const reportValues = await this.orm.call(this.reportModelName, "get_report_values", [], {
             context: this.context,
             docids: [this.productId],
         });
-        this.docs = {
-            ...reportValues.docs,
-            ...reportValues.precision,
-            lead_days_date: this.context.lead_days_date,
-            qty_to_order: this.context.qty_to_order,
-            visibility_days_date: this.context.visibility_days_date,
-            qty_to_order_with_visibility_days: this.context.qty_to_order_with_visibility_days
-        };
+        this.docs = { ...reportValues.docs, ...reportValues.precision };
     }
 
     async _getResModel(){
         this.resModel = this.context.active_model || this.context.params?.active_model;
         //Following is used as a fallback when the forecast is not called by an action but through browser's history
         if (!this.resModel) {
-            let resModel = this.props.action.res_model;
-            if (resModel) {
-                if (/^\d+$/.test(resModel)) {
-                    // legacy action definition where res_model is the model id instead of name
-                    const actionModel = await this.orm.read('ir.model', [Number(resModel)], ['model']);
-                    resModel = actionModel[0]?.model;
-                }
-                this.resModel = resModel;
+            if (this.props.action.res_model) {
+                this.resModel = this.props.action.res_model;
             } else if (this.props.action._originalAction) {
                 const originalContextAction = JSON.parse(this.props.action._originalAction).context;
                 if (typeof originalContextAction === "string") {
@@ -89,8 +65,8 @@ export class StockForecasted extends Component {
     }
 
     async updateWarehouse(id) {
-        const hasPreviousValue = this.context.warehouse_id !== undefined;
-        this.context.warehouse_id = id;
+        const hasPreviousValue = this.context.warehouse !== undefined;
+        this.context.warehouse = id;
         if (hasPreviousValue) {
             await this.reloadReport();
         }
@@ -109,9 +85,7 @@ export class StockForecasted extends Component {
     }
 
     get graphDomain() {
-        const warehouseIds = Array.isArray(this.context.warehouse_id)
-            ? this.context.warehouse_id
-            : [this.context.warehouse_id];
+        const warehouseIds = Array.isArray(this.context.warehouse) ? this.context.warehouse : [this.context.warehouse];
         const domain = [
             ["state", "=", "forecast"],
             ["warehouse_id", "in", warehouseIds],
@@ -140,4 +114,13 @@ export class StockForecasted extends Component {
     }
 }
 
+StockForecasted.template = "stock.Forecasted";
+StockForecasted.components = {
+    ControlPanel,
+    ForecastedButtons,
+    ForecastedWarehouseFilter,
+    ForecastedHeader,
+    View,
+    ForecastedDetails,
+};
 registry.category("actions").add("stock_forecasted", StockForecasted);

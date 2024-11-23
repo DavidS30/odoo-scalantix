@@ -199,12 +199,10 @@ class TestHttpEnsureDb(TestHttpBase):
         self.db_list = ['db0', 'db1']
 
     def test_ensure_db0_db_selector(self):
-        for url in ('/web', '/test_http/ensure_db'):
-            with self.subTest(url=url):
-                res = self.multidb_url_open(url)
-                res.raise_for_status()
-                self.assertEqual(res.status_code, 303)
-                self.assertURLEqual(res.headers.get('Location'), '/web/database/selector')
+        res = self.multidb_url_open('/test_http/ensure_db')
+        res.raise_for_status()
+        self.assertEqual(res.status_code, 303)
+        self.assertURLEqual(res.headers.get('Location'), '/web/database/selector')
 
     def test_ensure_db1_grant_db(self):
         res = self.multidb_url_open('/test_http/ensure_db?db=db0')

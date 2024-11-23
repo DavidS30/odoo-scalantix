@@ -1,73 +1,101 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import fields, models, _
+from odoo import fields, models, _lt
+from odoo.osv import expression
 
 
-class ProjectProject(models.Model):
-    _inherit = 'project.project'
+class Project(models.Model):
+    _inherit = "project.project"
 
-    bom_count = fields.Integer(compute='_compute_bom_count', groups='mrp.group_mrp_user', export_string_translation=False)
-    production_count = fields.Integer(compute='_compute_production_count', groups='mrp.group_mrp_user', export_string_translation=False)
-
-    def _compute_bom_count(self):
-        bom_count_per_project = dict(
-            self.env['mrp.bom']._read_group(
-                [('project_id', 'in', self.ids)],
-                ['project_id'], ['__count']
-            )
-        )
-        for project in self:
-            project.bom_count = bom_count_per_project.get(project)
-
-    def _compute_production_count(self):
-        production_count_per_project = dict(
-            self.env['mrp.production']._read_group(
-                [('project_id', 'in', self.ids)],
-                ['project_id'], ['__count']
-            )
-        )
-        for project in self:
-            project.production_count = production_count_per_project.get(project)
-
-    def action_view_mrp_bom(self):
-        self.ensure_one()
-        action = {
-            'type': 'ir.actions.act_window',
-            'res_model': 'mrp.bom',
-            'domain': [('project_id', '=', self.id)],
-            'name': self.env._('Bills of Materials'),
-            'view_mode': 'list,form',
-            'context': {'default_project_id': self.id},
-            'help': "<p class='o_view_nocontent_smiling_face'>%s</p><p>%s</p>" % (
-                _("No bill of materials found. Let's create one."),
-                _("Bills of materials allow you to define the list of required raw materials used to make a finished "
-                    "product; through a manufacturing order or a pack of products."),
-            ),
-        }
-        boms = self.env['mrp.bom'].search([('project_id', '=', self.id)])
-        if not self.env.context.get('from_embedded_action', False) and len(boms) == 1:
-            action['views'] = [[False, 'form']]
-            action['res_id'] = boms.id
-        return action
+    production_count = fields.Integer(related="analytic_account_id.production_count", groups='mrp.group_mrp_user')
+    workorder_count = fields.Integer(related="analytic_account_id.workorder_count", groups='mrp.group_mrp_user')
+    bom_count = fields.Integer(related="analytic_account_id.bom_count", groups='mrp.group_mrp_user')
 
     def action_view_mrp_production(self):
         self.ensure_one()
         action = self.env['ir.actions.actions']._for_xml_id('mrp.mrp_production_action')
-        action['domain'] = [('project_id', '=', self.id)]
-        action['context'] = {'default_project_id': self.id, 'from_project_action': True}
-        productions = self.env['mrp.production'].search([('project_id', '=', self.id)])
-        if not self.env.context.get('from_embedded_action', False) and len(productions) == 1:
-            action['views'] = [[False, 'form']]
-            action['res_id'] = productions.id
+        action['domain'] = [('id', 'in', self.analytic_account_id.production_ids.ids)]
+        action['context'] = {'project_id': self.id}
+        if self.production_count == 1:
+            action['view_mode'] = 'form'
+            action['res_id'] = self.analytic_account_id.production_ids.id
+            if 'views' in action:
+                action['views'] = [
+                    (view_id, view_type)
+                    for view_id, view_type in action['views']
+                    if view_type == 'form'
+                ] or [False, 'form']
         return action
 
+    def action_view_mrp_bom(self):
+        self.ensure_one()
+        action = self.analytic_account_id.action_view_mrp_bom()
+        if self.bom_count > 1:
+            action['view_mode'] = 'tree,form,kanban'
+        return action
+
+    def action_view_workorder(self):
+        self.ensure_one()
+        action = self.analytic_account_id.action_view_workorder()
+        if self.workorder_count > 1:
+            action['view_mode'] = 'tree,form,kanban,calendar,pivot,graph'
+        return action
+
+    # ----------------------------
+    #  Project Updates
+    # ----------------------------
+
+    def _get_profitability_labels(self):
+        labels = super()._get_profitability_labels()
+        labels['manufacturing_order'] = _lt('Manufacturing Orders')
+        return labels
+
+    def _get_profitability_sequence_per_invoice_type(self):
+        sequence_per_invoice_type = super()._get_profitability_sequence_per_invoice_type()
+        sequence_per_invoice_type['manufacturing_order'] = 12
+        return sequence_per_invoice_type
+
+    def _get_profitability_aal_domain(self):
+        return expression.AND([
+            super()._get_profitability_aal_domain(),
+            [('category', '!=', 'manufacturing_order')],
+        ])
+
+    def _get_profitability_items(self, with_action=True):
+        profitability_items = super()._get_profitability_items(with_action)
+        mrp_category = 'manufacturing_order'
+        mrp_aal_read_group = self.env['account.analytic.line'].sudo()._read_group(
+            [('auto_account_id', 'in', self.analytic_account_id.ids), ('category', '=', mrp_category)],
+            ['currency_id'],
+            ['amount:sum'],
+        )
+        if mrp_aal_read_group:
+            can_see_manufactoring_order = with_action and len(self) == 1 and self.user_has_groups('mrp.group_mrp_user')
+            total_amount = 0
+            for currency, amount_summed in mrp_aal_read_group:
+                total_amount += currency._convert(amount_summed, self.currency_id, self.company_id)
+
+            mrp_costs = {
+                'id': mrp_category,
+                'sequence': self._get_profitability_sequence_per_invoice_type()[mrp_category],
+                'billed': total_amount,
+                'to_bill': 0.0,
+            }
+            if can_see_manufactoring_order:
+                mrp_costs['action'] = {'name': 'action_view_mrp_production', 'type': 'object'}
+            costs = profitability_items['costs']
+            costs['data'].append(mrp_costs)
+            costs['total']['billed'] += mrp_costs['billed']
+        return profitability_items
+
     def _get_stat_buttons(self):
-        buttons = super()._get_stat_buttons()
-        if self.env.user.has_group('mrp.group_mrp_user'):
+        buttons = super(Project, self)._get_stat_buttons()
+        if self.user_has_groups('mrp.group_mrp_user'):
             self_sudo = self.sudo()
             buttons.extend([{
                 'icon': 'flask',
-                'text': self.env._('Bills of Materials'),
+                'text': _lt('Bills of Materials'),
                 'number': self_sudo.bom_count,
                 'action_type': 'object',
                 'action': 'action_view_mrp_bom',
@@ -76,7 +104,7 @@ class ProjectProject(models.Model):
             },
             {
                 'icon': 'wrench',
-                'text': self.env._('Manufacturing Orders'),
+                'text': _lt('Manufacturing Orders'),
                 'number': self_sudo.production_count,
                 'action_type': 'object',
                 'action': 'action_view_mrp_production',

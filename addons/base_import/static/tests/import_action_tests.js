@@ -11,14 +11,12 @@ import {
     patchWithCleanup,
 } from "@web/../tests/helpers/utils";
 import { createWebClient, doAction } from "@web/../tests/webclient/helpers";
-import { dragenterFiles, dropFiles } from "@web/../tests/legacy/utils";
 import { registry } from "@web/core/registry";
 import { makeFakeNotificationService } from "@web/../tests/helpers/mock_services";
 import { ImportDataProgress } from "../src/import_data_progress/import_data_progress";
 import { ImportAction } from "../src/import_action/import_action";
 import { ImportBlockUI } from "../src/import_block_ui";
 import { useEffect } from "@odoo/owl";
-import { redirect } from "@web/core/utils/urls";
 
 const serviceRegistry = registry.category("services");
 
@@ -269,6 +267,7 @@ async function createImportAction(customRouter = {}) {
 
 QUnit.module("Base Import Tests", (hooks) => {
     hooks.beforeEach(async () => {
+        target = getFixture();
         serverData = {
             actions: {
                 1: {
@@ -277,7 +276,7 @@ QUnit.module("Base Import Tests", (hooks) => {
                     target: "current",
                     type: "ir.actions.client",
                     params: {
-                        active_model: "partner",
+                        model: "partner",
                     },
                 },
             },
@@ -315,11 +314,6 @@ QUnit.module("Base Import Tests", (hooks) => {
     QUnit.test("Import view: UI before file upload", async function (assert) {
         const templateURL = "/myTemplateURL.xlsx";
 
-        patchWithCleanup(browser.location, {
-            origin: "http://example.com",
-        });
-        redirect("/odoo");
-
         await createImportAction({
             "partner/get_import_templates": (route, args) => {
                 assert.step(route);
@@ -336,13 +330,6 @@ QUnit.module("Base Import Tests", (hooks) => {
             },
         });
 
-        await nextTick(); // pushState is debounced
-        assert.strictEqual(
-            browser.location.href,
-            "http://example.com/odoo/import?active_model=partner",
-            "the url contains the active_model"
-        );
-
         assert.containsOnce(target, ".o_import_action", "import view is displayed");
         assert.strictEqual(
             target.querySelector(".o_nocontent_help .btn-outline-primary").textContent,
@@ -354,10 +341,11 @@ QUnit.module("Base Import Tests", (hooks) => {
             "button has the right download url"
         );
         assert.verifySteps(["partner/get_import_templates", "base_import.import/create"]);
+        // Contains invisible mobile buttons
         assert.containsN(
             target,
             ".o_control_panel button",
-            2,
+            5,
             "only two buttons are visible by default"
         );
     });
@@ -393,7 +381,7 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xlsx", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         assert.verifySteps([
             "partner/get_import_templates",
             "base_import.import/create",
@@ -528,8 +516,10 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xls", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
-        await click(target.querySelector(".o_control_panel_main_buttons button:first-child"));
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:first-child")
+        );
         assert.verifySteps(["execute_import"]);
     });
 
@@ -546,35 +536,12 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.csv", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         assert.containsOnce(
             target,
             ".o_import_data_sidepanel .o_import_formatting",
             "formatting options are present in the side panel"
         );
-        assert.containsOnce(
-            target,
-            ".o_import_action .o_import_data_content",
-            "content panel is visible"
-        );
-    });
-
-    QUnit.test("Import view: drag-and-drop file support", async function (assert) {
-        registerFakeHTTPService((route, params) => {
-            assert.strictEqual(route, "/base_import/set_file");
-            assert.strictEqual(
-                params.ufile[0].name,
-                "fake_file.csv",
-                "file is correctly uploaded to the server"
-            );
-        });
-        await createImportAction();
-        const file = new File(["fake_file"], "fake_file.csv", {
-            type: "text/plain"
-        });
-        await dragenterFiles(".o_import_action", [file]);
-        await dropFiles(".o-Dropzone", [file]);
-        await nextTick();
         assert.containsOnce(
             target,
             ".o_import_action .o_import_data_content",
@@ -599,7 +566,7 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.csv", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
 
         await nextTick();
         assert.containsOnce(
@@ -640,7 +607,11 @@ QUnit.module("Base Import Tests", (hooks) => {
 
             // Set and trigger the change of a file for the input
             const file = new File(["fake_file"], "fake_file.xls", { type: "text/plain" });
-            await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+            await editInput(
+                target,
+                ".o_control_panel_main_buttons .d-none input[type='file']",
+                file
+            );
             assert.strictEqual(
                 target.querySelector(".o_import_data_sidepanel input[type=checkbox]").checked,
                 true,
@@ -673,7 +644,9 @@ QUnit.module("Base Import Tests", (hooks) => {
                 "as the column couldn't match with the database, user must make a choice"
             );
 
-            await click(target.querySelector(".o_control_panel_main_buttons button:first-child"));
+            await click(
+                target.querySelector(".o_control_panel_main_buttons .d-none button:first-child")
+            );
             assert.containsNone(
                 target,
                 ".o_notification_body",
@@ -696,7 +669,9 @@ QUnit.module("Base Import Tests", (hooks) => {
             );
 
             await editSelectMenu(target, ".o_import_data_content .o_select_menu", "Display name");
-            await click(target.querySelector(".o_control_panel_main_buttons button:first-child"));
+            await click(
+                target.querySelector(".o_control_panel_main_buttons .d-none button:first-child")
+            );
             assert.verifySteps([
                 "base_import.import/execute_import",
                 "1 records successfully imported",
@@ -736,10 +711,12 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xlsx", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         // For this test, we force the display of an error message if this field is set
         await editSelectMenu(target, ".o_import_data_content .o_select_menu", "Selection");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-danger").textContent,
             "The file contains blocking errors (see below)",
@@ -766,7 +743,9 @@ QUnit.module("Base Import Tests", (hooks) => {
             "prevent option is selected by default"
         );
         editSelect(target, ".o_import_field_selection select", "item_2");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-info").textContent,
             "Everything seems valid.",
@@ -810,10 +789,12 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xlsx", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         // For this test, we force the display of an error message if this field is set
         await editSelectMenu(target, ".o_import_data_content .o_select_menu", "Bar");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-danger").textContent,
             "The file contains blocking errors (see below)",
@@ -825,7 +806,9 @@ QUnit.module("Base Import Tests", (hooks) => {
             "options are 'prevent', choose a default boolean value or 'skip'"
         );
         editSelect(target, ".o_import_field_boolean select", "false");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-info").textContent,
             "Everything seems valid.",
@@ -873,10 +856,12 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xlsx", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         // For this test, we force the display of an error message if this field is set
         await editSelectMenu(target, ".o_import_data_content .o_select_menu", "Many2Many");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-danger").textContent,
             "The file contains blocking errors (see below)",
@@ -888,14 +873,18 @@ QUnit.module("Base Import Tests", (hooks) => {
             "options are 'prevent', choose a default boolean value or 'skip'"
         );
         editSelect(target, ".o_import_field_many2many select", "name_create_enabled_fields");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-info").textContent,
             "Everything seems valid.",
             "import is now successful"
         );
         editSelect(target, ".o_import_field_many2many select", "import_skip_records");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-info").textContent,
             "Everything seems valid.",
@@ -950,8 +939,10 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xlsx", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(1)"));
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(1)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-danger").textContent,
             "The file contains blocking errors (see below)",
@@ -1027,7 +1018,7 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xls", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         assert.strictEqual(
             target.querySelector("input#o_import_batch_limit").value,
             "2000",
@@ -1040,7 +1031,9 @@ QUnit.module("Base Import Tests", (hooks) => {
         );
 
         await editInput(target, "input#o_import_batch_limit", 1);
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-info").textContent,
             "Everything seems valid.",
@@ -1104,9 +1097,11 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xls", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         await editInput(target, "input#o_import_batch_limit", 1);
-        await click(target.querySelector(".o_control_panel_main_buttons button:first-child"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:first-child")
+        );
         // Since a nextTick is added to each batch, we must wait twice before the end of the second batch
         await nextTick();
         await nextTick();
@@ -1122,7 +1117,8 @@ QUnit.module("Base Import Tests", (hooks) => {
             "a message is shown to indicate the user to resume from the third row"
         );
         assert.strictEqual(
-            target.querySelector(".o_control_panel_main_buttons button:first-child").textContent,
+            target.querySelector(".o_control_panel_main_buttons .d-none button:first-child")
+                .textContent,
             "Resume",
             "button contains the right text"
         );
@@ -1193,9 +1189,11 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xls", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         await editInput(target, "input#o_import_batch_limit", 1);
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
         // Since a nextTick is added to each batch, we must wait twice before the end of the second batch
         await nextTick();
         await nextTick();
@@ -1205,7 +1203,8 @@ QUnit.module("Base Import Tests", (hooks) => {
             "Everything seems valid."
         );
         assert.strictEqual(
-            target.querySelector(".o_control_panel_main_buttons button:first-child").textContent,
+            target.querySelector(".o_control_panel_main_buttons .d-none button:first-child")
+                .textContent,
             "Import",
             "after testing, 'Resume' text is not shown"
         );
@@ -1281,7 +1280,11 @@ QUnit.module("Base Import Tests", (hooks) => {
 
             // Set and trigger the change of a file for the input
             const file = new File(["fake_file"], "fake_file.xls", { type: "text/plain" });
-            await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+            await editInput(
+                target,
+                ".o_control_panel_main_buttons .d-none input[type='file']",
+                file
+            );
 
             assert.strictEqual(
                 target.querySelector(
@@ -1297,7 +1300,9 @@ QUnit.module("Base Import Tests", (hooks) => {
                 "The relational field should be selected by default and the name should be the full path."
             );
 
-            await click(target.querySelector(".o_control_panel_main_buttons button:first-child"));
+            await click(
+                target.querySelector(".o_control_panel_main_buttons .d-none button:first-child")
+            );
         }
     );
 
@@ -1356,10 +1361,12 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xlsx", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         // For this test, we force the display of an error message if this field is set
         await editSelectMenu(target, ".o_import_data_content .o_select_menu", "Many2Many");
-        await click(target.querySelector(".o_control_panel_main_buttons button:nth-child(2)"));
+        await click(
+            target.querySelector(".o_control_panel_main_buttons .d-none button:nth-child(2)")
+        );
 
         assert.strictEqual(
             target.querySelector(".o_import_data_content .alert-danger").textContent,
@@ -1423,7 +1430,7 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.csv", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         await editInput(target, ".o_import_date_format#date_format-3", "YYYYMMDD");
 
         // Parse the file again with the updated date format to check that
@@ -1452,7 +1459,7 @@ QUnit.module("Base Import Tests", (hooks) => {
 
         // Set and trigger the change of a file for the input
         const file = new File(["fake_file"], "fake_file.xlsx", { type: "text/plain" });
-        await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+        await editInput(target, ".o_control_panel_main_buttons .d-none input[type='file']", file);
         await editSelectMenu(target, ".o_import_data_content .o_select_menu", "Bar");
         assert.containsN(
             target,
@@ -1484,7 +1491,7 @@ QUnit.module("Base Import Tests", (hooks) => {
 
             // Set and trigger the change of a file for the input
             const file = new File(["fake_file"], "fake_file.csv", { type: "text/plain" });
-            await editInput(target, ".o_control_panel_main_buttons input[type='file']", file);
+            await editInput(target, ".o_control_panel_collapsed_create input[type='file']", file);
             assert.strictEqual(
                 target.querySelector(".o_import_date_format").list.id,
                 "list-3",

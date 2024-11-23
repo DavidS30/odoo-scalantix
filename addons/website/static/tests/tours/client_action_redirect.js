@@ -13,6 +13,7 @@ const goToFrontendSteps = [{
 }, {
     content: "Check we are in the frontend",
     trigger: 'body:not(:has(.o_website_preview)) #test_contact_FE',
+    run: () => null, // it's a check
 }];
 const goToBackendSteps = [{
     content: "Go to the backend",
@@ -23,21 +24,24 @@ const goToBackendSteps = [{
 }, {
     content: "Check we are in the backend",
     trigger: '.o_website_preview',
+    run: () => null, // it's a check
 }];
 const checkEditorSteps = [{
     content: "Check that the editor is loaded",
-    trigger: ':iframe body.editor_enable',
+    trigger: 'iframe body.editor_enable',
     timeout: 30000,
+    run: () => null, // it's a check
 }, {
     content: "exit edit mode",
     trigger: '.o_we_website_top_actions button.btn-primary:contains("Save")',
-    run: "click",
 }, {
     content: "wait for editor to close",
-    trigger: ':iframe body:not(.editor_enable)',
+    trigger: 'iframe body:not(.editor_enable)',
+    run: () => null, // It's a check
 }];
 
 registry.category("web_tour.tours").add('client_action_redirect', {
+    test: true,
     url: testUrl,
     steps: () => [
     // Case 1: From frontend, click on `enable_editor=1` link without `/@/` in it
@@ -45,7 +49,6 @@ registry.category("web_tour.tours").add('client_action_redirect', {
     {
         content: "Click on the link to frontend",
         trigger: '#test_contact_FE',
-        run: "click",
     },
     ...checkEditorSteps,
 
@@ -54,7 +57,6 @@ registry.category("web_tour.tours").add('client_action_redirect', {
     {
         content: "Click on the link to backend",
         trigger: '#test_contact_BE',
-        run: "click",
     },
     ...checkEditorSteps,
 
@@ -64,7 +66,7 @@ registry.category("web_tour.tours").add('client_action_redirect', {
     // ...goToBackendSteps,
     // {
     //     content: "Click on the link to frontend (2)",
-    //     trigger: ':iframe #test_contact_FR',
+    //     trigger: 'iframe #test_contact_FR',
     // },
     // ...checkEditorSteps,
 
@@ -72,8 +74,7 @@ registry.category("web_tour.tours").add('client_action_redirect', {
     ...goToBackendSteps,
     {
         content: "Click on the link to backend (2)",
-        trigger: ':iframe #test_contact_BE',
-        run: "click",
+        trigger: 'iframe #test_contact_BE',
     },
     ...checkEditorSteps,
 ]});

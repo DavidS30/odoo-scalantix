@@ -35,7 +35,6 @@
         'data/ir_cron_data.xml',
         'data/mail_message_subtype_data.xml',
         'data/crm_recurring_plan_data.xml',
-        'data/crm_tour.xml',
 
         'wizard/crm_lead_lost_views.xml',
         'wizard/crm_lead_to_opportunity_views.xml',
@@ -72,26 +71,14 @@
     'application': True,
     'assets': {
         'web.assets_backend': [
-            'crm/static/src/**',
-            ('remove', 'crm/static/src/views/forecast_graph/**'),
-            ('remove', 'crm/static/src/views/forecast_pivot/**'),
-        ],
-        'web.assets_backend_lazy': [
-            'crm/static/src/views/forecast_graph/**',
-            'crm/static/src/views/forecast_pivot/**',
+            'crm/static/src/**/*',
         ],
         'web.assets_tests': [
             'crm/static/tests/tours/**/*',
         ],
-        'web.assets_unit_tests': [
-            'crm/static/tests/mock_server/**/*',
-            'crm/static/tests/crm_test_helpers.js'
-        ],
         'web.qunit_suite_tests': [
             'crm/static/tests/**/*',
             ('remove', 'crm/static/tests/tours/**/*'),
-            ('remove', 'crm/static/tests/mock_server/**/*'),
-            ('remove', 'crm/static/tests/crm_test_helpers.js')
         ],
     },
     'license': 'LGPL-3',

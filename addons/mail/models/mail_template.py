@@ -33,7 +33,7 @@ class MailTemplate(models.Model):
     # description
     name = fields.Char('Name', translate=True)
     description = fields.Text(
-        'Template Description', translate=True,
+        'Template description', translate=True,
         help="This field is used for internal description of the template's usage.")
     active = fields.Boolean(default=True)
     template_category = fields.Selection(
@@ -62,8 +62,7 @@ class MailTemplate(models.Model):
     # content
     body_html = fields.Html(
         'Body', render_engine='qweb', render_options={'post_process': True},
-        prefetch=True, translate=True, sanitize='email_outgoing',
-    )
+        prefetch=True, translate=True, sanitize=False)
     attachment_ids = fields.Many2many('ir.attachment', 'email_template_attachment_rel', 'email_template_id',
                                       'attachment_id', 'Attachments',
                                       help="You may attach files to this template, to be added to all "
@@ -101,13 +100,13 @@ class MailTemplate(models.Model):
 
     @api.depends_context('uid')
     def _compute_can_write(self):
-        writable_templates = self._filtered_access('write')
+        writable_templates = self._filter_access_rules('write')
         for template in self:
             template.can_write = template in writable_templates
 
     @api.depends_context('uid')
     def _compute_is_template_editor(self):
-        self.is_template_editor = self.env.user.has_group('mail.group_mail_template_editor')
+        self.is_template_editor = self.user_has_groups('mail.group_mail_template_editor')
 
     @api.depends('active', 'description')
     def _compute_template_category(self):
@@ -200,9 +199,11 @@ class MailTemplate(models.Model):
             'context': {'dialog_size': 'large'},
         }
 
-    def copy_data(self, default=None):
-        vals_list = super().copy_data(default=default)
-        return [dict(vals, name=self.env._("%s (copy)", template.name)) for template, vals in zip(self, vals_list)]
+    @api.returns('self', lambda value: value.id)
+    def copy(self, default=None):
+        default = dict(default or {},
+                       name=_("%s (copy)", self.name))
+        return super(MailTemplate, self).copy(default=default)
 
     def unlink_action(self):
         for template in self:
@@ -225,7 +226,7 @@ class MailTemplate(models.Model):
                 'type': 'ir.actions.act_window',
                 'res_model': 'mail.compose.message',
                 'context': repr(context),
-                'view_mode': 'form,list',
+                'view_mode': 'form,tree',
                 'view_id': view.id,
                 'target': 'new',
                 'binding_model_id': template.model_id.id,
@@ -572,7 +573,8 @@ class MailTemplate(models.Model):
 
     def _send_check_access(self, res_ids):
         records = self.env[self.model].browse(res_ids)
-        records.check_access('read')
+        records.check_access_rights('read')
+        records.check_access_rule('read')
 
     def send_mail(self, res_id, force_send=False, raise_exception=False, email_values=None,
                   email_layout_xmlid=False):

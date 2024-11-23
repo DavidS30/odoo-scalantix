@@ -25,10 +25,11 @@ publicWidget.registry.SalePortalSidebar = PortalSidebar.extend({
         // Nav Menu ScrollSpy
         this._generateMenu();
         // After signature, automatically open the popup for payment
-        const searchParams = new URLSearchParams(window.location.search.substring(1));
-        const payNowButton = this.$('#o_sale_portal_paynow')
-        if (searchParams.get("allow_payment") === "yes" && payNowButton) {
-            payNowButton[0].click();
+        const hash = new URLSearchParams(window.location.hash.substring(1));
+        if (hash.get("allow_payment") === "yes" && this.$("#o_sale_portal_paynow").length) {
+            this.el.querySelector('#o_sale_portal_paynow').click();
+            hash.delete("allow_payment");
+            window.location.hash = hash.toString();
         }
         return def;
     },

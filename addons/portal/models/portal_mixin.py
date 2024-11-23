@@ -73,7 +73,8 @@ class PortalMixin(models.AbstractModel):
         user, record = self.env.user, self
         if access_uid:
             try:
-                record.check_access('read')
+                record.check_access_rights('read')
+                record.check_access_rule("read")
             except exceptions.AccessError:
                 return super(PortalMixin, self)._get_access_action(
                     access_uid=access_uid, force_website=force_website
@@ -82,7 +83,8 @@ class PortalMixin(models.AbstractModel):
             record = self.with_user(user)
         if user.share or force_website:
             try:
-                record.check_access('read')
+                record.check_access_rights('read')
+                record.check_access_rule('read')
             except exceptions.AccessError:
                 if force_website:
                     return {

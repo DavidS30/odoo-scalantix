@@ -25,10 +25,7 @@ export class TimeOffCalendarModel extends CalendarModel {
         let result = super.normalizeRecord(...arguments);
         if (rawRecord.employee_id) {
             const employee = rawRecord.employee_id[1];
-            // If the employee's name isn't already included at the start of the title
-            if (!result.title.startsWith(employee)){
-                result.title = [employee, result.title].join(' ');
-            }
+            result.title = [employee, result.title].join(' ');
         }
         return result;
     }
@@ -100,12 +97,5 @@ export class TimeOffCalendarModel extends CalendarModel {
             context['short_name'] = 1;
         }
         return this.orm.searchRead(resModel, this.computeDomain(data), fieldNames, { context });
-    }
-
-    computeDomain(data) {
-        return [
-            ...super.computeDomain(data),
-            ['state', '!=', 'cancel'],
-        ]
     }
 }

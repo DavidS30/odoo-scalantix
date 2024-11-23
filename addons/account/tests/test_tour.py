@@ -3,11 +3,11 @@
 import odoo.tests
 
 from odoo import Command
-from odoo.addons.account.tests.common import AccountTestInvoicingHttpCommon
+from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 
 
 @odoo.tests.tagged('post_install_l10n', 'post_install', '-at_install')
-class TestUi(AccountTestInvoicingHttpCommon):
+class TestUi(AccountTestInvoicingCommon, odoo.tests.HttpCase):
 
     @classmethod
     def setUpClass(cls):
@@ -42,7 +42,7 @@ class TestUi(AccountTestInvoicingHttpCommon):
             'account_purchase_tax_id': None,
         })
 
-        account_with_taxes = self.env['account.account'].search([('tax_ids', '!=', False), ('company_ids', '=', self.env.company.id)])
+        account_with_taxes = self.env['account.account'].search([('tax_ids', '!=', False), ('company_id', '=', self.env.company.id)])
         account_with_taxes.write({
             'tax_ids': [Command.clear()],
         })
@@ -54,13 +54,7 @@ class TestUi(AccountTestInvoicingHttpCommon):
                 invoice.button_draft()
         invoices.unlink()
 
-        # remove all entries in the miscellaneous journal to test the onboarding
-        self.env['account.move'].search([
-            ('journal_id.type', '=', 'general'),
-            ('state', '=', 'draft'),
-        ]).unlink()
-
-        self.start_tour("/odoo", 'account_tour', login="admin")
+        self.start_tour("/web", 'account_tour', login="admin")
 
     def test_01_account_tax_groups_tour(self):
         self.env.ref('base.user_admin').write({
@@ -75,7 +69,7 @@ class TestUi(AccountTestInvoicingHttpCommon):
             'name': 'Account Tax Group Product',
             'standard_price': 600.0,
             'list_price': 147.0,
-            'type': 'consu',
+            'detailed_type': 'consu',
         })
         new_tax = self.env['account.tax'].create({
             'name': '10% Tour Tax',
@@ -85,4 +79,4 @@ class TestUi(AccountTestInvoicingHttpCommon):
         })
         product.supplier_taxes_id = new_tax
 
-        self.start_tour("/odoo", 'account_tax_group', login="admin")
+        self.start_tour("/web", 'account_tax_group', login="admin")

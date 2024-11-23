@@ -1,34 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-
     <t t-name="web.StatusBarField.Dropdown">
-        <t t-foreach="items" t-as="item" t-key="item.value">
-            <DropdownItem
-                class="getDropdownItemClassNames(item)"
-                onSelected="() => this.selectItem(item)"
-            >
-                <span t-esc="item.label" />
-            </DropdownItem>
-        </t>
+        <Dropdown toggler="'parent'">
+            <t t-foreach="items" t-as="item" t-key="item.value">
+                <DropdownItem
+                    class="getDropdownItemClassNames(item)"
+                    onSelected="() => this.selectItem(item)"
+                >
+                    <span t-esc="item.label" />
+                </DropdownItem>
+            </t>
+        </Dropdown>
+        <!-- Must be below the dropdown menu to align with the caret (if any) -->
+        <t t-esc="label" />
     </t>
 
     <t t-name="web.StatusBarField">
         <div class="o_statusbar_status" t-ref="root" role="radiogroup">
-            <Dropdown position="'bottom-end'">
-                <button
-                    t-ref="after"
-                    type="button"
-                    class="btn btn-secondary dropdown-toggle o_arrow_button o_first"
-                    t-att-disabled="props.isDisabled"
-                >
-                    ...
-                </button>
-                <t t-set-slot="content">
-                    <t t-call="web.StatusBarField.Dropdown">
-                        <t t-set="items" t-value="items.after" />
-                    </t>
+            <button
+                t-ref="after"
+                type="button"
+                class="btn btn-secondary dropdown-toggle o_arrow_button o_first"
+            >
+                <t t-call="web.StatusBarField.Dropdown">
+                    <t t-set="label">...</t>
+                    <t t-set="items" t-value="items.after" />
                 </t>
-            </Dropdown>
+            </button>
             <t t-foreach="items.inline" t-as="item" t-key="item.value">
                 <button
                     type="button"
@@ -48,36 +46,22 @@
                     t-on-click="() => this.selectItem(item)"
                 />
             </t>
-            <Dropdown position="'bottom-start'">
-                <button
-                    t-ref="before"
-                    type="button"
-                    class="btn btn-secondary dropdown-toggle o_arrow_button o_last"
-                    t-att-disabled="props.isDisabled"
-                >
-                    ...
-                </button>
-                <t t-set-slot="content">
-                    <t t-call="web.StatusBarField.Dropdown">
-                        <t t-set="items" t-value="items.before" />
-                    </t>
+            <button
+                t-ref="before"
+                type="button"
+                class="btn btn-secondary dropdown-toggle o_arrow_button o_last"
+            >
+                <t t-call="web.StatusBarField.Dropdown">
+                    <t t-set="label">...</t>
+                    <t t-set="items" t-value="items.before" />
                 </t>
-            </Dropdown>
-            <Dropdown position="'bottom-end'">
-                <button
-                    t-ref="dropdown" 
-                    type="button" 
-                    class="btn btn-secondary dropdown-toggle"
-                    t-att-disabled="props.isDisabled"
-                >
-                    <t t-out="getCurrentLabel()" />
-                </button>
-                <t t-set-slot="content">
-                    <t t-call="web.StatusBarField.Dropdown">
-                        <t t-set="items" t-value="getAllItems()" />
-                    </t>
+            </button>
+            <button t-ref="dropdown" type="button" class="btn btn-secondary dropdown-toggle">
+                <t t-call="web.StatusBarField.Dropdown">
+                    <t t-set="label" t-value="getCurrentLabel()" />
+                    <t t-set="items" t-value="getAllItems()" />
                 </t>
-            </Dropdown>
+            </button>
         </div>
     </t>
 </templates>

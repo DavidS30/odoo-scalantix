@@ -14,7 +14,7 @@ class L10nInWithholdWizard(models.TransientModel):
     def default_get(self, fields_list):
         result = super().default_get(fields_list)
         active_model = self._context.get('active_model')
-        active_ids = self._context.get('active_ids', [])
+        active_ids = self._context.get('active_ids')
         if len(active_ids) > 1:
             raise UserError(_("You can only create a withhold for only one record at a time."))
         if active_model not in ('account.move', 'account.payment') or not active_ids:
@@ -26,8 +26,9 @@ class L10nInWithholdWizard(models.TransientModel):
                 raise UserError(_("TDS must be created from Posted Customer Invoices, Customer Credit Notes, Vendor Bills or Vendor Refunds."))
             result['related_move_id'] = active_record.id
         elif active_model == 'account.payment':
+            display_map = active_record._get_aml_default_display_map()
+            type_name = display_map.get((active_record.payment_type, active_record.partner_type))
             if not active_record.partner_id:
-                type_name = _("Vendor Payment") if active_record.partner_type == 'supplier' else _("Customer Payment")
                 raise UserError(_("Please set a partner on the %s before creating a withhold.", type_name))
             result['related_payment_id'] = active_record.id
         return result
@@ -76,7 +77,7 @@ class L10nInWithholdWizard(models.TransientModel):
         readonly=False,
         store=True,
     )
-    l10n_in_withholding_warning = fields.Json(string="Withholding warning", compute='_compute_l10n_in_withholding_warning')
+    warning_message = fields.Char(compute='_compute_warning_message')
 
     #  ===== Computes =====
     @api.depends('related_move_id', 'related_payment_id')
@@ -94,7 +95,8 @@ class L10nInWithholdWizard(models.TransientModel):
     def _compute_type_name(self):
         for wizard in self:
             if wizard.related_payment_id:
-                wizard.type_name = _("Vendor Payment") if wizard.related_payment_id.partner_type == 'supplier' else _("Customer Payment")
+                display_map = wizard.related_payment_id._get_aml_default_display_map()
+                wizard.type_name = display_map.get((wizard.related_payment_id.payment_type, wizard.related_payment_id.partner_type))
             else:
                 wizard.type_name = wizard.related_move_id.type_name
 
@@ -109,29 +111,16 @@ class L10nInWithholdWizard(models.TransientModel):
             wizard.journal_id = wizard.company_id.parent_ids.l10n_in_withholding_journal_id[-1:] or \
                                 wizard.env['account.journal'].search([*self.env['account.journal']._check_company_domain(wizard.company_id), ('type', '=', 'general')], limit=1)
 
-    @api.depends('related_payment_id', 'related_move_id', 'l10n_in_tds_tax_type', 'withhold_line_ids')
-    def _compute_l10n_in_withholding_warning(self):
+    @api.depends('related_move_id', 'related_payment_id', 'withhold_line_ids.base')
+    def _compute_warning_message(self):
+        warning_message = False
         for wizard in self:
-            warnings = {}
-            if wizard.l10n_in_tds_tax_type == 'purchase' and not wizard.related_move_id.commercial_partner_id.l10n_in_pan and any(
-                    line.tax_id.amount != max(line.tax_id.l10n_in_section_id.l10n_in_section_tax_ids, key=lambda t: abs(t.amount)).amount
-                    for line in wizard.withhold_line_ids
-                ):
-                warnings['lower_tds_tax'] = {
-                    'message': _("As the Partner's PAN missing/invalid, it's advisable to apply TDS at the higher rate.")
-                    }
             precision = self.currency_id.decimal_places
             if wizard.related_move_id and float_compare(wizard.related_move_id.amount_untaxed, sum(line.base for line in wizard.withhold_line_ids), precision_digits=precision) < 0:
-                message = _("The base amount of TDS lines is greater than the amount of the %s", wizard.type_name)
-                warnings['lower_move_amount'] = {
-                    'message': message
-                }
+                warning_message = _("Warning: The base amount of TDS lines is greater than the amount of the %s", wizard.type_name)
             elif wizard.related_payment_id and float_compare(wizard.related_payment_id.amount, sum(line.base for line in wizard.withhold_line_ids), precision_digits=precision) < 0:
-                message = _("The base amount of TDS lines is greater than the untaxed amount of the %s", wizard.type_name)
-                warnings['lower_payment_amount'] = {
-                    'message': message
-                }
-            wizard.l10n_in_withholding_warning = warnings
+                warning_message = _("Warning: The base amount of TDS lines is greater than the untaxed amount of the %s", wizard.type_name)
+            wizard.warning_message = warning_message
 
     def _get_withhold_type(self):
         if self.related_move_id:
@@ -208,13 +197,13 @@ class L10nInWithholdWizard(models.TransientModel):
         total_amount = 0
         total_tax = 0
 
-        partner = self.related_move_id.partner_id or self.related_payment_id.partner_id
+        related_move_id = self.related_move_id or self.related_payment_id.move_id
         withhold_type = self._get_withhold_type()
 
         if withhold_type in ('in_withhold', 'in_refund_withhold'):
-            partner_account = partner.property_account_payable_id
+            partner_account = related_move_id.partner_id.property_account_payable_id
         else:
-            partner_account = partner.property_account_receivable_id
+            partner_account = related_move_id.partner_id.property_account_receivable_id
 
         # Create move lines for each withhold line with the withholding tax and the base amount
         for line in self.withhold_line_ids:

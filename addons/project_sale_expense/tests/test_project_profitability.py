@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo.tests import tagged
@@ -20,7 +21,7 @@ class TestProjectSaleExpenseProfitability(TestProjectProfitabilityCommon, TestPr
     def test_project_profitability(self):
         project = self.env['project.project'].create({'name': 'new project'})
         project._create_analytic_account()
-        account = project.account_id
+        account = project.analytic_account_id
         # Create a new company with the foreign currency.
         foreign_company = self.company_data_2['company']
         foreign_company.currency_id = self.foreign_currency
@@ -49,13 +50,13 @@ class TestProjectSaleExpenseProfitability(TestProjectProfitabilityCommon, TestPr
             expense,
             project,
             self.project_profitability_items_empty)
-        self.assertEqual(expense_sheet.state, 'approve')
 
         # Create an expense in a foreign company, the expense is linked to the AA of the project.
         so_foreign = self.env['sale.order'].create({
             'name': 'Sale order foreign',
             'partner_id': self.partner_a.id,
             'company_id': foreign_company.id,
+            'analytic_account_id': account.id,
         })
         so_foreign.currency_id = self.foreign_currency
         so_foreign.action_confirm()
@@ -81,20 +82,18 @@ class TestProjectSaleExpenseProfitability(TestProjectProfitabilityCommon, TestPr
         sequence_per_invoice_type = project._get_profitability_sequence_per_invoice_type()
         self.assertIn('expenses', sequence_per_invoice_type)
         expense_sequence = sequence_per_invoice_type['expenses']
-        billed = -expense.untaxed_amount_currency - expense_foreign.untaxed_amount_currency * 0.2  # -280.0 - 175.0 * 0.2 = -315.0
+        billed = -expense.untaxed_amount_currency - expense_foreign.untaxed_amount_currency * 0.2  # 280 + 350 * 0.2 = 350
 
         self.assertDictEqual(
             expense_profitability.get('revenues', {}),
             {},
         )
-        self.assertNotIn(
-            'costs',
-            expense_profitability,
-            'No costs should be found since the sheets are not posted or done.',
+        self.assertDictEqual(
+            expense_profitability['costs'],
+            {'id': 'expenses', 'sequence': expense_sequence, 'billed': expense.currency_id.round(billed), 'to_bill': 0.0},
         )
 
-        expense_sheet.action_sheet_move_post()
-        self.assertEqual(expense_sheet.state, 'post')
+        expense_sheet.action_sheet_move_create()
         self.assertRecordValues(self.sale_order.order_line, [
             # Original SO line:
             {
@@ -119,7 +118,7 @@ class TestProjectSaleExpenseProfitability(TestProjectProfitabilityCommon, TestPr
         )
         self.assertDictEqual(
             expense_profitability['costs'],
-            {'id': 'expenses', 'sequence': expense_sequence, 'billed': expense.currency_id.round(-expense.untaxed_amount_currency), 'to_bill': 0.0},
+            {'id': 'expenses', 'sequence': expense_sequence, 'billed': expense.currency_id.round(billed), 'to_bill': 0.0},
         )
 
         self.assertDictEqual(
@@ -136,8 +135,7 @@ class TestProjectSaleExpenseProfitability(TestProjectProfitabilityCommon, TestPr
             }
         )
 
-        expense_sheet_foreign.action_sheet_move_post()
-        self.assertEqual(expense_sheet_foreign.state, 'post')
+        expense_sheet_foreign.action_sheet_move_create()
         expense_sol_foreign = so_foreign.order_line[0]
         expense_profitability = project._get_expenses_profitability_items(False)
         self.assertDictEqual(
@@ -293,7 +291,7 @@ class TestProjectSaleExpenseProfitability(TestProjectProfitabilityCommon, TestPr
             'product_id': self.company_data['product_order_cost'].id,
             'total_amount': self.company_data['product_order_cost'].list_price,
             'employee_id': self.expense_employee.id,
-            'analytic_distribution': {project.account_id.id: 100},
+            'analytic_distribution': {project.analytic_account_id.id: 100},
             'sale_order_id': sale_order.id,
         })
 
@@ -301,7 +299,7 @@ class TestProjectSaleExpenseProfitability(TestProjectProfitabilityCommon, TestPr
         expense_sheet = self.env['hr.expense.sheet'].create(expense_sheet_vals_list)
         expense_sheet.action_submit_sheet()
         expense_sheet.action_approve_expense_sheets()
-        expense_sheet.action_sheet_move_post()
+        expense_sheet.action_sheet_move_create()
 
         invoice = sale_order._create_invoices()
         invoice.action_post()

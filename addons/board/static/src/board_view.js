@@ -1,5 +1,6 @@
 /** @odoo-module **/
 
+import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 import { BoardController } from "./board_controller";
 import { visitXML } from "@web/core/utils/xml";
@@ -59,6 +60,7 @@ export class BoardArchParser {
 
 export const boardView = {
     type: "form",
+    display_name: _t("Board"),
     Controller: BoardController,
 
     props: (genericProps, view) => {

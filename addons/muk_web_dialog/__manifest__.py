@@ -5,12 +5,12 @@
         This module adds an option to dialogs to expand it to full screen mode.
         Each user can the initial state of the dialogs in their preferences.
     ''',
-    'version': '18.0.1.0.1',
+    'version': '17.0.1.0.0', 
     'category': 'Tools/UI',
     'license': 'LGPL-3', 
     'author': 'MuK IT',
     'website': 'http://www.mukit.at',
-    'live_test_url': 'https://my.mukit.at/r/f6m',
+    'live_test_url': 'https://mukit.at/demo',
     'contributors': [
         'Mathias Markl <mathias.markl@mukit.at>',
     ],

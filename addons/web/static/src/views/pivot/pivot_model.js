@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { Domain } from "@web/core/domain";
 import { cartesian, sections, sortBy, symmetricalDifference } from "@web/core/utils/arrays";
@@ -33,7 +35,7 @@ function computeVariation(value, comparisonValue) {
  * The pivot model keeps an in-memory representation of the pivot table that is
  * displayed on the screen.  The exact layout of this representation is not so
  * simple, because a pivot table is at its core a 2-dimensional object, but
- * with a 'list' component: some rows/cols can be expanded so we zoom into the
+ * with a 'tree' component: some rows/cols can be expanded so we zoom into the
  * structure.
  *
  * However, we need to be able to manipulate the data in a somewhat efficient
@@ -984,19 +986,27 @@ export class PivotModel extends Model {
      * @param {Object} group
      * @param {string[]} rowGroupBy
      * @param {string[]} colGroupBy
-     * @param {Object} params
+     * @param {Config} config
      */
-    async _getGroupSubdivision(group, rowGroupBy, colGroupBy, params) {
+    async _getGroupSubdivision(group, rowGroupBy, colGroupBy, config) {
+        const groupDomain = this._getGroupDomain(group, config);
+        const measureSpecs = this._getMeasureSpecs(config);
         const groupBy = this._getGroupBySpecs(rowGroupBy, colGroupBy);
-        const subGroups = await this._getSubGroups(groupBy, params);
+        const kwargs = { lazy: false, context: this.searchParams.context };
+        const subGroups = await this.orm.readGroup(
+            config.metaData.resModel,
+            groupDomain,
+            measureSpecs,
+            groupBy,
+            kwargs
+        );
         return {
-            group,
-            subGroups,
+            group: group,
+            subGroups: subGroups,
             rowGroupBy: rowGroupBy,
             colGroupBy: colGroupBy,
         };
     }
-
     /**
      * Returns the group sanitized values.
      *
@@ -1098,9 +1108,9 @@ export class PivotModel extends Model {
     }
     /**
      * Returns the list of measure specs associated with metaData.activeMeasures, i.e.
-     * a measure 'fieldName' becomes 'fieldName:aggregator' where
-     * aggregator is the value specified on the field 'fieldName' for
-     * the key aggregator.
+     * a measure 'fieldName' becomes 'fieldName:groupOperator' where
+     * groupOperator is the value specified on the field 'fieldName' for
+     * the key group_operator.
      *
      * @protected
      * @param {Config} config
@@ -1115,14 +1125,14 @@ export class PivotModel extends Model {
             }
             const field = this.metaData.fields[measure];
             if (field.type === "many2one") {
-                field.aggregator = "count_distinct";
+                field.group_operator = "count_distinct";
             }
-            if (field.aggregator === undefined) {
+            if (field.group_operator === undefined) {
                 throw new Error(
                     "No aggregate function has been provided for the measure '" + measure + "'"
                 );
             }
-            acc.push(measure + ":" + field.aggregator);
+            acc.push(measure + ":" + field.group_operator);
             return acc;
         }, []);
     }
@@ -1198,20 +1208,6 @@ export class PivotModel extends Model {
         });
 
         return originRow;
-    }
-    /**
-     * @protected
-     * @param {string[]} groupBy
-     * @param {Object} params
-     * @returns {Promise<Object[]>}
-     */
-    async _getSubGroups(groupBy, params) {
-        const { resModel, groupDomain, measureSpecs, kwargs, mapping } = params;
-        const key = JSON.stringify(groupBy);
-        if (!mapping[key]) {
-            mapping[key] = this.orm.readGroup(resModel, groupDomain, measureSpecs, groupBy, kwargs);
-        }
-        return mapping[key];
     }
     /**
      * Returns the list of header rows of the pivot table: the col group rows
@@ -1636,21 +1632,8 @@ export class PivotModel extends Model {
                     colValues: group.colValues,
                     originIndex: originIndex,
                 };
-                const groupDomain = this._getGroupDomain(subGroup, config);
-                const measureSpecs = this._getMeasureSpecs(config);
-                const resModel = config.metaData.resModel;
-                const kwargs = { lazy: false, context: this.searchParams.context };
-                const mapping = {};
                 divisors.forEach((divisor) => {
-                    acc.push(
-                        this._getGroupSubdivision(subGroup, divisor[0], divisor[1], {
-                            resModel,
-                            groupDomain,
-                            measureSpecs,
-                            kwargs,
-                            mapping,
-                        })
-                    );
+                    acc.push(this._getGroupSubdivision(subGroup, divisor[0], divisor[1], config));
                 });
             }
             return acc;

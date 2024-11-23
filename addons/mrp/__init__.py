@@ -5,6 +5,7 @@ from . import models
 from . import wizard
 from . import report
 from . import controller
+from . import populate
 
 
 def _pre_init_mrp(env):

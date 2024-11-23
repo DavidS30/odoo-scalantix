@@ -1,13 +1,13 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
 
 class ProductDocument(models.Model):
     _inherit = 'product.document'
 
-    shown_on_product_page = fields.Boolean(string="Publish on website")
+    shown_on_product_page = fields.Boolean(string="Show on product page")
 
     @api.constrains('res_model', 'shown_on_product_page')
     def _unsupported_product_product_document_on_ecommerce(self):

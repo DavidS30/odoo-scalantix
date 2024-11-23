@@ -14,4 +14,3 @@ from . import hr_leave_mandatory_day
 from . import mail_message_subtype
 from . import res_partner
 from . import res_users
-from . import calendar_event

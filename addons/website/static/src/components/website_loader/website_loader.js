@@ -1,66 +1,41 @@
 /** @odoo-module **/
 
-import { rpc } from "@web/core/network/rpc";
 import { useBus, useService } from "@web/core/utils/hooks";
 import { sprintf } from "@web/core/utils/strings";
 import { _t } from "@web/core/l10n/translation";
 import { EventBus, Component, markup, useEffect, useState } from "@odoo/owl";
 
 export class WebsiteLoader extends Component {
-    static props = {
-        bus: EventBus,
-    };
-    static template = "website.website_loader";
-
     setup() {
-        this.website = useService("website");
+        this.rpc = useService("rpc");
 
         const initialState = {
             isVisible: false,
             title: '',
-            flag: false,
             showTips: false,
             selectedFeatures: [],
             showWaitingMessages: false,
             progressPercentage: 0,
-            bottomMessageTemplate: undefined,
-            showLoader: true,
-            showCloseButton: false,
         };
-
-        const defaultMessages = [{
+        const defaultMessage = {
             title: _t("Building your website."),
-            description: _t("Applying your colors and design..."),
-            flag: "colors",
-        }, {
-            title: _t("Building your website."),
-            description: _t("Searching your images...."),
-            flag: "images",
-        }, {
-            title: _t("Building your website."),
-            description: _t("Generating inspiring text..."),
-            flag: "text",
-        }];
-
+            description: _t("Stay tuned for an exciting new online presence."),
+        };
         let messagesInterval;
 
         this.state = useState({
             ...initialState,
         });
-        this.waitingMessages = useState(defaultMessages);
-        this.currentWaitingMessage = useState({ ...defaultMessages[0] });
+        this.waitingMessages = useState([ defaultMessage ]);
+        this.currentWaitingMessage = useState({ ...defaultMessage });
         this.featuresInstallInfo = { nbInstalled: 0, total: undefined };
 
         useEffect(
             (selectedFeatures) => {
-                if (this.state.showWaitingMessages) {
-                    let messagesToDisplay = [...defaultMessages]; // Start with defaultMessages
-                    if (selectedFeatures.length > 0) {
-                        // Merge defaultMessages with the relevant waitingMessages
-                        messagesToDisplay.push(...this.getWaitingMessages(selectedFeatures));
-                    }
-
-                    this.waitingMessages.splice(0, this.waitingMessages.length, ...messagesToDisplay);
+                if (this.state.showWaitingMessages && selectedFeatures.length > 0) {
+                    // Populate this.waitingMessages with the relevant ones
+                    this.waitingMessages.splice(1, this.waitingMessages.length,
+                        ...this.getWaitingMessages(selectedFeatures));
 
                     // Request the number of modules/dependencies to install
                     // and already installed
@@ -87,7 +62,7 @@ export class WebsiteLoader extends Component {
                         if (this.waitingMessages.length - 1 === msgIndex) {
                             clearInterval(messagesInterval);
                         }
-                    }, 6000);
+                    }, 10000);
 
                     return () => clearInterval(messagesInterval);
                 }
@@ -122,21 +97,10 @@ export class WebsiteLoader extends Component {
         useBus(this.props.bus, "SHOW-WEBSITE-LOADER", (ev) => {
             const props = ev.detail;
             this.state.isVisible = true;
-            for (const prop of [
-                "title",
-                // FIXME: website user/interactive tours are not properly
-                // working at the moment. This disables the "follow the tips"
-                // message in the website loader while waiting for a fix.
-                // "showTips",
-                "selectedFeatures",
-                "showWaitingMessages",
-                "bottomMessageTemplate",
-                "showCloseButton",
-                "flag",
-            ]) {
-                this.state[prop] = props && props[prop];
-            }
-            this.state.showLoader = props && props.showLoader !== false;
+            this.state.title = props && props.title;
+            this.state.showTips = props && props.showTips;
+            this.state.selectedFeatures = props && props.selectedFeatures;
+            this.state.showWaitingMessages = props && props.showWaitingMessages;
         });
         useBus(this.props.bus, "HIDE-WEBSITE-LOADER", () => {
             for (const key of Object.keys(initialState)) {
@@ -202,11 +166,11 @@ export class WebsiteLoader extends Component {
      * @param {integer[]} selectedFeatures
      */
     async trackModules(selectedFeatures) {
-        const installInfo = await rpc(
+        const installInfo = await this.rpc(
             "/website/track_installing_modules",
             {
-                'selected_features': selectedFeatures,
-                'total_features': this.featuresInstallInfo.total,
+                selected_features: selectedFeatures,
+                total_features: this.featuresInstallInfo.total,
             },
             { silent: true }
         );
@@ -218,7 +182,7 @@ export class WebsiteLoader extends Component {
         if (this.featuresInstallInfo.nbInstalled !== this.featuresInstallInfo.total) {
             this.trackModulesTimeout = setTimeout(() => this.trackModules(selectedFeatures), 1000);
         }
-    }
+    };
 
     /**
      * Depending on the features selected, returns the right waiting messages.
@@ -229,46 +193,39 @@ export class WebsiteLoader extends Component {
     getWaitingMessages(selectedFeatures) {
         const websiteFeaturesMessages = [{
             id: 5,
-            title: _t("Adding features."),
+            title: _t("Enabling your %s."),
             name: _t("blog"),
-            description: _t("Enabling your %s."),
-            flag: "generic",
+            description: _t("Share your thoughts and ideas with the world."),
         }, {
             id: 7,
-            title: _t("Adding features."),
+            title: _t("Integrating your %s."),
             name: _t("recruitment platform"),
-            description: _t("Integrating your %s."),
-            flag: "generic",
+            description: _t("Find the best talent for your team."),
         }, {
             id: 8,
-            title: _t("Adding features."),
+            title: _t("Activating your %s."),
             name: _t("online store"),
-            description: _t("Activating your %s."),
-            flag: "generic",
+            description: _t("Start selling your products and services today."),
         }, {
             id: 9,
-            title: _t("Adding features."),
+            title: _t("Configuring your %s."),
             name: _t("online appointment system"),
-            description: _t("Configuring your %s."),
-            flag: "generic",
+            description: _t("Make it easy for clients to book appointments with you."),
         }, {
             id: 10,
-            title: _t("Adding features."),
+            title: _t("Setting up your %s."),
             name: _t("forum"),
-            description: _t("Setting up your %s."),
-            flag: "generic",
+            description: _t("Engage with your community and build relationships."),
         }, {
             id: 12,
-            title: _t("Adding features."),
+            title: _t("Installing your %s."),
             name: _t("e-learning platform"),
-            description: _t("Installing your %s."),
-            flag: "generic",
+            description: _t("Offer online courses and learning opportunities."),
         }, {
             // Always the last message if there is at least 1 feature selected.
             id: "last",
-            title: _t("Finalizing."),
-            description: _t("Activating the last features."),
-            flag: "generic",
+            title: _t("Activating the last features."),
+            description: _t("A bit more patience as your website takes shape."),
         }];
 
         const filteredIds = [...selectedFeatures, "last"];
@@ -278,13 +235,13 @@ export class WebsiteLoader extends Component {
                     const highlight = sprintf(
                         '<span class="o_website_loader_text_highlight">%s</span>', msg.name
                     );
-                    msg.description = markup(sprintf(msg.description, highlight));
+                    msg.title = markup(sprintf(msg.title, highlight));
                 }
                 return true;
             }
         });
         return messagesList;
-    }
+    };
 
     /**
      * Prevents refreshing/leaving the page if the loader is displayed (and
@@ -301,11 +258,8 @@ export class WebsiteLoader extends Component {
             return ev.returnValue;
         }
     };
-
-    /**
-     * Hide the loader.
-     */
-    close() {
-        this.website.hideLoader();
-    }
 }
+WebsiteLoader.props = {
+    bus: EventBus,
+};
+WebsiteLoader.template = 'website.website_loader';

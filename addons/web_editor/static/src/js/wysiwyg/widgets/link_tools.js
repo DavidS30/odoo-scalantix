@@ -4,9 +4,9 @@ import { Link } from "./link";
 import { ColorPalette } from '@web_editor/js/wysiwyg/widgets/color_palette';
 import weUtils from "@web_editor/js/common/utils";
 import {
+    onWillUpdateProps,
     onMounted,
     onWillUnmount,
-    onWillDestroy,
     useState,
 } from "@odoo/owl";
 import { normalizeCSSColor } from '@web/core/utils/colors';
@@ -48,12 +48,17 @@ export class LinkTools extends Link {
         showLinkSizeRow: true,
         showLinkCustomColor: true,
         showLinkShapeRow: true,
-        isDocument: false,
-        directDownload: true,
     });
 
     setup() {
         super.setup(...arguments);
+        onWillUpdateProps(async (newProps) => {
+            await this.mountedPromise;
+            this.$link = newProps.link ? $(newProps.link) : this.link;
+            this._setSelectOptionFromLink();
+            this._updateOptionsUI();
+            this._updateLabelInput();
+        });
         onMounted(() => {
             this._observer = new MutationObserver(records => {
                 if (records.some(record => record.type === 'attributes')) {
@@ -74,26 +79,7 @@ export class LinkTools extends Link {
         onWillUnmount(() => {
             this._observer.disconnect();
         });
-        onWillDestroy(() => {
-            const $contents = this.$link.contents();
-            if (shouldUnlink(this.$link[0], this.colorCombinationClass)) {
-                $contents.unwrap();
-            }
-            this.props.onDestroy();
-        });
     }
-    /**
-     * @override
-     */
-    async willUpdateProps(newProps) {
-        await super.willUpdateProps(newProps);
-        this.$link = newProps.link ? $(newProps.link) : this.link;
-        this._setSelectOptionFromLink();
-        this._updateOptionsUI();
-        this._updateLabelInput();
-        this._checkDocumentState();
-    }
-
     /**
      * @override
      */
@@ -105,21 +91,6 @@ export class LinkTools extends Link {
             'color': 'text-',
             'background-color': 'bg-',
         };
-        this._updateInitialNewWindowUI();
-    }
-    _updateInitialNewWindowUI() {
-        // TODO In master, put initialNewWindow in state.
-        // Adjust rendered initialNewWindow because changes are ignored by Owl.
-        if (this.$el && this.$el[0]) {
-            const checkboxEl = this.$el[0].querySelector("we-checkbox[name='is_new_window'");
-            if (checkboxEl) {
-                checkboxEl.checked = this.initialNewWindow ? "checked" : "";
-                const buttonEl = checkboxEl.closest("we-button");
-                if (buttonEl) {
-                    buttonEl.classList[this.initialNewWindow ? "add" : "remove"]("active");
-                }
-            }
-        }
     }
     /**
      * @override
@@ -140,9 +111,19 @@ export class LinkTools extends Link {
             // Link URL was deduced from label. Apply changes to DOM.
             this.__onURLInput();
         }
-        this._checkDocumentState();
 
         return ret;
+    }
+    destroy() {
+        if (!this.$el?.[0]) {
+            return super.destroy(...arguments);
+        }
+        const $contents = this.$link.contents();
+        if (shouldUnlink(this.$link[0], this.colorCombinationClass)) {
+            $contents.unwrap();
+        }
+        super.destroy(...arguments);
+        this.props.onDestroy();
     }
     applyLinkToDom() {
         this._observer.disconnect();
@@ -165,26 +146,6 @@ export class LinkTools extends Link {
         super.focusUrl(...arguments);
     }
 
-    openDocumentDialog() {
-        this.props.wysiwyg.openMediaDialog({
-            resModel: "ir.ui.view",
-            useMediaLibrary: true,
-            noImages: true,
-            noIcons: true,
-            noVideos: true,
-            save: async (link) => {
-                this.initialNewWindow = this.initialIsNewWindowFromProps;
-                this._updateInitialNewWindowUI();
-                let relativeUrl = link.href.substr(window.location.origin.length);
-                await this._determineAttachmentType(relativeUrl.split("?")[0]);
-                if (this.isLastAttachmentUrl) {
-                    relativeUrl = relativeUrl.replace("&download=true", "");
-                }
-                this.$el[0].querySelector("#o_link_dialog_url_input").value = relativeUrl;
-                this.__onURLInput();
-            },
-        });
-    }
     //--------------------------------------------------------------------------
     // Private
     //--------------------------------------------------------------------------
@@ -467,20 +428,6 @@ export class LinkTools extends Link {
     _onClickCheckbox(ev) {
         const $target = $(ev.target);
         $target.closest('we-button.o_we_checkbox_wrapper').toggleClass('active');
-        if (ev.target.getAttribute("name") === "direct_download") {
-            const el = ev.target.closest("we-button.o_we_checkbox_wrapper");
-            const urlInputEl = this.$el[0].querySelector("#o_link_dialog_url_input");
-            let href = urlInputEl.value.replace("&download=true", "");
-            if (el.classList.contains("active")) {
-                href += "&download=true";
-                this.state.directDownload = true;
-            }
-            else {
-                this.state.directDownload = false;
-            }
-            urlInputEl.value = href;
-            this.state.url = href;
-        } 
         this._adaptPreview();
     }
     _onPickSelectOption(ev) {
@@ -537,22 +484,12 @@ export class LinkTools extends Link {
             this.props.wysiwyg.odooEditor.historyStep();
         }
     }
-    _checkDocumentState() {
-        this.state.isDocument = false;
-        this.state.directDownload = true;
-        const url = this.state.url;
-        if (url && url.startsWith("/web/content/")) {
-            this.state.isDocument = !this.isLastAttachmentUrl;
-            this.state.directDownload = url.includes("&download=true");
-        }
-    }
     /**
      * @override
      */
     __onURLInput() {
         super.__onURLInput(...arguments);
         this.props.wysiwyg.odooEditor.historyPauseSteps('_onURLInput');
-        this._checkDocumentState();
         this._syncContent();
         this._adaptPreview();
         this.props.wysiwyg.odooEditor.historyUnpauseSteps('_onURLInput');

@@ -12,7 +12,7 @@ const RE_OFFSET_MATCH = /(^| )offset(-[\w\d]+)*( |$)/;
 const RE_PADDING_MATCH = /[ ]*padding[^;]*;/g;
 const RE_PADDING = /([\d.]+)/;
 const RE_WHITESPACE = /[\s\u200b]*/;
-const SELECTORS_IGNORE = /(^\*$|:hover|:before|:after|:active|:link|::|'|\([^(),]+[,(])|@page/;
+const SELECTORS_IGNORE = /(^\*$|:hover|:before|:after|:active|:link|::|'|\([^(),]+[,(])/;
 // CSS properties relating to font, which Outlook seem to have trouble inheriting.
 const FONT_PROPERTIES_TO_INHERIT = [
     'color',
@@ -39,19 +39,6 @@ export const TABLE_STYLES = {
     'text-align': 'inherit',
     'font-size': 'unset',
     'line-height': 'inherit',
-};
-
-const GROUPED_STYLES = {
-    border: [
-        "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
-        "border-top-style", "border-right-style", "border-bottom-style", "border-left-style",
-    ],
-    padding: ["padding-top", "padding-bottom", "padding-left", "padding-right"],
-    margin: ["margin-top", "margin-bottom", "margin-left", "margin-right"],
-    "border-radius": [
-        "border-top-left-radius", "border-top-right-radius",
-        "border-bottom-right-radius", "border-bottom-left-radius",
-    ],
 };
 
 //--------------------------------------------------------------------------
@@ -688,16 +675,18 @@ function enforceImagesResponsivity(editable) {
  * will be computed for the editable element's owner document.
  *
  * @param {JQuery} $editable
- * @param {Object} options {$iframe: JQuery;
- *                          wysiwyg: Object}
+ * @param {Object[]} [cssRules] Array<{selector: string;
+ *                                   style: {[styleName]: string};
+ *                                   specificity: number;}>
+ * @param {JQuery} [$iframe] the iframe containing the editable, if any
  */
-export async function toInline($editable, options) {
+export async function toInline($editable, cssRules, $iframe) {
     $editable.removeClass('odoo-editor-editable');
     const editable = $editable.get(0);
-    const iframe = options.$iframe && options.$iframe.get(0);
-    const wysiwyg = $editable.data('wysiwyg') || options.wysiwyg;
+    const iframe = $iframe && $iframe.get(0);
+    const wysiwyg = $editable.data('wysiwyg');
     const doc = editable.ownerDocument;
-    let cssRules = wysiwyg && wysiwyg._rulesCache;
+    cssRules = cssRules || wysiwyg && wysiwyg._rulesCache;
     if (!cssRules) {
         cssRules = getCSSRules(doc);
         if (wysiwyg) {
@@ -1583,29 +1572,6 @@ function _getMatchedCSSRules(node, cssRules, checkBlacklisted = false) {
             processedStyle[key] = value.replace(/\s*!important\s*$/, '');
         }
     };
-    // In case the groupStyle have var in its value, the substyles will not have
-    // any value assigned in cssRules thus we loose the style since the groupStyle
-    // doesn't appear too in cssRules. As a solution we added those substyle using
-    // their computed values
-    const computedStyle = getComputedStyle(node);
-    for (const groupName in GROUPED_STYLES) {
-        // We exclude the 'margin' and 'padding' styles from force apply because
-        // it's common that they have a value set by auto which doesn't make sense to
-        // force their computed value.
-        const force = !groupName.includes("margin") && !groupName.includes("padding");
-        const hasSubStyleApplied = GROUPED_STYLES[groupName].some(
-            (styleName) => styleName in processedStyle
-        );
-        if (!force && hasSubStyleApplied) {
-            continue;
-        }
-        for (const styleName of GROUPED_STYLES[groupName]) {
-            const styleValue = computedStyle.getPropertyValue(styleName);
-            if (styleValue && typeof styleValue === "string" && styleValue.length) {
-                processedStyle[styleName] = styleValue;
-            }
-        }
-    }
 
     if (processedStyle.display === 'block' && !(node.classList && node.classList.contains('oe-nested'))) {
         delete processedStyle.display;

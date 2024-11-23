@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 import { ModelFieldSelector } from "@web/core/model_field_selector/model_field_selector";
 
 export class DynamicModelFieldSelector extends ModelFieldSelector {

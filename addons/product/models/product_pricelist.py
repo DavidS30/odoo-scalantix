@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 
@@ -9,7 +10,7 @@ class Pricelist(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = "Pricelist"
     _rec_names_search = ['name', 'currency_id']  # TODO check if should be removed
-    _order = "sequence, id, name"
+    _order = "sequence asc, id asc"
 
     def _default_currency_id(self):
         return self.env.company.currency_id.id
@@ -44,6 +45,16 @@ class Pricelist(models.Model):
         tracking=10,
     )
 
+    discount_policy = fields.Selection(
+        selection=[
+            ('with_discount', "Discount included in the price"),
+            ('without_discount', "Show public price & discount to the customer"),
+        ],
+        default='with_discount',
+        required=True,
+        tracking=15,
+    )
+
     item_ids = fields.One2many(
         comodel_name='product.pricelist.item',
         inverse_name='pricelist_id',
@@ -58,8 +69,7 @@ class Pricelist(models.Model):
     @api.depends('currency_id')
     def _compute_display_name(self):
         for pricelist in self:
-            pricelist_name = pricelist.name and pricelist.name or _('New')
-            pricelist.display_name = f'{pricelist_name} ({pricelist.currency_id.name})'
+            pricelist.display_name = f'{pricelist.name} ({pricelist.currency_id.name})'
 
     def write(self, values):
         res = super().write(values)
@@ -72,12 +82,10 @@ class Pricelist(models.Model):
         return res
 
     def copy_data(self, default=None):
-        default = dict(default or {})
-        vals_list = super().copy_data(default=default)
-        if 'name' not in default:
-            for pricelist, vals in zip(self, vals_list):
-                vals['name'] = _("%s (copy)", pricelist.name)
-        return vals_list
+        default = default or {}
+        if not default.get('name'):
+            default['name'] = _('%s (copy)', self.name)
+        return super().copy_data(default=default)
 
     def _get_products_price(self, products, *args, **kwargs):
         """Compute the pricelist prices for the specified products, quantity & uom.
@@ -300,37 +308,36 @@ class Pricelist(models.Model):
         Partner = self.env['res.partner'].with_context(active_test=False)
         company_id = self.env.company.id
 
-        IrConfigParameter = self.env['ir.config_parameter'].sudo()
+        Property = self.env['ir.property'].with_company(company_id)
         Pricelist = self.env['product.pricelist']
         pl_domain = self._get_partner_pricelist_multi_search_domain_hook(company_id)
 
         # if no specific property, try to find a fitting pricelist
+        specific_properties = Property._get_multi(
+            'property_product_pricelist', Partner._name,
+            list(models.origin_ids(partner_ids)),  # Some NewID can be in the partner_ids
+        )
         result = {}
         remaining_partner_ids = []
-        for partner in Partner.browse(partner_ids):
-            if partner.specific_property_product_pricelist._get_partner_pricelist_multi_filter_hook():
-                result[partner.id] = partner.specific_property_product_pricelist
+        for pid in partner_ids:
+            if (
+                specific_properties.get(pid)
+                and specific_properties[pid]._get_partner_pricelist_multi_filter_hook()
+            ):
+                result[pid] = specific_properties[pid]
+            elif (
+                isinstance(pid, models.NewId) and specific_properties.get(pid.origin)
+                and specific_properties[pid.origin]._get_partner_pricelist_multi_filter_hook()
+            ):
+                result[pid] = specific_properties[pid.origin]
             else:
-                remaining_partner_ids.append(partner.id)
+                remaining_partner_ids.append(pid)
 
         if remaining_partner_ids:
-            def convert_to_int(string_value):
-                try:
-                    return int(string_value)
-                except (TypeError, ValueError, OverflowError):
-                    return None
             # get fallback pricelist when no pricelist for a given country
             pl_fallback = (
                 Pricelist.search(pl_domain + [('country_group_ids', '=', False)], limit=1) or
-                # save data in ir.config_parameter instead of ir.default for
-                # res.partner.property_product_pricelist
-                # otherwise the data will become the default value while
-                # creating without specifying the property_product_pricelist
-                # however if the property_product_pricelist is not specified
-                # the result of the previous line should have high priority
-                # when computing
-                Pricelist.browse(convert_to_int(IrConfigParameter.get_param(f'res.partner.property_product_pricelist_{company_id}'))) or
-                Pricelist.browse(convert_to_int(IrConfigParameter.get_param('res.partner.property_product_pricelist'))) or
+                Property._get('property_product_pricelist', 'res.partner') or
                 Pricelist.search(pl_domain, limit=1)
             )
             # group partners by country, and find a pricelist for each country
@@ -368,15 +375,7 @@ class Pricelist(models.Model):
         ])
         if linked_items:
             raise UserError(_(
-                'You cannot delete pricelist(s):\n(%(pricelists)s)\nThey are used within pricelist(s):\n%(other_pricelists)s',
-                pricelists='\n'.join(linked_items.base_pricelist_id.mapped('display_name')),
-                other_pricelists='\n'.join(linked_items.pricelist_id.mapped('display_name')),
+                'You cannot delete those pricelist(s):\n(%s)\n, they are used in other pricelist(s):\n%s',
+                '\n'.join(linked_items.base_pricelist_id.mapped('display_name')),
+                '\n'.join(linked_items.pricelist_id.mapped('display_name'))
             ))
-
-    def action_open_pricelist_report(self):
-        self.ensure_one()
-        return {
-            'name': _("Pricelist Report Preview"),
-            'type': 'ir.actions.client',
-            'tag': 'generate_pricelist_report',
-        }

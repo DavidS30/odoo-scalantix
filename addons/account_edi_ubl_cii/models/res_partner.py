@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+
 import re
 from stdnum.fr import siret
 
@@ -10,8 +12,9 @@ from odoo.addons.account_edi_ubl_cii.models.account_edi_common import EAS_MAPPIN
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    invoice_edi_format = fields.Selection(
-        selection_add=[
+    ubl_cii_format = fields.Selection(
+        string="Format",
+        selection=[
             ('facturx', "Factur-X (CII)"),
             ('ubl_bis3', "BIS Billing 3.0"),
             ('xrechnung', "XRechnung CIUS"),
@@ -19,9 +22,10 @@ class ResPartner(models.Model):
             ('ubl_a_nz', "BIS Billing 3.0 A-NZ"),
             ('ubl_sg', "BIS Billing 3.0 SG"),
         ],
+        compute='_compute_ubl_cii_format',
+        store=True,
+        readonly=False,
     )
-    is_ubl_format = fields.Boolean(compute='_compute_is_ubl_format')
-    is_peppol_edi_format = fields.Boolean(compute='_compute_is_peppol_edi_format')
     peppol_endpoint = fields.Char(
         string="Peppol Endpoint",
         help="Unique identifier used by the BIS Billing 3.0 and its derivatives, also known as 'Endpoint ID'.",
@@ -42,6 +46,7 @@ class ResPartner(models.Model):
             ('0002', "0002 - System Information et Repertoire des Entreprise et des Etablissements: SIRENE"),
             ('0007', "0007 - Organisationsnummer (Swedish legal entities)"),
             ('0009', "0009 - SIRET-CODE"),
+            ('0037', "0037 - LY-tunnus"),
             ('0060', "0060 - Data Universal Numbering System (D-U-N-S Number)"),
             ('0088', "0088 - EAN Location Code"),
             ('0096', "0096 - DANISH CHAMBER OF COMMERCE Scheme (EDIRA compliant)"),
@@ -70,9 +75,13 @@ class ResPartner(models.Model):
             ('0209', "0209 - GS1 identification keys"),
             ('0210', "0210 - CODICE FISCALE"),
             ('0211', "0211 - PARTITA IVA"),
+            ('0212', "0212 - Finnish Organization Identifier"),
+            ('0213', "0213 - Finnish Organization Value Add Tax Identifier"),
+            ('0215', "0215 - Net service ID"),
             ('0216', "0216 - OVTcode"),
             ('0221', "0221 - The registered number of the qualified invoice issuer (Japan)"),
             ('0230', "0230 - National e-Invoicing Framework (Malaysia)"),
+            ('9901', "9901 - Danish Ministry of the Interior and Health"),
             ('9910', "9910 - Hungary VAT number"),
             ('9913', "9913 - Business Registers Network"),
             ('9914', "9914 - Österreichische Umsatzsteuer-Identifikationsnummer"),
@@ -112,10 +121,21 @@ class ResPartner(models.Model):
             ('9951', "9951 - San Marino VAT number"),
             ('9952', "9952 - Türkiye VAT number"),
             ('9953', "9953 - Holy See (Vatican City State) VAT number"),
+            ('9955', "9955 - Swedish VAT number"),
             ('9957', "9957 - French VAT number"),
             ('9959', "9959 - Employer Identification Number (EIN, USA)"),
         ]
     )
+
+    @api.constrains('peppol_eas')
+    def _check_peppol_eas(self):
+        for partner in self:
+            if partner.peppol_eas in ('0037', '0212', '0213', '0215'):
+                raise ValidationError(_("Peppol EAS codes 0037, 0212, 0213, 0215 are deprecated. Please use 0216 instead."))
+            elif partner.peppol_eas == '9955':
+                raise ValidationError(_("Peppol EAS code 9955 is deprecated. Please use 0007 instead."))
+            elif partner.peppol_eas == '9901':
+                raise ValidationError(_("Peppol EAS code 9901 is deprecated. Please use a different Danish EAS code instead."))
 
     @api.constrains('peppol_endpoint')
     def _check_peppol_fields(self):
@@ -127,53 +147,14 @@ class ResPartner(models.Model):
 
     @api.model
     def _get_ubl_cii_formats(self):
-        return list(self._get_ubl_cii_formats_info().keys())
-
-    @api.model
-    def _get_ubl_cii_formats_info(self):
         return {
-            'ubl_bis3': {'countries': list(EAS_MAPPING), 'on_peppol': True, 'sequence': 200},
-            'xrechnung': {'countries': ['DE'], 'on_peppol': True},
-            'ubl_a_nz': {'countries': ['NZ', 'AU'], 'on_peppol': True},
-            'nlcius': {'countries': ['NL'], 'on_peppol': True},
-            'ubl_sg': {'countries': ['SG'], 'on_peppol': True},
-            'facturx': {'countries': ['FR'], 'on_peppol': False},
+            'DE': 'xrechnung',
+            'AU': 'ubl_a_nz',
+            'NZ': 'ubl_a_nz',
+            'NL': 'nlcius',
+            'FR': 'facturx',
+            'SG': 'ubl_sg',
         }
-
-    @api.model
-    def _get_ubl_cii_formats_by_country(self):
-        formats_info = self._get_ubl_cii_formats_info()
-        countries = {country for format_val in formats_info.values() for country in (format_val.get('countries') or [])}
-        return {
-            country_code: [
-                format_key
-                for format_key, format_val in formats_info.items() if country_code in (format_val.get('countries') or [])
-            ]
-            for country_code in countries
-        }
-
-    def _get_suggested_ubl_cii_edi_format(self):
-        self.ensure_one()
-        formats_info = self._get_ubl_cii_formats_info()
-        format_mapping = self._get_ubl_cii_formats_by_country()
-        country_code = self._deduce_country_code()
-        if country_code in format_mapping:
-            formats_by_country = format_mapping[country_code]
-            # return the format with the smallest sequence
-            if len(formats_by_country) == 1:
-                return formats_by_country[0]
-            else:
-                return min(formats_by_country, key=lambda e: formats_info[e].get('sequence', 100))  # we use a sequence of 100 by default
-        return False
-
-    def _get_suggested_invoice_edi_format(self):
-        # EXTENDS 'account'
-        return super()._get_suggested_invoice_edi_format() or self._get_suggested_ubl_cii_edi_format()
-
-    @api.model
-    def _get_peppol_formats(self):
-        formats_info = self._get_ubl_cii_formats_info()
-        return [format_key for format_key, format_vals in formats_info.items() if format_vals.get('on_peppol')]
 
     def _peppol_eas_endpoint_depends(self):
         # field dependencies of methods _compute_peppol_endpoint() and _compute_peppol_eas()
@@ -181,21 +162,16 @@ class ResPartner(models.Model):
         return ['country_code', 'vat', 'company_registry']
 
     @api.depends(lambda self: self._peppol_eas_endpoint_depends())
-    def _compute_invoice_edi_format(self):
-        # EXTENDS 'account' - add depends
-        super()._compute_invoice_edi_format()
-
-    @api.depends_context('company')
-    @api.depends('invoice_edi_format')
-    def _compute_is_ubl_format(self):
+    def _compute_ubl_cii_format(self):
+        format_mapping = self._get_ubl_cii_formats()
         for partner in self:
-            partner.is_ubl_format = partner.invoice_edi_format in self._get_ubl_cii_formats()
-
-    @api.depends_context('company')
-    @api.depends('invoice_edi_format')
-    def _compute_is_peppol_edi_format(self):
-        for partner in self:
-            partner.is_peppol_edi_format = partner.invoice_edi_format in self._get_peppol_formats()
+            country_code = partner._deduce_country_code()
+            if country_code in format_mapping:
+                partner.ubl_cii_format = format_mapping[country_code]
+            elif country_code in EAS_MAPPING:
+                partner.ubl_cii_format = 'ubl_bis3'
+            else:
+                partner.ubl_cii_format = partner.ubl_cii_format
 
     @api.depends(lambda self: self._peppol_eas_endpoint_depends() + ['peppol_eas'])
     def _compute_peppol_endpoint(self):
@@ -243,17 +219,17 @@ class ResPartner(models.Model):
                      "It should contain exactly 10 digits (Company Registry number)."
                      "The expected format is: 1234567890")
 
-    @api.model
-    def _get_edi_builder(self, invoice_edi_format):
-        if invoice_edi_format == 'xrechnung':
+    def _get_edi_builder(self):
+        self.ensure_one()
+        if self.ubl_cii_format == 'xrechnung':
             return self.env['account.edi.xml.ubl_de']
-        if invoice_edi_format == 'facturx':
+        if self.ubl_cii_format == 'facturx':
             return self.env['account.edi.xml.cii']
-        if invoice_edi_format == 'ubl_a_nz':
+        if self.ubl_cii_format == 'ubl_a_nz':
             return self.env['account.edi.xml.ubl_a_nz']
-        if invoice_edi_format == 'nlcius':
+        if self.ubl_cii_format == 'nlcius':
             return self.env['account.edi.xml.ubl_nl']
-        if invoice_edi_format == 'ubl_bis3':
+        if self.ubl_cii_format == 'ubl_bis3':
             return self.env['account.edi.xml.ubl_bis3']
-        if invoice_edi_format == 'ubl_sg':
+        if self.ubl_cii_format == 'ubl_sg':
             return self.env['account.edi.xml.ubl_sg']

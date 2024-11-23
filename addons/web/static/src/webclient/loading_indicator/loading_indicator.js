@@ -1,7 +1,8 @@
+/** @odoo-module **/
+
 import { browser } from "@web/core/browser/browser";
-import { rpcBus } from "@web/core/network/rpc";
 import { registry } from "@web/core/registry";
-import { useBus } from "@web/core/utils/hooks";
+import { useBus, useService } from "@web/core/utils/hooks";
 import { Transition } from "@web/core/transition";
 
 import { Component, useState } from "@odoo/owl";
@@ -17,19 +18,18 @@ import { Component, useState } from "@odoo/owl";
  * After a delay of 3s, if a rpc is still not completed, we also block the UI.
  */
 export class LoadingIndicator extends Component {
-    static template = "web.LoadingIndicator";
-    static components = { Transition };
-    static props = {};
-
     setup() {
+        this.uiService = useService("ui");
         this.state = useState({
             count: 0,
             show: false,
         });
         this.rpcIds = new Set();
+        this.shouldUnblock = false;
         this.startShowTimer = null;
-        useBus(rpcBus, "RPC:REQUEST", this.requestCall);
-        useBus(rpcBus, "RPC:RESPONSE", this.responseCall);
+        this.blockUITimer = null;
+        useBus(this.env.bus, "RPC:REQUEST", this.requestCall);
+        useBus(this.env.bus, "RPC:RESPONSE", this.responseCall);
     }
 
     requestCall({ detail }) {
@@ -56,10 +56,19 @@ export class LoadingIndicator extends Component {
         this.state.count = this.rpcIds.size;
         if (this.state.count === 0) {
             browser.clearTimeout(this.startShowTimer);
+            browser.clearTimeout(this.blockUITimer);
             this.state.show = false;
+            if (this.shouldUnblock) {
+                this.uiService.unblock();
+                this.shouldUnblock = false;
+            }
         }
     }
 }
+
+LoadingIndicator.template = "web.LoadingIndicator";
+LoadingIndicator.components = { Transition };
+LoadingIndicator.props = {};
 
 registry.category("main_components").add("LoadingIndicator", {
     Component: LoadingIndicator,

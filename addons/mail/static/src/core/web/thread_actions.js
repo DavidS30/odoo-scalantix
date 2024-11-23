@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { threadActionsRegistry } from "@mail/core/common/thread_actions";
 import { useComponent, useState } from "@odoo/owl";
 
@@ -26,26 +28,18 @@ threadActionsRegistry
             return component.thread.isEmpty;
         },
         open(component) {
-            component.store.unstarAll();
+            component.messageService.unstarAll();
         },
         sequence: 2,
         setup() {
             const component = useComponent();
-            component.store = useState(useService("mail.store"));
+            component.messageService = useState(useService("mail.message"));
         },
         text: _t("Unstar all"),
     })
     .add("expand-form", {
         condition(component) {
-            return (
-                component.thread &&
-                !["mail.box", "discuss.channel"].includes(component.thread.model) &&
-                component.props.chatWindow?.isOpen
-            );
-        },
-        setup() {
-            const component = useComponent();
-            component.actionService = useService("action");
+            return component.thread?.type === "chatter" && component.props.chatWindow?.isOpen;
         },
         icon: "fa fa-fw fa-expand",
         name: _t("Open Form View"),
@@ -56,8 +50,7 @@ threadActionsRegistry
                 res_model: component.thread.model,
                 views: [[false, "form"]],
             });
-            component.props.chatWindow.close();
+            component.chatWindowService.close(component.props.chatWindow);
         },
-        sequence: 40,
-        sequenceGroup: 20,
+        sequence: 50,
     });

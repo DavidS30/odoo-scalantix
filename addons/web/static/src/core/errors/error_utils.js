@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { loadJS } from "../assets"; // use the real, non patched (in tests), loadJS
 
 /** @typedef {import("./error_service").UncaughtError} UncaughtError */

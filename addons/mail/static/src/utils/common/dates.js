@@ -1,14 +1,11 @@
+/* @odoo-module */
+
 const { DateTime } = luxon;
 
-/**
- * @param {luxon.DateTime} datetime
- */
-export function computeDelay(datetime) {
-    if (!datetime) {
-        return 0;
-    }
+export function computeDelay(dateStr) {
     const today = DateTime.now().startOf("day");
-    return datetime.diff(today, "days").days;
+    const date = DateTime.fromISO(dateStr);
+    return date.diff(today, "days").days;
 }
 
 export function getMsToTomorrow() {
@@ -22,14 +19,4 @@ export function getMsToTomorrow() {
         0 // at 00:00:00 hours
     );
     return night.getTime() - now.getTime();
-}
-
-export function isToday(datetime) {
-    if (!datetime) {
-        return false;
-    }
-    return (
-        datetime.toLocaleString(DateTime.DATE_FULL) ===
-        DateTime.now().toLocaleString(DateTime.DATE_FULL)
-    );
 }

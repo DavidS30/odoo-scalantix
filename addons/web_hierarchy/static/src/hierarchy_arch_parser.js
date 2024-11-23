@@ -1,16 +1,13 @@
 /** @odoo-module */
 
 import { visitXML } from "@web/core/utils/xml";
-import { stringToOrderBy } from "@web/search/utils/order_by";
 import { Field } from "@web/views/fields/field";
-import { getActiveActions } from "@web/views/utils";
-import { exprToBoolean } from "@web/core/utils/strings";
+import { archParseBoolean, getActiveActions } from "@web/views/utils";
 
 export class HierarchyArchParser {
     parse(xmlDoc, models, modelName) {
         const archInfo = {
             activeActions: getActiveActions(xmlDoc),
-            defaultOrder: stringToOrderBy(xmlDoc.getAttribute("default_order") || null),
             draggable: false,
             icon: "fa-share-alt o_hierarchy_icon",
             parentFieldName: "parent_id",
@@ -19,7 +16,7 @@ export class HierarchyArchParser {
             xmlDoc,
         };
         const fieldNextIds = {};
-        const fields = models[modelName].fields;
+        const fields = models[modelName];
 
         visitXML(xmlDoc, (node) => {
             if (node.hasAttribute("t-name")) {
@@ -50,7 +47,7 @@ export class HierarchyArchParser {
                     archInfo.childFieldName = childFieldName;
                 }
                 if (node.hasAttribute("draggable")) {
-                    archInfo.draggable = exprToBoolean(node.getAttribute("draggable"));
+                    archInfo.draggable = archParseBoolean(node.getAttribute("draggable"));
                 }
                 if (node.hasAttribute("icon")) {
                     archInfo.icon = node.getAttribute("icon");

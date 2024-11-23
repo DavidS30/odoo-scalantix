@@ -17,6 +17,8 @@ class TestRepairTraceability(TestMrpCommon):
         Test that removing a tracked component with a repair does not block the flow of using that component in another
         bom
         """
+        picking_type = self.env['stock.picking.type'].search([('code', '=', 'mrp_operation')])[0]
+        picking_type.use_auto_consume_components_lots = True
         product_to_repair = self.env['product.product'].create({
             'name': 'product first serial to act repair',
             'tracking': 'serial',
@@ -24,6 +26,7 @@ class TestRepairTraceability(TestMrpCommon):
         ptrepair_lot = self.env['stock.lot'].create({
             'name': 'A1',
             'product_id': product_to_repair.id,
+            'company_id': self.env.user.company_id.id
         })
         product_to_remove = self.env['product.product'].create({
             'name': 'other first serial to remove with repair',
@@ -32,6 +35,7 @@ class TestRepairTraceability(TestMrpCommon):
         ptremove_lot = self.env['stock.lot'].create({
             'name': 'B2',
             'product_id': product_to_remove.id,
+            'company_id': self.env.user.company_id.id
         })
         # Create a manufacturing order with product (with SN A1)
         mo_form = Form(self.env['mrp.production'])
@@ -73,6 +77,7 @@ class TestRepairTraceability(TestMrpCommon):
         mo2.lot_producing_id = self.env['stock.lot'].create({
             'name': 'A2',
             'product_id': product_to_repair.id,
+            'company_id': self.env.user.company_id.id
         })
         # Set component serial to B2 again, it is possible
         mo2.move_raw_ids.move_line_ids.lot_id = ptremove_lot
@@ -99,21 +104,24 @@ class TestRepairTraceability(TestMrpCommon):
             mo.button_mark_done()
             return mo
 
+        picking_type = self.env['stock.picking.type'].search([('code', '=', 'mrp_operation')])[0]
+        picking_type.use_auto_consume_components_lots = True
 
         stock_location = self.env.ref('stock.stock_location_stock')
 
         finished, component = self.env['product.product'].create([{
             'name': 'Finished Product',
-            'is_storable': True,
+            'type': 'product',
         }, {
             'name': 'SN Componentt',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'serial',
         }])
 
         sn_lot = self.env['stock.lot'].create({
             'product_id': component.id,
             'name': 'USN01',
+            'company_id': self.env.company.id,
         })
         self.env['stock.quant']._update_available_quantity(component, stock_location, 1, lot_id=sn_lot)
 
@@ -187,10 +195,10 @@ class TestRepairTraceability(TestMrpCommon):
         """
         finished, component = self.env['product.product'].create([{
             'name': 'Finished Product',
-            'is_storable': True,
+            'type': 'product',
         }, {
             'name': 'SN Componentt',
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'serial',
         }])
 
@@ -260,12 +268,11 @@ class TestRepairTraceability(TestMrpCommon):
         """
         stock_location = self.env.ref('stock.stock_location_stock')
         scrap_location = self.env['stock.location'].search([('company_id', '=', self.env.company.id), ('scrap_location', '=', True)], limit=1)
-        internal_type = self.env.ref('stock.picking_type_internal')
 
         finished = self.bom_4.product_id
         component = self.bom_4.bom_line_ids.product_id
         component.write({
-            'is_storable': True,
+            'type': 'product',
             'tracking': 'serial',
         })
 
@@ -308,7 +315,6 @@ class TestRepairTraceability(TestMrpCommon):
             'product_id': component.id,
             'product_uom_qty': 1,
             'product_uom': component.uom_id.id,
-            'picking_id': internal_type.id,
             'location_id': scrap_location.id,
             'location_dest_id': stock_location.id,
         })

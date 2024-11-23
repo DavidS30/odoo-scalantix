@@ -12,7 +12,6 @@ from odoo.http import request, content_disposition
 
 from odoo.tools import consteq
 from ..models.discuss.mail_guest import add_guest_to_context
-from odoo.addons.mail.tools.discuss import Store
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +47,7 @@ class AttachmentController(http.Controller):
     @http.route("/mail/attachment/upload", methods=["POST"], type="http", auth="public")
     @add_guest_to_context
     def mail_attachment_upload(self, ufile, thread_id, thread_model, is_pending=False, **kwargs):
-        thread = request.env[thread_model]._get_thread_with_access(
-            int(thread_id), mode=request.env[thread_model]._mail_post_access, **kwargs
-        )
+        thread = request.env[thread_model].with_context(active_test=False).search([("id", "=", thread_id)])
         if not thread:
             raise NotFound()
         if thread_model == "discuss.channel" and not thread.allow_public_upload and not request.env.user._is_internal():
@@ -77,22 +74,22 @@ class AttachmentController(http.Controller):
             # sudo: ir.attachment - posting a new attachment on an accessible thread
             attachment = request.env["ir.attachment"].sudo().create(vals)
             attachment._post_add_create(**kwargs)
-            res = {"data": Store(attachment, extra_fields=["access_token"]).get_result()}
+            attachmentData = attachment._attachment_format()[0]
+            if attachment.access_token:
+                attachmentData["accessToken"] = attachment.access_token
         except AccessError:
-            res = {"error": _("You are not allowed to upload an attachment here.")}
-        return request.make_json_response(res)
+            attachmentData = {"error": _("You are not allowed to upload an attachment here.")}
+        return request.make_json_response(attachmentData)
 
     @http.route("/mail/attachment/delete", methods=["POST"], type="json", auth="public")
     @add_guest_to_context
-    def mail_attachment_delete(self, attachment_id, access_token=None, **kwargs):
+    def mail_attachment_delete(self, attachment_id, access_token=None):
         attachment = request.env["ir.attachment"].browse(int(attachment_id)).exists()
         if not attachment:
-            request.env.user._bus_send("ir.attachment/delete", {"id": attachment_id})
+            target = request.env.user.partner_id
+            request.env["bus.bus"]._sendone(target, "ir.attachment/delete", {"id": attachment_id})
             return
-        attachment_message = request.env["mail.message"].sudo().search(
-            [("attachment_ids", "in", attachment.ids)], limit=1)
-        message = request.env["mail.message"].sudo(False)._get_with_access(attachment_message.id,
-                                                                           "create", **kwargs)
+        message = request.env["mail.message"].search([("attachment_ids", "in", attachment.ids)], limit=1)
         if not request.env.user.share:
             # Check through standard access rights/rules for internal users.
             attachment._delete_and_notify(message)
@@ -103,7 +100,7 @@ class AttachmentController(http.Controller):
         # sudo: ir.attachment: access is validated below with membership of message or access token
         attachment_sudo = attachment.sudo()
         if message:
-            if not self._is_allowed_to_delete(message, **kwargs):
+            if not message.is_current_user_or_guest_author:
                 raise NotFound()
         else:
             if (
@@ -115,9 +112,6 @@ class AttachmentController(http.Controller):
             if attachment_sudo.res_model != "mail.compose.message" or attachment_sudo.res_id != 0:
                 raise NotFound()
         attachment_sudo._delete_and_notify(message)
-
-    def _is_allowed_to_delete(self, message, **kwargs):
-        return message.is_current_user_or_guest_author
 
     @http.route(['/mail/attachment/zip'], methods=["POST"], type="http", auth="public")
     def mail_attachment_get_zip(self, file_ids, zip_name, **kw):

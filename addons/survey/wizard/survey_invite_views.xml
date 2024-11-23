@@ -52,8 +52,7 @@
                         </group>
                         <field name="can_edit_body" invisible="1"/>
                         <field name="body" class="oe-bordered-editor border border-1 m-3 p-0 flex-fill"
-                            widget="html_mail"
-                            options="{'height': 380}"
+                            options="{'style-inline': true, 'height': 380}"
                             invisible="not send_email"
                             readonly="not can_edit_body" force_save="1"/>
                         <group invisible="not send_email">
@@ -61,7 +60,7 @@
                                 <field name="attachment_ids" widget="many2many_binary"/>
                             </group>
                             <group>
-                                <field name="deadline"/>
+                                <field name="deadline" widget="date"/>
                                 <field name="template_id" label="Use template"/>
                             </group>
                         </group>

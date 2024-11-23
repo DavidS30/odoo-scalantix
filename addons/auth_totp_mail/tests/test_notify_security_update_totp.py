@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from datetime import datetime, timedelta
-
-from odoo.addons.auth_totp.controllers.home import TRUSTED_DEVICE_AGE
 from odoo.addons.mail.tests.test_res_users import TestNotifySecurityUpdate
 from odoo.tests import users
 
@@ -31,11 +28,7 @@ class TestNotifySecurityUpdateTotp(TestNotifySecurityUpdate):
         """ Make sure we notify the user when TOTP trusted devices are added/removed on his account. """
         recipients = [self.env.user.email_formatted]
         with self.mock_mail_gateway():
-            self.env['auth_totp.device'].sudo()._generate(
-                'trusted_device_chrome',
-                'Chrome on Windows',
-                datetime.now() + timedelta(seconds=TRUSTED_DEVICE_AGE)
-            )
+            self.env['auth_totp.device']._generate('trusted_device_chrome', 'Chrome on Windows')
 
         self.assertMailMailWEmails(recipients, 'outgoing', fields_values={
             'subject': 'Security Update: Device Added',
@@ -43,11 +36,7 @@ class TestNotifySecurityUpdateTotp(TestNotifySecurityUpdate):
 
         # generating a key outside of the 'auth_totp.device' model should however not notify
         with self.mock_mail_gateway():
-            self.env['res.users.apikeys']._generate(
-                'new_api_key',
-                'New Key',
-                datetime.now() + timedelta(days=1)
-            )
+            self.env['res.users.apikeys']._generate('new_api_key', 'New Key')
         self.assertNotSentEmail(recipients)
 
         # now remove the key using the user's relationship

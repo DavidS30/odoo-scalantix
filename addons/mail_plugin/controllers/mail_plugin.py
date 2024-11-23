@@ -183,7 +183,7 @@ class MailPluginController(http.Controller):
             }
             company = self._find_existing_company(normalized_email)
 
-            can_create_partner = request.env['res.partner'].has_access('create')
+            can_create_partner = request.env['res.partner'].check_access_rights('create', raise_exception=False)
 
             if not company and can_create_partner:  # create and enrich company
                 company, enrichment_info = self._create_company_from_iap(normalized_email)
@@ -314,7 +314,8 @@ class MailPluginController(http.Controller):
             return {'id': -1}
 
         try:
-            company.check_access('read')
+            company.check_access_rights('read')
+            company.check_access_rule('read')
         except AccessError:
             return {'id': company.id, 'name': _('No Access')}
 
@@ -395,7 +396,8 @@ class MailPluginController(http.Controller):
         partner_values['enrichment_info'] = None
 
         try:
-            partner.check_access('write')
+            partner.check_access_rights('write')
+            partner.check_access_rule('write')
             partner_values['can_write_on_partner'] = True
         except AccessError:
             partner_values['can_write_on_partner'] = False
@@ -426,7 +428,8 @@ class MailPluginController(http.Controller):
         return {
             'partner': partner_response,
             'user_companies': request.env.user.company_ids.ids,
-            'can_create_partner': request.env['res.partner'].has_access('create'),
+            'can_create_partner': request.env['res.partner'].check_access_rights(
+                'create', raise_exception=False),
         }
 
     def _mail_content_logging_models_whitelist(self):

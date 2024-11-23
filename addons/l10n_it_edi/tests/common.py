@@ -1,10 +1,9 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
-import base64
+
 from lxml import etree
 
 from odoo import tools
 from odoo.tests import tagged
-from odoo.tools.misc import file_open
 from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 
 
@@ -34,24 +33,23 @@ class TestItEdi(AccountTestInvoicingCommon):
         }) for line in lines])
 
     @classmethod
-    @AccountTestInvoicingCommon.setup_country('it')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref='it'):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         # Company data ------
-        cls.company_data_2 = cls.setup_other_company(
-            name='company_2_data',
-            vat='IT01234560157',
-            phone='0266766700',
-            mobile='+393288088988',
-            email='test@test.it',
-            street="1234 Test Street",
-            zip="12345",
-            city="Prova",
-            l10n_it_codice_fiscale='01234560157',
-            l10n_it_tax_system="RF01",
-        )
         cls.company = cls.company_data_2['company']
+        cls.company.write({
+            'vat': 'IT01234560157',
+            'phone': '0266766700',
+            'mobile': '+393288088988',
+            'email': 'test@test.it',
+            'street': "1234 Test Street",
+            'zip': "12345",
+            'city': "Prova",
+            'country_id': cls.env.ref('base.it').id,
+            'l10n_it_codice_fiscale': '01234560157',
+            'l10n_it_tax_system': "RF01",
+        })
         cls.company.partner_id.write({
             'l10n_it_pa_index': "0803HR0"
         })
@@ -74,7 +72,6 @@ class TestItEdi(AccountTestInvoicingCommon):
             'city': 'Milan',
             'company_id': False,
             'is_company': True,
-            'invoice_edi_format': 'it_edi_xml',
         })
 
         cls.italian_partner_b = cls.env['res.partner'].create({
@@ -86,8 +83,7 @@ class TestItEdi(AccountTestInvoicingCommon):
             'street': 'Via Test PA',
             'zip': '32121',
             'city': 'PA Town',
-            'is_company': True,
-            'invoice_edi_format': 'it_edi_xml',
+            'is_company': True
         })
 
         cls.italian_partner_no_address_codice = cls.env['res.partner'].create({
@@ -110,16 +106,12 @@ class TestItEdi(AccountTestInvoicingCommon):
         })
 
         # We create this because we are unable to post without a proxy user existing
-        cls.private_key_id = cls.env['certificate.key'].create({
-            'name': 'IT test key',
-            'content': base64.b64encode(file_open('l10n_it_edi/data/pkey.key', 'rb').read()),
-        })
         cls.proxy_user = cls.env['account_edi_proxy_client.user'].create({
             'proxy_type': 'l10n_it_edi',
             'id_client': 'l10n_it_edi_test',
             'company_id': cls.company.id,
             'edi_identification': 'l10n_it_edi_test',
-            'private_key_id': cls.private_key_id.id,
+            'private_key': 'l10n_it_edi_test',
         })
 
         cls.default_tax = cls.env['account.tax'].with_company(cls.company).create({

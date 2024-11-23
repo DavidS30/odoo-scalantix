@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 
 import { Component, useState } from "@odoo/owl";
@@ -27,7 +29,7 @@ export class ActivityController extends Component {
 
         this.dialog = useService("dialog");
         this.action = useService("action");
-        this.store = useService("mail.store");
+        this.activity = useService("mail.activity");
         this.ui = useState(useService("ui"));
         usePager(() => {
             const { count, hasLimitedCount, limit, offset } = this.model.root;
@@ -39,10 +41,7 @@ export class ActivityController extends Component {
                     // Ensure that only (active) records with at least one activity, "done" (archived) or not, are fetched.
                     // We don't use active_test=false in the context because otherwise we would also get archived records.
                     params.domain = [...(this.model.originalDomain || []), ["activity_ids.active", "in", [true, false]]];
-                    await Promise.all([
-                        this.model.root.load(params),
-                        this.model.fetchActivityData(params),
-                    ]);
+                    await Promise.all([this.model.root.load(params), this.model.fetchActivityData(params)]);
                 },
                 updateTotal: hasLimitedCount ? () => this.model.root.fetchCount() : undefined,
             };
@@ -75,7 +74,7 @@ export class ActivityController extends Component {
             multiSelect: false,
             context: this.props.context,
             onSelected: async (resIds) => {
-                await this.store.scheduleActivity(this.props.resModel, resIds);
+                await this.activity.schedule(this.props.resModel, resIds);
             },
         }, {
             onClose: () => this.model.load(this.getSearchProps())

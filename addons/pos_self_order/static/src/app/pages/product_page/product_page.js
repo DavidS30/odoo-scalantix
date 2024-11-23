@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 import { Component, onWillUnmount, useState, useSubEnv } from "@odoo/owl";
 import { useSelfOrder } from "@pos_self_order/app/self_order_service";
 import { AttributeSelection } from "@pos_self_order/app/components/attribute_selection/attribute_selection";
@@ -59,6 +61,10 @@ export class ProductPage extends Component {
         }
 
         return 0;
+    }
+
+    back() {
+        this.router.navigate("product_list");
     }
 
     changeQuantity(increase) {

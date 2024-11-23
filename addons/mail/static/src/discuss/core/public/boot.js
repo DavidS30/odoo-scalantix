@@ -1,8 +1,10 @@
-import { DiscussClientAction } from "@mail/core/public_web/discuss_client_action";
+/* @odoo-module */
+
+import { DiscussPublic } from "@mail/discuss/core/public/discuss_public";
 
 import { mount, whenReady } from "@odoo/owl";
 
-import { getTemplate } from "@web/core/templates";
+import { templates } from "@web/core/assets";
 import { MainComponentsContainer } from "@web/core/main_components_container";
 import { registry } from "@web/core/registry";
 import { makeEnv, startServices } from "@web/env";
@@ -11,16 +13,14 @@ import { makeEnv, startServices } from "@web/env";
     await whenReady();
 
     const mainComponentsRegistry = registry.category("main_components");
-    mainComponentsRegistry.add("DiscussClientAction", { Component: DiscussClientAction });
+    mainComponentsRegistry.add("DiscussPublic", {
+        Component: DiscussPublic,
+        props: { data: odoo.discuss_data },
+    });
 
     const env = makeEnv();
     await startServices(env);
-    env.services["mail.store"].insert(odoo.discuss_data);
+    env.services["mail.store"].inPublicPage = true;
     odoo.isReady = true;
-    const root = await mount(MainComponentsContainer, document.body, {
-        env,
-        getTemplate,
-        dev: env.debug,
-    });
-    odoo.__WOWL_DEBUG__ = { root };
+    await mount(MainComponentsContainer, document.body, { env, templates, dev: env.debug });
 })();

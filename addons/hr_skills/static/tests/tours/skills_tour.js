@@ -4,66 +4,61 @@ import { registry } from "@web/core/registry";
 import { stepUtils } from "@web_tour/tour_service/tour_utils";
 
 registry.category("web_tour.tours").add('hr_skills_tour', {
-    url: '/odoo',
+    test: true,
+    url: '/web',
     steps: () => [
     stepUtils.showAppsMenuItem(),
     {
         content: "Open Employees app",
         trigger: ".o_app[data-menu-xmlid='hr.menu_hr_root']",
-        run: "click",
     },
     {
         content: "Create a new employee",
         trigger: ".o-kanban-button-new",
-        run: "click",
     },
     {
         content: "Pick a name",
         trigger: ".o_field_widget[name='name'] input",
-        run: "edit Jony McHallyFace",
+        run: "text Jony McHallyFace",
     },
     {
         content: "Save",
         trigger: ".o_form_button_save",
-        run: "click",
     },
     {
         content: "Add a new Resume experience",
         trigger: ".o_field_resume_one2many tr.o_resume_group_header button.btn-secondary",
-        run: "click",
     },
     {
         content: "Enter some company name",
-        trigger: ".modal:contains(new resume line) .modal-body .o_field_widget[name='name'] input",
-        run: "edit Mamie Rock",
+        trigger: ".modal-body .o_field_widget[name='name'] input",
+        run: "text Mamie Rock",
     },
     {
         content: "Set start date",
-        trigger: ".modal:contains(new resume line) .o_field_widget[name='date_start'] input",
-        run: "edit 12/05/2017",
+        trigger: ".o_field_widget[name='date_start'] input",
+        run: "text 12/05/2017",
     },
     {
         content: "Give some description",
-        trigger: ".modal:contains(new resume line) .o_field_html[name='description'] p",
-        run: "editor Sang some songs and played some music",
+        trigger: ".o_field_widget[name='description'] textarea",
+        run: "text Sang some songs and played some music",
     },
     {
         content: "Save it",
-        trigger: ".modal:contains(new resume line) .o_form_button_save:contains(save)",
+        trigger: ".o_form_button_save",
+        in_modal: true,
         run: "click",
     },
     {
-        trigger: "body:not(:has(.modal:contains(new resume line)))",
-    },
-    {
         content: "Edit newly created experience",
-        trigger: ".o_resume_line_title:contains(Mamie Rock)",
+        trigger: ".o_resume_line_title:contains('Mamie Rock')",
         run: "click",
     },
     {
         content: "Change type",
-        trigger: ".modal:contains(new resume line) .o_field_widget[name='line_type_id'] input",
-        run: "edit Experience",
+        trigger: ".o_field_widget[name='line_type_id'] input",
+        run: "text Experience",
     },
     {
         content: "Choose experience",
@@ -72,26 +67,23 @@ registry.category("web_tour.tours").add('hr_skills_tour', {
     },
     {
         content: "Save experience change",
-        trigger: ".modal:contains(new resume line) .o_form_button_save:contains(save)",
+        trigger: ".o_form_button_save",
+        in_modal: true,
         run: "click",
-    },
-    {
-        trigger: "body:not(:has(.modal:contains(new resume line)))",
     },
     {
         content: "Add a new Skill",
         trigger: ".o_field_skills_one2many button:contains('Pick a skill from the list')",
-        run: "click",
     },
     {
         content: "Select Music",
-        trigger: ".modal:contains(select skills) .o_field_widget[name='skill_type_id'] label:contains('Best Music')",
+        trigger: ".o_field_widget[name='skill_type_id'] label:contains('Best Music')",
         run: "click",
     },
     {
         content: "Select a song",
-        trigger: ".modal:contains(select skills) .o_field_widget[name='skill_id'] input",
-        run: "edit Fortun",
+        trigger: ".o_field_widget[name='skill_id'] input",
+        run: "text Fortun",
     },
     {
         content: "Choose the song",
@@ -100,8 +92,8 @@ registry.category("web_tour.tours").add('hr_skills_tour', {
     },
     {
         content: "Select a level",
-        trigger: ".modal:contains(select skills) .o_field_widget[name='skill_level_id'] input",
-        run: "edit Level",
+        trigger: ".o_field_widget[name='skill_level_id'] input",
+        run: "text Level",
     },
     {
         content: "Choose the level",
@@ -110,30 +102,23 @@ registry.category("web_tour.tours").add('hr_skills_tour', {
     },
     {
         content: "Save new skill",
-        trigger: ".modal:contains(select skills) .o_form_button_save:contains(save & close)",
+        trigger: ".o_form_button_save",
+        in_modal: true,
         run: "click",
-    },
-    {
-        content: "Wait the new skill is completely saved. Ensure also the modal is closed before open a new one.",
-        trigger: "body:not(:has(.modal))",
     },
     {
         content: "Check if item is added",
         trigger: ".o_data_row td.o_data_cell:contains('Fortunate Son')",
+        run: () => {},
     },
     {
         content: "Add a new Skill",
         trigger: ".o_field_skills_one2many button:contains('ADD')",
-        run: "click",
     },
     {
-        content: "Music should be already selected",
-        trigger: ".modal:contains(select skills) .o_field_widget[name=skill_id] input:value(Fortunate Son)",
-    },
-    {
-        content: "Select a song",
-        trigger: ".modal:contains(select skills) .o_field_widget[name='skill_id'] input",
-        run: "edit Mary",
+        content: "Select a song", // "Music" should be already selected
+        trigger: ".o_field_widget[name='skill_id'] input",
+        run: "text Mary",
     },
     {
         content: "Choose the song",
@@ -142,8 +127,8 @@ registry.category("web_tour.tours").add('hr_skills_tour', {
     },
     {
         content: "Select a level",
-        trigger: ".modal:contains(select skills) .o_field_widget[name='skill_level_id'] input",
-        run: "edit Level 7",
+        trigger: ".o_field_widget[name='skill_level_id'] input",
+        run: "text Level 7",
     },
     {
         content: "Choose the level",
@@ -152,16 +137,14 @@ registry.category("web_tour.tours").add('hr_skills_tour', {
     },
     {
         content: "Save new skill",
-        trigger: ".modal:contains(select skills) .o_form_button_save:contains(save & close)",
+        trigger: ".o_form_button_save",
+        in_modal: true,
         run: "click",
-    },
-    {
-        content: "Wait the new skill is completely saved",
-        trigger: "body:not(:has(.modal))",
     },
     {
         content: "Check if item is added",
         trigger: ".o_data_row td.o_data_cell:contains('Oh Mary')",
+        run: () => {},
     },
     ...stepUtils.saveForm(),
 ]});

@@ -4,9 +4,9 @@ import { patch } from "@web/core/utils/patch";
 import { ProductCatalogKanbanRecord } from "@product/product_catalog/kanban_record";
 
 patch(ProductCatalogKanbanRecord.prototype, {
-    _getUpdateQuantityAndGetPriceParams() {
+    _getUpdateQuantityAndGetPrice() {
         return {
-            ...super._getUpdateQuantityAndGetPriceParams(),
+            ...super._getUpdateQuantityAndGetPrice(),
             project_id: this.props.record.context.project_id,
         };
     },

@@ -2,8 +2,7 @@
 
 import { loadJS } from "@web/core/assets";
 import { _t } from "@web/core/l10n/translation";
-import { user } from "@web/core/user";
-import { rpc } from "@web/core/network/rpc";
+import { session } from "@web/session";
 import publicRootData from '@web/legacy/js/public/public_root';
 import "@website/libs/zoomodoo/zoomodoo";
 import { pick } from "@web/core/utils/objects";
@@ -29,8 +28,8 @@ export const WebsiteRoot = publicRootData.PublicRoot.extend({
      */
     init() {
         this.isFullscreen = false;
+        this.rpc = this.bindService("rpc");
         this.notification = this.bindService("notification");
-        this.orm = this.bindService("orm");
         return this._super(...arguments);
     },
     /**
@@ -74,7 +73,7 @@ export const WebsiteRoot = publicRootData.PublicRoot.extend({
     async _getGMapAPIKey(refetch) {
         if (refetch || !this._gmapAPIKeyProm) {
             this._gmapAPIKeyProm = new Promise(async resolve => {
-                const data = await rpc('/website/google_maps_api_key');
+                const data = await this.rpc('/website/google_maps_api_key');
                 resolve(JSON.parse(data).google_maps_api_key || '');
             });
         }
@@ -114,13 +113,13 @@ export const WebsiteRoot = publicRootData.PublicRoot.extend({
                 }).bind(this);
 
                 if (!key) {
-                    if (!editableMode && user.isAdmin) {
+                    if (!editableMode && session.is_admin) {
                         const message = _t("Cannot load google map.");
                         const urlTitle = _t("Check your configuration.");
                         this.notification.add(
                             markup(`<div>
                                 <span>${message}</span><br/>
-                                <a href="/odoo/action-website.action_website_configuration">${urlTitle}</a>
+                                <a href="/web#action=website.action_website_configuration">${urlTitle}</a>
                             </div>`),
                             { type: 'warning', sticky: true }
                         );
@@ -225,18 +224,15 @@ export const WebsiteRoot = publicRootData.PublicRoot.extend({
             return;
         }
 
-        const publishEl = ev.currentTarget.closest(".js_publish_management");
-        this.orm.call(
-            publishEl.dataset.object,
-            "website_publish_button",
-            [[parseInt(publishEl.dataset.id, 10)]]
-        ).then(function (result) {
-            publishEl.classList.toggle("css_published", result);
-            publishEl.classList.toggle("css_unpublished", !result);
-            const itemEl = publishEl.closest("[data-publish]");
-            if (itemEl) {
-                itemEl.dataset.publish = result ? 'on' : 'off';
-            }
+        var $data = $(ev.currentTarget).parents(".js_publish_management:first");
+        this.rpc($data.data('controller') || '/website/publish', {
+            id: +$data.data('id'),
+            object: $data.data('object'),
+        })
+        .then(function (result) {
+            $data.toggleClass("css_published", result).toggleClass("css_unpublished", !result);
+            $data.find('input').prop("checked", result);
+            $data.parents("[data-publish]").attr("data-publish", +result ? 'on' : 'off');
         });
     },
     /**

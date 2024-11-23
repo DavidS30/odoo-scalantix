@@ -1,12 +1,17 @@
-import { Component, markRaw, reactive, useChildSubEnv, xml } from "@odoo/owl";
-import { registry } from "@web/core/registry";
+/** @odoo-module **/
+
+import { registry } from "../registry";
+import { Component, markRaw, reactive, xml } from "@odoo/owl";
+import { WithEnv } from "../utils/components";
 
 class DialogWrapper extends Component {
-    static template = xml`<t t-component="props.subComponent" t-props="props.subProps" />`;
+    static template = xml`
+        <WithEnv env="{ dialogData: props.subEnv }">
+            <t t-component="props.subComponent" t-props="props.subProps" />
+        </WithEnv>
+    `;
+    static components = { WithEnv };
     static props = ["*"];
-    setup() {
-        useChildSubEnv({ dialogData: this.props.subEnv });
-    }
 }
 
 /**
@@ -75,7 +80,6 @@ export const dialogService = {
                         }
                         options.onClose?.();
                     },
-                    rootId: options.context?.root?.el.getRootNode()?.host?.id,
                 }
             );
 

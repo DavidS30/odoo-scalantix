@@ -12,9 +12,8 @@ class CrmKanbanHeader extends KanbanHeader {
     };
 }
 
-export class CrmKanbanRenderer extends KanbanRenderer {
-    static components = {
-        ...KanbanRenderer.components,
-        KanbanHeader: CrmKanbanHeader,
-    };
-}
+export class CrmKanbanRenderer extends KanbanRenderer {}
+CrmKanbanRenderer.components = {
+    ...KanbanRenderer.components,
+    KanbanHeader: CrmKanbanHeader,
+};

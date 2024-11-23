@@ -1,26 +1,25 @@
-import { roundPrecision as round_pr } from "@web/core/utils/numbers";
+/** @odoo-module */
+
+import { registry } from "@web/core/registry";
 import { usePos } from "@point_of_sale/app/store/pos_hook";
-import { Component, onMounted, onWillUnmount, useState } from "@odoo/owl";
-import { Dialog } from "@web/core/dialog/dialog";
+import { Component, onMounted, onWillUnmount, useExternalListener, useState } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 
 export class ScaleScreen extends Component {
     static template = "point_of_sale.ScaleScreen";
-    static components = { Dialog };
-    static props = {
-        getPayload: Function,
-        productName: String,
-        uomName: String,
-        uomRounding: Number,
-        productPrice: Number,
-        close: Function,
-    };
+
+    /**
+     * @param {Object} props
+     * @param {Object} props.product The product to weight.
+     */
     setup() {
         this.pos = usePos();
         this.hardwareProxy = useService("hardware_proxy");
-        this.state = useState({ weight: 0, tare: 0, tareLoading: false });
+        useExternalListener(document, "keyup", this._onHotkeys);
+        this.state = useState({ weight: 0 });
         onMounted(this.onMounted);
         onWillUnmount(this.onWillUnmount);
+        this.pos = usePos();
     }
     onMounted() {
         // start the scale reading
@@ -30,9 +29,23 @@ export class ScaleScreen extends Component {
         // stop the scale reading
         this.shouldRead = false;
     }
+    back() {
+        this.props.resolve({ confirmed: false, payload: null });
+        this.pos.closeTempScreen();
+    }
     confirm() {
-        this.props.getPayload(this.netWeight);
-        this.props.close();
+        this.props.resolve({
+            confirmed: true,
+            payload: { weight: this.state.weight },
+        });
+        this.pos.closeTempScreen();
+    }
+    _onHotkeys(event) {
+        if (event.key === "Escape") {
+            this.back();
+        } else if (event.key === "Enter") {
+            this.confirm();
+        }
     }
     _readScale() {
         this.shouldRead = true;
@@ -43,45 +56,35 @@ export class ScaleScreen extends Component {
             return;
         }
         this.state.weight = await this.hardwareProxy.readScale();
-        this.pos.setScaleWeight(this.state.weight);
         setTimeout(() => this._setWeight(), 500);
     }
-    get netWeight() {
-        const weight = round_pr(this.state.weight || 0, this.props.uomRounding);
-        const weightRound = weight.toFixed(
-            Math.ceil(Math.log(1.0 / this.props.uomRounding) / Math.log(10))
-        );
-        return weightRound - parseFloat(this.state.tare);
-    }
-
-    get productWeightString() {
-        const defaultstr = (this.state.weight || 0).toFixed(3) + " Kg";
-        const uom = this.props.uomName;
-        if (!uom) {
-            return defaultstr;
+    get _activePricelist() {
+        const current_order = this.pos.get_order();
+        let current_pricelist = this.pos.default_pricelist;
+        if (current_order) {
+            current_pricelist = current_order.pricelist;
         }
-        const weight = round_pr(this.state.weight || 0, this.props.uomRounding);
-        let weightstr = weight.toFixed(
-            Math.ceil(Math.log(1.0 / this.props.uomRounding) / Math.log(10))
-        );
-        weightstr += " " + this.props.uomName;
-        return weightstr;
+        return current_pricelist;
+    }
+    get productWeightString() {
+        return (this.state.weight || 0).toFixed(3);
     }
     get computedPriceString() {
-        const priceString = this.env.utils.formatCurrency(this.netWeight * this.props.productPrice);
-        this.pos.totalPriceOnScale = priceString;
-        return priceString;
+        return this.env.utils.formatCurrency(this.productPrice * this.state.weight);
     }
-    async handleTareButtonClick() {
-        this.state.tareLoading = true;
-        const tareWeight = await this.hardwareProxy.readScale();
-        this.state.tare = tareWeight;
-        this.pos.setScaleTare(this.state.tare);
-        setTimeout(() => {
-            this.state.tareLoading = false;
-        }, 3000);
+    get productPrice() {
+        const product = this.props.product;
+        return (product ? product.get_price(this._activePricelist, this.state.weight) : 0) || 0;
     }
-    handleInputChange(ev) {
-        this.pos.setScaleTare(ev.target.value);
+    get productName() {
+        return this.props.product?.display_name || "Unnamed Product";
+    }
+    get productUom() {
+        if (!this.props.product) {
+            return "";
+        }
+        return this.pos.units_by_id[this.props.product.uom_id[0]].name;
     }
 }
+
+registry.category("pos_screens").add("ScaleScreen", ScaleScreen);

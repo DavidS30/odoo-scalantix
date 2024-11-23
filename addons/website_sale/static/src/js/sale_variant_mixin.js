@@ -6,12 +6,13 @@ import { throttleForAnimation } from "@web/core/utils/timing";
 import { insertThousandsSep } from "@web/core/utils/numbers";
 import { _t } from "@web/core/l10n/translation";
 import { localization } from "@web/core/l10n/localization";
-import { rpc } from "@web/core/network/rpc";
+import { jsonrpc } from "@web/core/network/rpc_service";
 
 var VariantMixin = {
     events: {
         'change .css_attribute_color input': '_onChangeColorAttribute',
         'click .o_variant_pills': '_onChangePillsAttribute',
+        'change .main_product:not(.in_cart) input.js_quantity': 'onChangeAddQuantity',
         'change [data-attribute_exclusions]': 'onChangeVariant'
     },
 
@@ -59,13 +60,44 @@ var VariantMixin = {
             return Promise.resolve();
         }
         const combination = this.getSelectedVariantValues($parent);
+        let parentCombination;
 
-        return rpc('/website_sale/get_combination_info', {
+        if ($parent.hasClass('main_product')) {
+            parentCombination = $parent.find('ul[data-attribute_exclusions]').data('attribute_exclusions').parent_combination;
+            const $optProducts = $parent.parent().find(`[data-parent-unique-id='${$parent.data('uniqueId')}']`);
+
+            for (const optionalProduct of $optProducts) {
+                const $currentOptionalProduct = $(optionalProduct);
+                const childCombination = this.getSelectedVariantValues($currentOptionalProduct);
+                const productTemplateId = parseInt($currentOptionalProduct.find('.product_template_id').val());
+                jsonrpc('/website_sale/get_combination_info', {
+                    'product_template_id': productTemplateId,
+                    'product_id': this._getProductId($currentOptionalProduct),
+                    'combination': childCombination,
+                    'add_qty': parseInt($currentOptionalProduct.find('input[name="add_qty"]').val()),
+                    'parent_combination': combination,
+                    'context': this.context,
+                    ...this._getOptionalCombinationInfoParam($currentOptionalProduct),
+                }).then((combinationData) => {
+                    if (this._shouldIgnoreRpcResult()) {
+                        return;
+                    }
+                    this._onChangeCombination(ev, $currentOptionalProduct, combinationData);
+                    this._checkExclusions($currentOptionalProduct, childCombination, combinationData.parent_exclusions);
+                });
+            }
+        } else {
+            parentCombination = this.getSelectedVariantValues(
+                $parent.parent().find('.js_product.in_cart.main_product')
+            );
+        }
+
+        return jsonrpc('/website_sale/get_combination_info', {
             'product_template_id': parseInt($parent.find('.product_template_id').val()),
             'product_id': this._getProductId($parent),
             'combination': combination,
             'add_qty': parseInt($parent.find('input[name="add_qty"]').val()),
-            'parent_combination': [],
+            'parent_combination': parentCombination,
             'context': this.context,
             ...this._getOptionalCombinationInfoParam($parent),
         }).then((combinationData) => {
@@ -160,15 +192,22 @@ var VariantMixin = {
 
     /**
      * When the quantity is changed, we need to query the new price of the product.
-     * Based on the pricelist, the price might change when quantity exceeds a certain amount.
+     * Based on the price list, the price might change when quantity exceeds X
      *
      * @param {MouseEvent} ev
      */
     onChangeAddQuantity: function (ev) {
-        const $parent = $(ev.currentTarget).closest('form');
-        if ($parent.length > 0) {
-            this.triggerVariantChange($parent);
+        var $parent;
+
+        if ($(ev.currentTarget).closest('.oe_advanced_configurator_modal').length > 0){
+            $parent = $(ev.currentTarget).closest('.oe_advanced_configurator_modal');
+        } else if ($(ev.currentTarget).closest('form').length > 0){
+            $parent = $(ev.currentTarget).closest('form');
+        }  else {
+            $parent = $(ev.currentTarget).closest('.o_product_configurator');
         }
+
+        this.triggerVariantChange($parent);
     },
 
     /**
@@ -252,11 +291,16 @@ var VariantMixin = {
 
     /**
      * Will return the list of selected product.template.attribute.value ids
+     * For the modal, the "main product"'s attribute values are stored in the
+     * "unchanged_value_ids" data
      *
      * @param {$.Element} $container the container to look into
      */
     getSelectedVariantValues: function ($container) {
         var values = [];
+        var unchangedValues = $container
+            .find('div.oe_unchanged_value_ids')
+            .data('unchanged_value_ids') || [];
 
         var variantsValuesSelectors = [
             'input.js_variant_change:checked',
@@ -266,7 +310,7 @@ var VariantMixin = {
             values.push(+$(el).val());
         });
 
-        return values;
+        return values.concat(unchangedValues);
     },
 
     /**
@@ -279,9 +323,10 @@ var VariantMixin = {
      * @param {$.Element} $container the container to look into
      * @param {integer} productId the product id
      * @param {integer} productTemplateId the corresponding product template id
+     * @param {boolean} useAjax wether the rpc call should be done using jsonrpc or using _rpc
      * @returns {Promise} the promise that will be resolved with a {integer} productId
      */
-    selectOrCreateProduct: function ($container, productId, productTemplateId) {
+    selectOrCreateProduct: function ($container, productId, productTemplateId, useAjax) {
         productId = parseInt(productId);
         productTemplateId = parseInt(productTemplateId);
         var productReady = Promise.resolve();
@@ -295,7 +340,11 @@ var VariantMixin = {
             };
 
             var route = '/sale/create_product_variant';
-            productReady = rpc(route, params);
+            if (useAjax) {
+                productReady = jsonrpc(route, params);
+            } else {
+                productReady = this.rpc(route, params);
+            }
         }
 
         return productReady;
@@ -482,49 +531,10 @@ var VariantMixin = {
      * @param {Array} combination
      */
     _onChangeCombination: function (ev, $parent, combination) {
-        const $pricePerUom = $parent.find(".o_base_unit_price:first .oe_currency_value");
-        if ($pricePerUom) {
-            if (combination.is_combination_possible !== false && combination.base_unit_price != 0) {
-                $pricePerUom.parents(".o_base_unit_price_wrapper").removeClass("d-none");
-                $pricePerUom.text(this._priceToStr(combination.base_unit_price));
-                $parent.find(".oe_custom_base_unit:first").text(combination.base_unit_name);
-            } else {
-                $pricePerUom.parents(".o_base_unit_price_wrapper").addClass("d-none");
-            }
-        }
-
-        // Triggers a new JS event with the correct payload, which is then handled
-        // by the google analytics tracking code.
-        // Indeed, every time another variant is selected, a new view_item event
-        // needs to be tracked by google analytics.
-        if ('product_tracking_info' in combination) {
-            const $product = $('#product_detail');
-            $product.data('product-tracking-info', combination['product_tracking_info']);
-            $product.trigger('view_item_event', combination['product_tracking_info']);
-        }
-        const addToCart = $parent.find('#add_to_cart_wrap');
-        const contactUsButton = $parent.find('#contact_us_wrapper');
-        const productPrice = $parent.find('.product_price');
-        const quantity = $parent.find('.css_quantity');
-        const product_unavailable = $parent.find('#product_unavailable');
-        if (combination.prevent_zero_price_sale) {
-            productPrice.removeClass('d-inline-block').addClass('d-none');
-            quantity.removeClass('d-inline-flex').addClass('d-none');
-            addToCart.removeClass('d-inline-flex').addClass('d-none');
-            contactUsButton.removeClass('d-none').addClass('d-flex');
-            product_unavailable.removeClass('d-none').addClass('d-flex')
-        } else {
-            productPrice.removeClass('d-none').addClass('d-inline-block');
-            quantity.removeClass('d-none').addClass('d-inline-flex');
-            addToCart.removeClass('d-none').addClass('d-inline-flex');
-            contactUsButton.removeClass('d-flex').addClass('d-none');
-            product_unavailable.removeClass('d-flex').addClass('d-none')
-        }
-
         var self = this;
         var $price = $parent.find(".oe_price:first .oe_currency_value");
         var $default_price = $parent.find(".oe_default_price:first .oe_currency_value");
-        var $compare_price = $parent.find(".oe_compare_list_price")
+        var $optional_price = $parent.find(".oe_optional:first .oe_currency_value");
         $price.text(self._priceToStr(combination.price));
         $default_price.text(self._priceToStr(combination.list_price));
 
@@ -538,19 +548,23 @@ var VariantMixin = {
             $default_price
                 .closest('.oe_website_sale')
                 .addClass("discount");
+            $optional_price
+                .closest('.oe_optional')
+                .removeClass('d-none')
+                .css('text-decoration', 'line-through');
             $default_price.parent().removeClass('d-none');
-            $compare_price.addClass("d-none");
         } else {
             $default_price
                 .closest('.oe_website_sale')
                 .removeClass("discount");
+            $optional_price.closest('.oe_optional').addClass('d-none');
             $default_price.parent().addClass('d-none');
-            $compare_price.removeClass("d-none");
         }
 
         var rootComponentSelectors = [
             'tr.js_product',
             '.oe_website_sale',
+            '.o_product_configurator'
         ];
 
         // update images only when changing product
@@ -575,6 +589,17 @@ var VariantMixin = {
             .find('.product_id')
             .first()
             .val(combination.product_id || 0)
+            .trigger('change');
+
+        $parent
+            .find('.product_display_name')
+            .first()
+            .text(combination.display_name);
+
+        $parent
+            .find('.js_raw_price')
+            .first()
+            .text(combination.price)
             .trigger('change');
 
         $parent
@@ -639,6 +664,11 @@ var VariantMixin = {
      */
     _toggleDisable: function ($parent, isCombinationPossible) {
         $parent.toggleClass('css_not_available', !isCombinationPossible);
+        if ($parent.hasClass('in_cart')) {
+            const primaryButton = $parent.parents('.modal-content').find('.modal-footer .btn-primary');
+            primaryButton.prop('disabled', !isCombinationPossible);
+            primaryButton.toggleClass('disabled', !isCombinationPossible);
+        }
     },
     /**
      * Updates the product image.
@@ -662,6 +692,8 @@ var VariantMixin = {
         var imagesSelectors = [
             'span[data-oe-model^="product."][data-oe-type="image"] img:first',
             'img.product_detail_img',
+            'span.variant_image img',
+            'img.variant_image',
         ];
 
         var $img = $productContainer.find(imagesSelectors.join(', '));
@@ -698,8 +730,9 @@ var VariantMixin = {
     },
 
     /**
-     * Return true if the current object has been destroyed. Useful to know if
-     * the result of a rpc should be handled.
+     * Return true if the current object has been destroyed.
+     * This function has been added as a fix to know if the result of a rpc
+     * should be handled.
      *
      * @private
      */

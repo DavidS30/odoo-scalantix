@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { htmlToTextContentInline } from "@mail/utils/common/format";
 
 import { browser } from "@web/core/browser/browser";
@@ -24,13 +26,12 @@ export class OutOfFocusService {
         this.audio = undefined;
         this.multiTab = services.multi_tab;
         this.notificationService = services.notification;
-        this.closeFuncs = [];
     }
 
-    async notify(message, thread) {
+    async notify(message, channel) {
         const modelsHandleByPush = ["mail.thread", "discuss.channel"];
         if (
-            modelsHandleByPush.includes(message.thread?.model) &&
+            modelsHandleByPush.includes(message.model) &&
             (await this.hasServiceWorkInstalledAndPushSubscriptionActive())
         ) {
             return;
@@ -40,10 +41,10 @@ export class OutOfFocusService {
         if (!author) {
             notificationTitle = _t("New message");
         } else {
-            if (message.thread?.channel_type === "channel") {
+            if (channel.channel_type === "channel") {
                 notificationTitle = _t("%(author name)s from %(channel name)s", {
                     "author name": author.name,
-                    "channel name": message.thread.displayName,
+                    "channel name": channel.displayName,
                 });
             } else {
                 notificationTitle = author.name;
@@ -55,7 +56,6 @@ export class OutOfFocusService {
         );
         this.sendNotification({
             message: notificationContent,
-            sound: message.thread?.model === "discuss.channel",
             title: notificationTitle,
             type: "info",
         });
@@ -85,22 +85,22 @@ export class OutOfFocusService {
      * @param {string} [param0.type] The type to be passed to the no
      * service when native notifications can't be sent.
      */
-    sendNotification({ message, sound = true, title, type }) {
+    sendNotification({ message, title, type }) {
         if (!this.canSendNativeNotification) {
-            this.sendOdooNotification(message, { sound, title, type });
+            this.sendOdooNotification(message, { title, type });
             return;
         }
         if (!this.multiTab.isOnMainTab()) {
             return;
         }
         try {
-            this.sendNativeNotification(title, message, { sound });
+            this.sendNativeNotification(title, message);
         } catch (error) {
             // Notification without Serviceworker in Chrome Android doesn't works anymore
             // So we fallback to the notification service in this case
             // https://bugs.chromium.org/p/chromium/issues/detail?id=481856
             if (error.message.includes("ServiceWorkerRegistration")) {
-                this.sendOdooNotification(message, { sound, title, type });
+                this.sendOdooNotification(message, { title, type });
             } else {
                 throw error;
             }
@@ -112,22 +112,15 @@ export class OutOfFocusService {
      * @param {Object} options
      */
     async sendOdooNotification(message, options) {
-        const { sound } = options;
-        delete options.sound;
-        this.closeFuncs.push(this.notificationService.add(message, options));
-        if (this.closeFuncs.length > 3) {
-            this.closeFuncs.shift()();
-        }
-        if (sound) {
-            this._playSound();
-        }
+        this.notificationService.add(message, options);
+        this._playSound();
     }
 
     /**
      * @param {string} title
      * @param {string} message
      */
-    sendNativeNotification(title, message, { sound = true } = {}) {
+    sendNativeNotification(title, message) {
         const notification = new Notification(title, {
             body: message,
             icon: "/mail/static/src/img/odoobot_transparent.png",
@@ -136,9 +129,7 @@ export class OutOfFocusService {
             window.focus();
             notification.close();
         });
-        if (sound) {
-            this._playSound();
-        }
+        this._playSound();
     }
 
     async _playSound() {

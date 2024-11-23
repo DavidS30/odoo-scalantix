@@ -3,6 +3,7 @@
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add('subcontracting_portal_tour', {
+    test: true,
     url: '/my/productions',
     steps: () => [
         {
@@ -10,10 +11,11 @@ registry.category("web_tour.tours").add('subcontracting_portal_tour', {
             content: 'Select the picking to open the backend view.',
             run: 'click',
         },{
-            trigger: ':iframe .o_subcontracting_portal',
+            trigger: 'iframe .o_subcontracting_portal',
             content: 'Wait the subcontracting portal to be loaded.',
+            run: function () {},
         }, {
-            trigger: ':iframe button[name="action_show_details"]',
+            trigger: 'iframe button[name="action_show_details"]',
             run: 'click',
         }
     ],

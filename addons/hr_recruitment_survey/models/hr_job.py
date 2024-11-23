@@ -24,7 +24,7 @@ class Job(models.Model):
 
         action = {
                 'name': _('Survey'),
-                'view_mode': 'form,list',
+                'view_mode': 'form,tree',
                 'res_model': 'survey.survey',
                 'type': 'ir.actions.act_window',
                 'res_id': survey.id,

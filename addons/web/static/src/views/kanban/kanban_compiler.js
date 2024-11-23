@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {
     append,
     combineAttributes,
@@ -17,21 +19,13 @@ import { toInterpolatedStringExpression, ViewCompiler } from "@web/views/view_co
  */
 
 const ACTION_TYPES = ["action", "object"];
-const SPECIAL_TYPES = [
-    ...ACTION_TYPES,
-    "edit",
-    "open",
-    "delete",
-    "url",
-    "set_cover",
-    "archive",
-    "unarchive",
-];
+const SPECIAL_TYPES = [...ACTION_TYPES, "edit", "open", "delete", "url", "set_cover"];
 
 export class KanbanCompiler extends ViewCompiler {
     setup() {
         this.ctx.readonly = "read_only_mode";
         this.compilers.push(
+            { selector: ".oe_kanban_colorpicker", fn: this.compileColorPicker },
             { selector: "t[t-call]", fn: this.compileTCall },
             { selector: "img", fn: this.compileImage }
         );
@@ -45,13 +39,28 @@ export class KanbanCompiler extends ViewCompiler {
      * @override
      */
     compileButton(el, params) {
+        /**
+         * WOWL FIXME
+         * For some reason, buttons in some arch have a data-something instead of just a normal attribute.
+         * The new system only uses normal attributes.
+         * This is an ugly small compatibility trick to fix this.
+         */
+        if (el.hasAttribute("data-type")) {
+            for (const { name, value } of el.attributes) {
+                el.setAttribute(name.replace(/^data-/, ""), value);
+            }
+        }
+
         const type = el.getAttribute("type");
         if (!SPECIAL_TYPES.includes(type)) {
-            // Not a kanban-specific action type.
+            // Not a supported action type.
             return super.compileButton(el, params);
         }
 
-        combineAttributes(el, "class", ["oe_kanban_action"]);
+        combineAttributes(el, "class", [
+            "oe_kanban_action",
+            `oe_kanban_action_${getTag(el, true)}`,
+        ]);
 
         if (ACTION_TYPES.includes(type)) {
             if (!el.hasAttribute("debounce")) {
@@ -95,6 +104,15 @@ export class KanbanCompiler extends ViewCompiler {
         element.setAttribute("loading", "lazy");
         return element;
     }
+    /**
+     * @returns {Element}
+     */
+    compileColorPicker() {
+        return createElement("t", {
+            "t-call": "web.KanbanColorPicker",
+            "t-call-context": "__comp__",
+        });
+    }
 
     /**
      * @override
@@ -102,7 +120,7 @@ export class KanbanCompiler extends ViewCompiler {
     compileField(el, params) {
         let compiled;
         let isSpan = false;
-        const recordExpr = params.recordExpr || "__comp__.props.record";
+        const recordExpr = params.recordExpr || '__comp__.props.record';
         const dataPointIdExpr = params.dataPointIdExpr || `${recordExpr}.id`;
         if (!el.hasAttribute("widget")) {
             isSpan = true;
@@ -122,31 +140,31 @@ export class KanbanCompiler extends ViewCompiler {
             // view dialog.
             const readonlyAttr = compiled.getAttribute("readonly");
             if (readonlyAttr) {
-                compiled.setAttribute("readonly", `${recordExpr}.isInEdition || (${readonlyAttr})`);
+                compiled.setAttribute(
+                    "readonly",
+                    `${recordExpr}.isInEdition || (${readonlyAttr})`
+                );
             } else {
                 compiled.setAttribute("readonly", `${recordExpr}.isInEdition`);
             }
         }
 
-        if (params.isLegacy) {
-            const { bold, display } = extractAttributes(el, ["bold", "display"]);
-            const classNames = [];
-            if (display === "right") {
-                classNames.push("float-end");
-            } else if (display === "full") {
-                classNames.push("o_text_block");
-            }
-            if (bold) {
-                classNames.push("o_text_bold");
-            }
-            if (classNames.length > 0) {
-                const clsFormatted = isSpan
-                    ? classNames.join(" ")
-                    : toStringExpression(classNames.join(" "));
-                compiled.setAttribute("class", clsFormatted);
-            }
+        const { bold, display } = extractAttributes(el, ["bold", "display"]);
+        const classNames = [];
+        if (display === "right") {
+            classNames.push("float-end");
+        } else if (display === "full") {
+            classNames.push("o_text_block");
         }
-
+        if (bold) {
+            classNames.push("o_text_bold");
+        }
+        if (classNames.length > 0) {
+            const clsFormatted = isSpan
+                ? classNames.join(" ")
+                : toStringExpression(classNames.join(" "));
+            compiled.setAttribute("class", clsFormatted);
+        }
         const attrs = {};
         for (const attr of el.attributes) {
             attrs[attr.name] = attr.value;

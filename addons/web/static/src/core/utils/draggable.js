@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { makeDraggableHook } from "@web/core/utils/draggable_hook_builder_owl";
 import { pick } from "@web/core/utils/objects";
 

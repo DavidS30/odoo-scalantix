@@ -19,7 +19,6 @@ class TestAccessRights(TransactionCase):
         cls.george = new_test_user(cls.env, login='george', groups='base.group_user')
         cls.portal = new_test_user(cls.env, login='pot', groups='base.group_portal')
         cls.admin_user = new_test_user(cls.env, login='admin_user', groups='base.group_partner_manager,base.group_user')
-        cls.admin_system_user = new_test_user(cls.env, login='admin_system_user', groups='base.group_system')
 
     def create_event(self, user, **values):
         return self.env['calendar.event'].with_user(user).create({

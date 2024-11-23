@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { Component } from "@odoo/owl";
 
 import { useService } from "@web/core/utils/hooks";
@@ -7,12 +9,12 @@ export class CallInvitation extends Component {
     static template = "discuss.CallInvitation";
 
     setup() {
-        super.setup();
+        this.threadService = useService("mail.thread");
         this.rtc = useService("discuss.rtc");
     }
 
     async onClickAccept(ev) {
-        this.props.thread.open();
+        this.threadService.open(this.props.thread);
         if (this.rtc.state.hasPendingRequest) {
             return;
         }
@@ -20,7 +22,7 @@ export class CallInvitation extends Component {
     }
 
     onClickAvatar(ev) {
-        this.props.thread.open();
+        this.threadService.open(this.props.thread);
     }
 
     onClickRefuse(ev) {

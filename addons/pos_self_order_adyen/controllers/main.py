@@ -46,11 +46,8 @@ class PosSelfAdyenController(PosAdyenController):
             order._send_order()
 
         if order.config_id.self_ordering_mode == 'kiosk':
-            order.config_id._notify('PAYMENT_STATUS', {
+            order.env['bus.bus']._sendone(f'pos_config-{order.config_id.access_token}', 'PAYMENT_STATUS', {
                 'payment_result': payment_result,
-                'data': {
-                    'pos.order': order.read(order._load_pos_self_data_fields(order.config_id.id), load=False),
-                    'pos.order.line': order.lines.read(order._load_pos_self_data_fields(order.config_id.id), load=False),
-                }
+                'order': order._export_for_self_order(),
             })
         return request.make_json_response('[accepted]') # https://docs.adyen.com/point-of-sale/design-your-integration/choose-your-architecture/cloud/#guarantee

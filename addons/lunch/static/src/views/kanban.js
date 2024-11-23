@@ -19,13 +19,6 @@ export class LunchKanbanRecord extends KanbanRecord {
 }
 
 export class LunchKanbanRenderer extends LunchRendererMixin(KanbanRenderer) {
-    static template = "lunch.KanbanRenderer";
-    static components = {
-        ...LunchKanbanRenderer.components,
-        LunchDashboard,
-        KanbanRecord: LunchKanbanRecord,
-    };
-
     getGroupsOrRecords() {
         const { locationId } = this.env.searchModel.lunchState;
         if (!locationId) {
@@ -34,6 +27,13 @@ export class LunchKanbanRenderer extends LunchRendererMixin(KanbanRenderer) {
             return super.getGroupsOrRecords(...arguments);
         }
     }
+}
+
+LunchKanbanRenderer.template = 'lunch.KanbanRenderer';
+LunchKanbanRenderer.components = {
+    ...LunchKanbanRenderer.components,
+    LunchDashboard,
+    KanbanRecord: LunchKanbanRecord,
 }
 
 registry.category('views').add('lunch_kanban', {

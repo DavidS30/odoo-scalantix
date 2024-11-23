@@ -1,10 +1,12 @@
+/* @odoo-module */
+
 import { onWillDestroy } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { FileViewer } from "./file_viewer";
 
 let id = 1;
 
-export function createFileViewer() {
+export function useFileViewer() {
     const fileViewerId = `web.file_viewer${id++}`;
     /**
      * @param {import("@web/core/file_viewer/file_viewer").FileViewer.props.files[]} file
@@ -27,11 +29,6 @@ export function createFileViewer() {
     function close() {
         registry.category("main_components").remove(fileViewerId);
     }
-    return { open, close };
-}
-
-export function useFileViewer() {
-    const { open, close } = createFileViewer();
     onWillDestroy(close);
     return { open, close };
 }

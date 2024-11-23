@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { localization } from "@web/core/l10n/localization";
 import { isIOS } from "@web/core/browser/feature_detection";
 

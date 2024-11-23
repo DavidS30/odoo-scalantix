@@ -3,8 +3,7 @@
 
 import re
 
-from odoo import fields, models
-from odoo.tools.mail import TEXT_URL_REGEX
+from odoo import fields, models, tools
 
 
 class SmsSms(models.Model):
@@ -26,7 +25,7 @@ class SmsSms(models.Model):
                 continue
 
             body = sms.body
-            for url in set(re.findall(TEXT_URL_REGEX, body)):
+            for url in set(re.findall(tools.TEXT_URL_REGEX, body)):
                 if url.startswith(sms.get_base_url() + '/r/'):
                     body = re.sub(re.escape(url) + r'(?![\w@:%.+&~#=/-])', url + f'/s/{sms.id}', body)
             res[sms.id] = body

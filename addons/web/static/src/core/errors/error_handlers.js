@@ -1,6 +1,8 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { browser } from "../browser/browser";
-import { ConnectionLostError, RPCError, rpc } from "../network/rpc";
+import { ConnectionLostError, RPCError } from "../network/rpc_service";
 import { registry } from "../registry";
 import {
     ClientErrorDialog,
@@ -8,7 +10,7 @@ import {
     NetworkErrorDialog,
     RPCErrorDialog,
 } from "./error_dialogs";
-import { UncaughtClientError, ThirdPartyScriptError, UncaughtPromiseError } from "./error_service";
+import { UncaughtClientError, UncaughtCorsError, UncaughtPromiseError } from "./error_service";
 
 /**
  * @typedef {import("../../env").OdooEnv} OdooEnv
@@ -70,9 +72,6 @@ export function rpcErrorHandler(env, error, originalError) {
             subType: originalError.subType,
             code: originalError.code,
             type: originalError.type,
-            serverHost: error.event?.target?.location.host,
-            id: originalError.id,
-            model: originalError.model,
         });
         return true;
     }
@@ -107,7 +106,8 @@ export function lostConnectionHandler(env, error, originalError) {
         );
         let delay = 2000;
         browser.setTimeout(function checkConnection() {
-            rpc("/web/webclient/version_info", {})
+            env.services
+                .rpc("/web/webclient/version_info", {})
                 .then(function () {
                     if (connectionLostNotifRemove) {
                         connectionLostNotifRemove();
@@ -135,7 +135,7 @@ errorHandlerRegistry.add("lostConnectionHandler", lostConnectionHandler, { seque
 const defaultDialogs = new Map([
     [UncaughtClientError, ClientErrorDialog],
     [UncaughtPromiseError, ClientErrorDialog],
-    [ThirdPartyScriptError, NetworkErrorDialog],
+    [UncaughtCorsError, NetworkErrorDialog],
 ]);
 
 /**
@@ -152,7 +152,6 @@ export function defaultHandler(env, error) {
         traceback: error.traceback,
         message: error.message,
         name: error.name,
-        serverHost: error.event?.target?.location.host,
     });
     return true;
 }

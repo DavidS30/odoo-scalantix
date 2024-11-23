@@ -1,4 +1,5 @@
-import { rpc } from "@web/core/network/rpc";
+/* @odoo-module */
+
 import { Component, onWillStart, useState } from "@odoo/owl";
 
 import { Dialog } from "@web/core/dialog/dialog";
@@ -25,14 +26,14 @@ export class FollowerSubtypeDialog extends Component {
     static template = "mail.FollowerSubtypeDialog";
 
     setup() {
-        super.setup();
+        this.rpc = useService("rpc");
         this.store = useState(useService("mail.store"));
         this.state = useState({
             /** @type {SubtypeData[]} */
             subtypes: [],
         });
         onWillStart(async () => {
-            this.state.subtypes = await rpc("/mail/read_subscription_data", {
+            this.state.subtypes = await this.rpc("/mail/read_subscription_data", {
                 follower_id: this.props.follower.id,
             });
         });
@@ -48,21 +49,21 @@ export class FollowerSubtypeDialog extends Component {
 
     async onClickApply() {
         const selectedSubtypes = this.state.subtypes.filter((s) => s.followed);
-        const thread = this.props.follower.thread;
+        const thread = this.props.follower.followedThread;
         if (selectedSubtypes.length === 0) {
-            await this.props.follower.remove();
+            await this.env.services["mail.thread"].removeFollower(this.props.follower);
         } else {
             await this.env.services.orm.call(
-                this.props.follower.thread.model,
+                this.props.follower.followedThread.model,
                 "message_subscribe",
-                [[this.props.follower.thread.id]],
+                [[this.props.follower.followedThread.id]],
                 {
                     partner_ids: [this.props.follower.partner.id],
                     subtype_ids: selectedSubtypes.map((subtype) => subtype.id),
                 }
             );
             if (!selectedSubtypes.some((subtype) => subtype.id === this.store.mt_comment_id)) {
-                this.props.follower.removeRecipient();
+                this.env.services["mail.thread"].removeRecipient(this.props.follower);
             }
             this.env.services.notification.add(
                 _t("The subscription preferences were successfully applied."),

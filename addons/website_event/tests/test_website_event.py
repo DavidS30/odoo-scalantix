@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 from odoo import fields, http
 from odoo.addons.base.tests.common import HttpCaseWithUserDemo, HttpCaseWithUserPortal
 from odoo.addons.mail.tests.common import mail_new_test_user
+from odoo.addons.website.tests.test_base_url import TestUrlCommon
 from odoo.addons.website_event.tests.common import TestEventOnlineCommon, OnlineEventCase
 from odoo.exceptions import AccessError
 from odoo.tests import HttpCase, tagged
@@ -55,7 +56,13 @@ class TestEventRegisterUTM(HttpCase, TestEventOnlineCommon):
 class TestUi(HttpCaseWithUserDemo, HttpCaseWithUserPortal):
 
     def test_website_event_tour_admin(self):
-        self.start_tour(self.env['website'].get_client_action_url('/'), 'website_event_tour', login='admin')
+        self.upcoming_event = self.env['event.event'].create({
+            'name': 'Upcoming Event',
+            'date_begin': fields.Datetime.now() + relativedelta(days=10),
+            'date_end': fields.Datetime.now() + relativedelta(days=13),
+            'website_published': True,
+        })
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'website_event_tour', login='admin', step_delay=100)
 
     def test_website_event_pages_seo(self):
         website = self.env['website'].get_current_website()
@@ -164,6 +171,14 @@ class TestUi(HttpCaseWithUserDemo, HttpCaseWithUserPortal):
         self.assertEqual(first_registration_answers.filtered(
             lambda answer: answer.question_id.title == 'How did you learn about this event?'
         ).value_answer_id.name, 'A friend')
+
+
+@tagged('-at_install', 'post_install')
+class TestURLs(TestUrlCommon):
+
+    def test_canonical_url(self):
+        self._assertCanonical('/event?date=all', self.domain + '/event')
+        self._assertCanonical('/event?date=old', self.domain + '/event?date=old')
 
 
 @tagged('post_install', '-at_install')

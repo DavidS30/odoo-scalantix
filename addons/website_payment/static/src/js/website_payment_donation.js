@@ -18,21 +18,18 @@ publicWidget.registry.WebsitePaymentDonation = publicWidget.Widget.extend({
      * @param {Event} ev
      */
     _onFocusAmountInput(ev) {
-        const otherAmountEl = this.el.querySelector("#other_amount");
-        if (otherAmountEl) {
-            otherAmountEl.checked = true;
-        }
+        this.$el.find('#other_amount').prop("checked", true);
     },
     /**
      * @private
      * @param {Event} ev
      */
     _onChangeDonationComment(ev) {
-        const donationCommentEl = this.el.querySelector('#donation_comment');
-        const checked = ev.currentTarget.checked;
-        donationCommentEl.classList.toggle('d-none', !checked);
+        const $donationComment = this.$el.find('#donation_comment');
+        const checked = $(ev.currentTarget).is(':checked');
+        $donationComment.toggleClass('d-none', !checked);
         if (!checked) {
-            donationCommentEl.value = "";
+            $donationComment.val('');
         }
     },
 });

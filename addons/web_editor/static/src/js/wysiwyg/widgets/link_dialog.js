@@ -48,8 +48,7 @@ export class LinkDialog extends Link {
     /**
      * @override
      */
-    onSave(ev) {
-        ev.preventDefault();
+    onSave() {
         var data = this._getData();
         if (data === null) {
             var $url = this.$el.find('input[name="url"]');
@@ -77,12 +76,6 @@ export class LinkDialog extends Link {
         this.props.close();
     }
 
-    onUrlKeydown(ev) {
-        const isAutoCompleteDropdownOpen = document.querySelector(".o-autocomplete--dropdown-menu");
-        if (ev.key === "Enter" && !isAutoCompleteDropdownOpen) {
-            this.onSave(ev);
-        }
-    }
     //--------------------------------------------------------------------------
     // Private
     //--------------------------------------------------------------------------
@@ -122,7 +115,7 @@ export class LinkDialog extends Link {
      */
     _getLinkOptions() {
         const options = [
-            'select[name="link_style_color"] > option',
+            'input[name="link_style_color"]',
             'select[name="link_style_size"] > option',
             'select[name="link_style_shape"] > option',
         ];
@@ -144,7 +137,7 @@ export class LinkDialog extends Link {
      * @override
      */
     _getLinkType() {
-        return this.$el.find('select[name="link_style_color"]').val() || '';
+        return this.$el.find('input[name="link_style_color"]:checked').val() || '';
     }
     /**
      * @override
@@ -172,7 +165,7 @@ export class LinkDialog extends Link {
      * @override
      */
     _updateOptionsUI() {
-        const el = this.linkComponentWrapperRef.el.querySelector('[name="link_style_color"] option:checked');
+        const el = this.linkComponentWrapperRef.el.querySelector('[name="link_style_color"]:checked');
         $(this.buttonOptsCollapseEl).collapse(el && el.value ? 'show' : 'hide');
     }
 

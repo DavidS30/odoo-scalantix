@@ -37,13 +37,9 @@ try:
 except ImportError:
     _logger.warning('Could not import library crypt')
 
-
-class Orientation(Enum):
-    """xrandr screen orientation for kiosk mode"""
-    NORMAL = 'normal'
-    INVERTED = 'inverted'
-    LEFT = 'left'
-    RIGHT = 'right'
+#----------------------------------------------------------
+# Helper
+#----------------------------------------------------------
 
 
 class CertificateStatus(Enum):
@@ -131,7 +127,7 @@ def check_certificate():
         _logger.info(message)
         return {"status": CertificateStatus.NEED_REFRESH}
     else:
-        message = 'Your certificate %(certificate)s is valid until %(end_date)s' % {"certificate": cn, "end_date": cert_end_date}
+        message = 'Your certificate %s is valid until %s' % (cn, cert_end_date)
         _logger.info(message)
         return {"status": CertificateStatus.OK, "message": message}
 
@@ -597,30 +593,50 @@ def disconnect_from_server():
         'remote_server': '',
         'token': '',
         'db_uuid': '',
-        'enterprise_code': '',
     })
 
 
-def save_browser_state(url=None, orientation=None):
-    """
-    Save the browser state to the file
-    :param url: The URL the browser is on (if None, the URL is not saved)
-    :param orientation: The orientation of the screen (if None, the orientation is not saved)
-    """
-    update_conf({
-        'browser-url': url,
-        'screen-orientation': orientation.value if orientation else None,
-    })
+def migrate_old_config_files_to_new_config_file():
+    """Migrate old config files to the new odoo.conf"""
+    if not get_conf().has_section('iot.box'):
+        _logger.info('Migrating old config files to the new odoo.conf')
+        iotbox_version = read_file_first_line('/var/odoo/iotbox_version')
+        db_uuid = read_file_first_line('odoo-db-uuid.conf')
+        enterprise_code = read_file_first_line('odoo-enterprise-code.conf')
+        remote_server = read_file_first_line('odoo-remote-server.conf')
+        token = read_file_first_line('token')
+        subject = read_file_first_line('odoo-subject.conf')
 
+        update_conf({
+            'iotbox_version': iotbox_version,
+            'remote_server': remote_server,
+            'token': token,
+            'db_uuid': db_uuid,
+            'enterprise_code': enterprise_code,
+            'subject': subject,
+        })
 
-def load_browser_state():
-    """
-    Load the browser state from the file
-    :return: The URL the browser is on and the orientation of the screen (default to NORMAL)
-    """
-    url = get_conf('browser-url')
-    orientation = get_conf('screen-orientation') or Orientation.NORMAL
-    return url, Orientation(orientation)
+        if platform.system() == 'Linux':
+            wifi_network_path = path_file('wifi_network.txt')
+            if wifi_network_path.exists():
+                with open(wifi_network_path, encoding="utf-8") as f:
+                    wifi_ssid = f.readline().strip('\n')
+                    wifi_password = f.readline().strip('\n')
+                update_conf({
+                    'wifi_ssid': wifi_ssid,
+                    'wifi_password': wifi_password,
+                })
+
+        get_conf.cache_clear()
+
+        _logger.info('Removing old config files')
+        unlink_file('iotbox_version')
+        unlink_file('wifi_network.txt')
+        unlink_file('odoo-db-uuid.conf')
+        unlink_file('odoo-enterprise-code.conf')
+        unlink_file('odoo-remote-server.conf')
+        unlink_file('token')
+        unlink_file('odoo-subject.conf')
 
 
 def url_is_valid(url):
@@ -656,17 +672,3 @@ def parse_url(url):
         "url": f"{url.scheme}://{url.netloc}",
         **search_params,
     }
-
-
-def reset_log_level():
-    """Reset the log level to the default one if the reset timestamp is reached
-    This timestamp is set by the log controller in `hw_posbox_homepage/homepage.py` when the log level is changed
-    """
-    log_level_reset_timestamp = get_conf('log_level_reset_timestamp')
-    if log_level_reset_timestamp and float(log_level_reset_timestamp) <= time.time():
-        _logger.info("Resetting log level to default.")
-        update_conf({
-            'log_level_reset_timestamp': '',
-            'log_handler': ':WARNING',
-            'log_level': 'warn',
-        })

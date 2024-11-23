@@ -1,57 +1,85 @@
-import * as ProductScreen from "@point_of_sale/../tests/tours/utils/product_screen_util";
-import * as Dialog from "@point_of_sale/../tests/tours/utils/dialog_util";
-import * as ReceiptScreen from "@point_of_sale/../tests/tours/utils/receipt_screen_util";
-import * as PaymentScreen from "@point_of_sale/../tests/tours/utils/payment_screen_util";
-import * as Chrome from "@point_of_sale/../tests/tours/utils/chrome_util";
-import * as PartnerList from "@point_of_sale/../tests/tours/utils/partner_list_util";
+/** @odoo-module */
+
+import * as ErrorPopup from "@point_of_sale/../tests/tours/helpers/ErrorPopupTourMethods";
+import * as ProductScreen from "@point_of_sale/../tests/tours/helpers/ProductScreenTourMethods";
+import * as ReceiptScreen from "@point_of_sale/../tests/tours/helpers/ReceiptScreenTourMethods";
+import * as PaymentScreen from "@point_of_sale/../tests/tours/helpers/PaymentScreenTourMethods";
+import * as PartnerListScreen from "@point_of_sale/../tests/tours/helpers/PartnerListScreenTourMethods";
+import * as Chrome from "@point_of_sale/../tests/tours/helpers/ChromeTourMethods";
+import * as Utils from "@point_of_sale/../tests/tours/helpers/utils";
 import { registry } from "@web/core/registry";
-import { checkSimplifiedInvoiceNumber, pay } from "./utils/receipt_util";
+import { checkSimplifiedInvoiceNumber, pay } from "./helpers/receipt_helpers";
 
 const SIMPLIFIED_INVOICE_LIMIT = 1000;
 
 registry.category("web_tour.tours").add("spanish_pos_tour", {
+    test: true,
+    steps: () => [
+        ...ProductScreen.confirmOpeningPopup(),
+
+        ...ProductScreen.addOrderline("Desk Pad", "1"),
+        ...pay(),
+        ...checkSimplifiedInvoiceNumber("0001"),
+        ...ReceiptScreen.clickNextOrder(),
+
+        ...ProductScreen.addOrderline("Desk Pad", "1", SIMPLIFIED_INVOICE_LIMIT - 1),
+        ...pay(),
+        ...checkSimplifiedInvoiceNumber("0002"),
+        ...ReceiptScreen.clickNextOrder(),
+
+        ...ProductScreen.addOrderline("Desk Pad", "1", SIMPLIFIED_INVOICE_LIMIT + 1),
+        ...pay(),
+        ...ErrorPopup.isShown(),
+        ...ErrorPopup.clickConfirm(),
+
+        ...PaymentScreen.clickInvoiceButton(),
+        ...PaymentScreen.clickValidate(),
+        {
+            content: "verify that the pos requires the selection of a partner",
+            trigger: `div.popup.popup-confirm .modal-header:contains('Please select the Customer') ~ footer div.button.confirm`,
+        },
+
+        ...PartnerListScreen.clickPartner(""),
+
+        ...PaymentScreen.isInvoiceOptionSelected(),
+        ...PaymentScreen.clickValidate(),
+        {
+            content:
+                "verify that the simplified invoice number does not appear on the receipt, because this order is invoiced, so it does not have a simplified invoice number",
+            trigger: ".receipt-screen:not(:has(.simplified-invoice-number))",
+            isCheck: true,
+        },
+        ...ReceiptScreen.clickNextOrder(),
+
+        ...ProductScreen.addOrderline("Desk Pad", "1"),
+        ...pay(),
+        ...checkSimplifiedInvoiceNumber("0003"),
+
+        ...ReceiptScreen.clickNextOrder(),
+        ...ProductScreen.addOrderline("Desk Pad", "1"),
+        ...ProductScreen.clickPayButton(),
+        ...PaymentScreen.clickPaymentMethod("Customer Account"),
+        ...PaymentScreen.clickValidate(),
+        {
+            content: "verify that the pos requires the selection of a partner",
+            trigger: `div.popup.popup-confirm .modal-header:contains('Customer Required')`,
+        },
+    ],
+});
+
+registry.category("web_tour.tours").add("l10n_es_pos_settle_account_due", {
+    test: true,
     steps: () =>
         [
-            Chrome.startPoS(),
-            Dialog.confirm("Open Register"),
-
-            ProductScreen.addOrderline("Desk Pad", "1"),
-            pay(),
-            checkSimplifiedInvoiceNumber("0001"),
-            ReceiptScreen.clickNextOrder(),
-
-            ProductScreen.addOrderline("Desk Pad", "1", SIMPLIFIED_INVOICE_LIMIT - 1),
-            pay(),
-            checkSimplifiedInvoiceNumber("0002"),
-            ReceiptScreen.clickNextOrder(),
-
-            ProductScreen.addOrderline("Desk Pad", "1", SIMPLIFIED_INVOICE_LIMIT + 1),
-            pay(),
-            Dialog.confirm(),
-
-            PaymentScreen.clickInvoiceButton(),
-            PaymentScreen.clickValidate(),
-            // verify that the pos requires the selection of a partner
-            Dialog.confirm(),
-            PartnerList.clickPartner(""),
-
-            PaymentScreen.isInvoiceOptionSelected(),
-            PaymentScreen.clickValidate(),
+            ProductScreen.confirmOpeningPopup(),
+            ProductScreen.clickPartnerButton(),
+            PartnerListScreen.clickPartnerDetailsButton("Partner Test 1"),
             {
-                content:
-                    "verify that the simplified invoice number does not appear on the receipt, because this order is invoiced, so it does not have a simplified invoice number",
-                trigger: ".receipt-screen:not(:has(.simplified-invoice-number))",
+                trigger: `.button:contains("Settle due accounts")`,
             },
-            ReceiptScreen.clickNextOrder(),
-
-            ProductScreen.addOrderline("Desk Pad", "1"),
-            pay(),
-            checkSimplifiedInvoiceNumber("0003"),
-            ReceiptScreen.clickNextOrder(),
-            ProductScreen.addOrderline("Desk Pad", "1"),
-            ProductScreen.clickPayButton(),
-            PaymentScreen.clickPaymentMethod("Customer Account"),
+            Utils.selectButton("Bank"),
             PaymentScreen.clickValidate(),
-            Dialog.is({ title: "Customer Required" }),
+            Chrome.confirmPopup(),
+            ReceiptScreen.isShown(),
         ].flat(),
 });

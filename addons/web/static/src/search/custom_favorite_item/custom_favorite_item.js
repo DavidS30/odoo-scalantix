@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { AccordionItem } from "@web/core/dropdown/accordion_item";
 import { CheckBox } from "@web/core/checkbox/checkbox";
@@ -9,10 +11,6 @@ import { Component, useRef, useState } from "@odoo/owl";
 const favoriteMenuRegistry = registry.category("favoriteMenu");
 
 export class CustomFavoriteItem extends Component {
-    static template = "web.CustomFavoriteItem";
-    static components = { CheckBox, AccordionItem };
-    static props = {};
-
     setup() {
         this.notificationService = useService("notification");
         this.descriptionRef = useRef("description");
@@ -45,13 +43,7 @@ export class CustomFavoriteItem extends Component {
             return this.descriptionRef.el.focus();
         }
         const { description, isDefault, isShared } = this.state;
-        const embeddedActionId = this.env.config.currentEmbeddedActionId || false;
-        this.env.searchModel.createNewFavorite({
-            description,
-            isDefault,
-            isShared,
-            embeddedActionId,
-        });
+        this.env.searchModel.createNewFavorite({ description, isDefault, isShared });
 
         Object.assign(this.state, {
             description: this.env.config.getDisplayName(),
@@ -98,6 +90,9 @@ export class CustomFavoriteItem extends Component {
     }
 }
 
+CustomFavoriteItem.template = "web.CustomFavoriteItem";
+CustomFavoriteItem.components = { CheckBox, AccordionItem };
+CustomFavoriteItem.props = {};
 favoriteMenuRegistry.add(
     "custom-favorite-item",
     { Component: CustomFavoriteItem, groupNumber: 3 },

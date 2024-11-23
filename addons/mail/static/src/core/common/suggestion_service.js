@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { partnerCompareRegistry } from "@mail/core/common/partner_compare";
 import { cleanTerm } from "@mail/utils/common/format";
 import { toRaw } from "@odoo/owl";
@@ -13,10 +15,11 @@ export class SuggestionService {
         this.env = env;
         this.orm = services.orm;
         this.store = services["mail.store"];
+        this.personaService = services["mail.persona"];
     }
 
     getSupportedDelimiters(thread) {
-        return [["@"], ["#"], [":"]];
+        return [["@"], ["#"]];
     }
 
     async fetchSuggestions({ delimiter, term }, { thread } = {}) {
@@ -28,9 +31,6 @@ export class SuggestionService {
             }
             case "#":
                 await this.fetchThreads(cleanedSearchTerm);
-                break;
-            case ":":
-                await this.store.cannedReponses.fetch();
                 break;
         }
     }
@@ -44,7 +44,7 @@ export class SuggestionService {
         if (thread?.model === "discuss.channel") {
             kwargs.channel_id = thread.id;
         }
-        const data = await this.orm.silent.call(
+        const suggestedPartners = await this.orm.silent.call(
             "res.partner",
             thread?.model === "discuss.channel"
                 ? "get_mention_suggestions_from_channel"
@@ -52,7 +52,7 @@ export class SuggestionService {
             [],
             kwargs
         );
-        this.store.insert(data);
+        this.store.Persona.insert(suggestedPartners);
     }
 
     /**
@@ -68,41 +68,6 @@ export class SuggestionService {
         this.store.Thread.insert(suggestedThreads);
     }
 
-    searchCannedResponseSuggestions(cleanedSearchTerm, sort) {
-        const cannedResponses = Object.values(this.store["mail.canned.response"].records).filter(
-            (cannedResponse) => {
-                return cleanTerm(cannedResponse.source).includes(cleanedSearchTerm);
-            }
-        );
-        const sortFunc = (c1, c2) => {
-            const cleanedName1 = cleanTerm(c1.source);
-            const cleanedName2 = cleanTerm(c2.source);
-            if (
-                cleanedName1.startsWith(cleanedSearchTerm) &&
-                !cleanedName2.startsWith(cleanedSearchTerm)
-            ) {
-                return -1;
-            }
-            if (
-                !cleanedName1.startsWith(cleanedSearchTerm) &&
-                cleanedName2.startsWith(cleanedSearchTerm)
-            ) {
-                return 1;
-            }
-            if (cleanedName1 < cleanedName2) {
-                return -1;
-            }
-            if (cleanedName1 > cleanedName2) {
-                return 1;
-            }
-            return c1.id - c2.id;
-        };
-        return {
-            type: "mail.canned.response",
-            suggestions: sort ? cannedResponses.sort(sortFunc) : cannedResponses,
-        };
-    }
-
     /**
      * Returns suggestions that match the given search term from specified type.
      *
@@ -112,7 +77,7 @@ export class SuggestionService {
      * @param {Object} [options={}]
      * @param {Integer} [options.thread] prioritize and/or restrict
      *  result in the context of given thread
-     * @returns {{ type: String, suggestions: Array }}
+     * @returns {{ type: String, mainSuggestions: Array, extraSuggestions: Array }}
      */
     searchSuggestions({ delimiter, term }, { thread, sort = false } = {}) {
         thread = toRaw(thread);
@@ -123,22 +88,21 @@ export class SuggestionService {
             }
             case "#":
                 return this.searchChannelSuggestions(cleanedSearchTerm, sort);
-            case ":":
-                return this.searchCannedResponseSuggestions(cleanedSearchTerm, sort);
         }
         return {
             type: undefined,
-            suggestions: [],
+            mainSuggestions: [],
+            extraSuggestions: [],
         };
     }
 
-    getPartnerSuggestions(thread) {
+    searchPartnerSuggestions(cleanedSearchTerm, thread, sort) {
         let partners;
         const isNonPublicChannel =
             thread &&
-            (thread.channel_type === "group" ||
-                thread.channel_type === "chat" ||
-                (thread.channel_type === "channel" && thread.authorizedGroupFullName));
+            (thread.type === "group" ||
+                thread.type === "chat" ||
+                (thread.type === "channel" && thread.authorizedGroupFullName));
         if (isNonPublicChannel) {
             // Only return the channel members when in the context of a
             // group restricted channel. Indeed, the message with the mention
@@ -149,19 +113,12 @@ export class SuggestionService {
                 .map((member) => member.persona)
                 .filter((persona) => persona.type === "partner");
         } else {
-            partners = Object.values(this.store.Persona.records).filter((persona) => {
-                if (thread?.model !== "discuss.channel" && persona.eq(this.store.odoobot)) {
-                    return false;
-                }
-                return persona.type === "partner";
-            });
+            partners = Object.values(this.store.Persona.records).filter(
+                (persona) => persona.type === "partner"
+            );
         }
-        return partners;
-    }
-
-    searchPartnerSuggestions(cleanedSearchTerm, thread, sort) {
-        const partners = this.getPartnerSuggestions(thread);
-        const suggestions = [];
+        const mainSuggestionList = [];
+        const extraSuggestionList = [];
         for (const partner of partners) {
             if (!partner.name) {
                 continue;
@@ -170,29 +127,26 @@ export class SuggestionService {
                 cleanTerm(partner.name).includes(cleanedSearchTerm) ||
                 (partner.email && cleanTerm(partner.email).includes(cleanedSearchTerm))
             ) {
-                suggestions.push(partner);
+                if (partner.user) {
+                    mainSuggestionList.push(partner);
+                } else {
+                    extraSuggestionList.push(partner);
+                }
             }
         }
-        suggestions.push(
-            ...this.store.specialMentions.filter(
-                (special) =>
-                    thread &&
-                    special.channel_types.includes(thread.channel_type) &&
-                    cleanedSearchTerm.length >= Math.min(4, special.label.length) &&
-                    (special.label.startsWith(cleanedSearchTerm) ||
-                        cleanTerm(special.description.toString()).includes(cleanedSearchTerm))
-            )
-        );
         return {
             type: "Partner",
-            suggestions: sort
-                ? [...this.sortPartnerSuggestions(suggestions, cleanedSearchTerm, thread)]
-                : suggestions,
+            mainSuggestions: sort
+                ? this.sortPartnerSuggestions(mainSuggestionList, cleanedSearchTerm, thread)
+                : mainSuggestionList,
+            extraSuggestions: sort
+                ? this.sortPartnerSuggestions(extraSuggestionList, cleanedSearchTerm, thread)
+                : extraSuggestionList,
         };
     }
 
     /**
-     * @param {[import("models").Persona | import("@mail/core/common/store_service").SpecialMention]} [partners]
+     * @param {[import("models").Persona]} [partners]
      * @param {String} [searchTerm]
      * @param {import("models").Thread} thread
      * @returns {[import("models").Persona]}
@@ -200,7 +154,7 @@ export class SuggestionService {
     sortPartnerSuggestions(partners, searchTerm = "", thread = undefined) {
         const cleanedSearchTerm = cleanTerm(searchTerm);
         const compareFunctions = partnerCompareRegistry.getAll();
-        const context = { recentChatPartnerIds: this.store.getRecentChatPartnerIds() };
+        const context = { recentChatPartnerIds: this.personaService.getRecentChatPartnerIds() };
         const memberPartnerIds = new Set(
             thread?.channelMembers
                 .filter((member) => member.persona.type === "partner")
@@ -209,9 +163,6 @@ export class SuggestionService {
         return partners.sort((p1, p2) => {
             p1 = toRaw(p1);
             p2 = toRaw(p2);
-            if (p1.isSpecial || p2.isSpecial) {
-                return 0;
-            }
             for (const fn of compareFunctions) {
                 const result = fn(p1, p2, {
                     env: this.env,
@@ -230,13 +181,13 @@ export class SuggestionService {
     searchChannelSuggestions(cleanedSearchTerm, sort) {
         const suggestionList = Object.values(this.store.Thread.records).filter(
             (thread) =>
-                thread.channel_type === "channel" &&
+                thread.type === "channel" &&
                 thread.displayName &&
                 cleanTerm(thread.displayName).includes(cleanedSearchTerm)
         );
         const sortFunc = (c1, c2) => {
-            const isPublicChannel1 = c1.channel_type === "channel" && !c2.authorizedGroupFullName;
-            const isPublicChannel2 = c2.channel_type === "channel" && !c2.authorizedGroupFullName;
+            const isPublicChannel1 = c1.type === "channel" && !c2.authorizedGroupFullName;
+            const isPublicChannel2 = c2.type === "channel" && !c2.authorizedGroupFullName;
             if (isPublicChannel1 && !isPublicChannel2) {
                 return -1;
             }
@@ -273,13 +224,14 @@ export class SuggestionService {
         };
         return {
             type: "Thread",
-            suggestions: sort ? suggestionList.sort(sortFunc) : suggestionList,
+            mainSuggestions: sort ? suggestionList.sort(sortFunc) : suggestionList,
+            extraSuggestions: [],
         };
     }
 }
 
 export const suggestionService = {
-    dependencies: ["orm", "mail.store"],
+    dependencies: ["orm", "mail.store", "mail.persona"],
     /**
      * @param {import("@web/env").OdooEnv} env
      * @param {Partial<import("services").Services>} services

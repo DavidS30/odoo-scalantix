@@ -1,6 +1,5 @@
+/** @odoo-module **/
 /* global StripeTerminal */
-
-import { rpc } from "@web/core/network/rpc";
 
 export class StripeError extends Error {}
 
@@ -46,11 +45,14 @@ export class Stripe {
 
     async startPayment(order) {
         try {
-            const result = await rpc(`/kiosk/payment/${this.pos_config_id}/kiosk`, {
-                order: order,
-                access_token: this.access_token,
-                payment_method_id: this.stripePaymentMethod.id,
-            });
+            const result = await this.env.services.rpc(
+                `/kiosk/payment/${this.pos_config_id}/kiosk`,
+                {
+                    order: order,
+                    access_token: this.access_token,
+                    payment_method_id: this.stripePaymentMethod.id,
+                }
+            );
             const paymentStatus = result.payment_status;
             const savedOrder = result.order;
             await this.connectReader();
@@ -74,7 +76,7 @@ export class Stripe {
     }
 
     async getBackendConnectionToken() {
-        const data = await rpc("/pos-self-order/stripe-connection-token", {
+        const data = await this.env.services.rpc("/pos-self-order/stripe-connection-token", {
             access_token: this.access_token,
             payment_method_id: this.stripePaymentMethod.id,
         });
@@ -83,7 +85,7 @@ export class Stripe {
     }
 
     async capturePayment(paymentIntentId, order) {
-        return await rpc("/pos-self-order/stripe-capture-payment", {
+        return await this.env.services.rpc("/pos-self-order/stripe-capture-payment", {
             access_token: this.access_token,
             order_access_token: order.access_token,
             payment_intent_id: paymentIntentId,

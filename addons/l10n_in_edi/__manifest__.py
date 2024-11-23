@@ -8,6 +8,7 @@
     "depends": [
         "account_edi",
         "l10n_in",
+        "iap",
     ],
     "description": """
 Indian - E-invoicing

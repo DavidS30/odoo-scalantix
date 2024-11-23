@@ -1,6 +1,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import fields, models, api, _
+from odoo.tools import float_compare
 
 
 class HrExpenseSplitWizard(models.TransientModel):
@@ -64,7 +65,7 @@ class HrExpenseSplitWizard(models.TransientModel):
             'type': 'ir.actions.act_window',
             'res_model': 'hr.expense',
             'name': _('Split Expenses'),
-            'view_mode': 'list,form',
+            'view_mode': 'tree,form',
             'target': 'current',
             'domain': [('id', 'in', (copied_expenses | self.expense_split_line_ids.expense_id).ids)],
         }

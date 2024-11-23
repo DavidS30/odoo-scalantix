@@ -13,7 +13,7 @@
                         <div>
                             <field name="accrued_gain_time" invisible="1"/>
                             <field name="can_modify_value_type" invisible="1"/>
-                            <field name="added_value" widget="float_without_trailing_zeros" style="width: 4rem" class="me-1"/>
+                            <field name="added_value" widget="FloatWithoutTrailingZeros" style="width: 4rem" class="me-1"/>
                             <field name="added_value_type" style="width: 3.4rem" nolabel="1" readonly="not can_modify_value_type"/>
                         </div>
                         <div style="width: 5rem"/>
@@ -53,19 +53,16 @@
                         </div>
                     </group>
                     <group name="maximum_leave">
-                        <label for="cap_accrued_time"/>
-                        <span>
-                            <field name="cap_accrued_time" nolabel="1"/>
-                            <span class="position-absolute" invisible="not cap_accrued_time">
-                                <field name="maximum_leave" style="width: 5rem" widget="float_without_trailing_zeros"
-                                    nolabel="1"/>
-                                <field name="added_value_type" readonly="1" style="white-space: nowrap;width: 5rem"/>
-                            </span>
-                        </span>
+                        <field name="cap_accrued_time" style="width: 9.35rem"/>
+                        <div style="width: 9.35rem"/>
+                        <div invisible="not cap_accrued_time">
+                            <field name="maximum_leave" style="width: 5rem" widget="FloatWithoutTrailingZeros"/>
+                            <field name="added_value_type" style="white-space: nowrap;width: 5rem"/>
+                        </div>
                     </group>
                     <group name="milestone">
                         <div class="o_td_label">
-                            <label for="start_count" string="Start Accruing"/>
+                            <label for="start_count" string="Milestone reached"/>
                         </div>
                         <div>
                             <field name="start_count" style="width: 2rem"/>
@@ -82,46 +79,21 @@
                                 <field name="added_value_type" nolabel="1" readonly="1" force_save="1" style="width: 5rem"/>
                             </div>
                         </div>
-                        <div invisible="action_with_unused_accruals == 'lost'">
-                            <label for="cap_accrued_time_yearly"/>
-                        </div>
-                        <div invisible="action_with_unused_accruals == 'lost'">
-                            <span>
-                                <field name="cap_accrued_time_yearly" nolabel="1"/>
-                                <span class="position-absolute" invisible="not cap_accrued_time_yearly">
-                                    <field name="maximum_leave_yearly" style="width: 5rem" widget="float_without_trailing_zeros"
-                                        nolabel="1"/>
-                                    <field name="added_value_type" readonly="1" style="white-space: nowrap;width: 5rem"/>
-                                </span>
-                            </span>
-                        </div>
                         <field name="postpone_max_days" class="w-25" invisible="action_with_unused_accruals != 'postponed'"/>
-                        <div class="o_td_label" invisible="action_with_unused_accruals == 'lost'">
-                            <label for="accrual_validity_count" string="Carry Over Validity"/>
-                        </div>
-                        <div class="col-lg-2 d-flex" invisible="action_with_unused_accruals == 'lost'">
-                            <div>
-                                <field name="accrual_validity" style="width: 9.35rem"/>
-                                <div class="d-flex" invisible="not accrual_validity">
-                                    <field name="accrual_validity_count" />
-                                    <field name="accrual_validity_type" />
-                                </div>
-                            </div>
-                        </div>
                     </group>
                 </sheet>
             </form>
         </field>
     </record>
     <record id="hr_accrual_plan_view_tree" model="ir.ui.view">
-        <field name="name">hr.leave.accrual.plan.list</field>
+        <field name="name">hr.leave.accrual.plan.tree</field>
         <field name="model">hr.leave.accrual.plan</field>
         <field name="arch" type="xml">
-            <list string="Accrual Plans">
+            <tree string="Accrual Plans">
                 <field name="name"/>
                 <field name="level_count"/>
                 <field name="employees_count"/>
-            </list>
+            </tree>
         </field>
     </record>
     <record id="hr_accrual_plan_view_form" model="ir.ui.view">
@@ -133,7 +105,7 @@
                 <field name="show_transition_mode" invisible="1" />
                 <sheet>
                     <div class="oe_button_box" name="button_box" invisible="not id" >
-                        <button name="action_open_accrual_plan_employees" type="object" class="oe_stat_button" icon="fa-users" invisible="employees_count == 0" groups="hr.group_hr_user">
+                        <button name="action_open_accrual_plan_employees" type="object" class="oe_stat_button" icon="fa-users" invisible="employees_count == 0">
                             <field name="employees_count" widget="statinfo"/>
                         </button>
                     </div>
@@ -172,24 +144,36 @@
                             >
                             <kanban default_order="sequence">
                                 <field name="sequence"/>
+                                <field name="start_count"/>
+                                <field name="start_type"/>
+                                <field name="added_value"/>
+                                <field name="added_value_type"/>
+                                <field name="frequency"/>
+                                <field name="week_day"/>
+                                <field name="first_day"/>
+                                <field name="second_day"/>
+                                <field name="first_month_day"/>
+                                <field name="first_month"/>
+                                <field name="second_month_day"/>
+                                <field name="second_month"/>
+                                <field name="yearly_day"/>
+                                <field name="yearly_month"/>
+                                <field name="maximum_leave"/>
                                 <field name="action_with_unused_accruals"/>
-                                <field name="accrual_validity_count"/>
-                                <field name="accrual_validity_type"/>
                                 <field name="cap_accrued_time"/>
-                                <field name="accrual_validity"/>
                                 <templates>
-                                    <div t-name="card" class="bg-transparent border-0">
-                                        <div class="o_hr_holidays_body">
+                                    <div t-name="kanban-box" class="border-0 bg-transparent">
+                                        <div class="o_hr_holidays_body oe_kanban_global_click">
                                             <div class="o_hr_holidays_timeline text-center">
                                                 <t t-if="record.start_count.raw_value > 0">
-                                                    after <field name="start_count"/> <field name="start_type"/>
+                                                    after <t t-esc="record.start_count.value"/> <t t-esc="record.start_type.value"/>
                                                 </t>
                                                 <t t-else="">
                                                     initially
                                                 </t>
                                             </div>
                                             <t t-if="!read_only_mode">
-                                                <a type="edit" t-attf-class="oe_kanban_action text-black">
+                                                <a type="edit" t-attf-class="oe_kanban_action oe_kanban_action_a text-black">
                                                     <t t-call="level_content"/>
                                                 </a>
                                             </t>
@@ -203,8 +187,7 @@
                                             <div class="content container" style="width: 560px;">
                                                 <div class="row w-100">
                                                     <div class="pe-0 me-0" style="width: 6rem;">
-                                                        <field name="added_value" invisible="1"/>
-                                                        <span t-out="record.added_value.raw_value"/> <field name="added_value_type"/>,
+                                                        <field name="added_value" widget="FloatWithoutTrailingZeros"/> <field name="added_value_type"/>,
                                                     </div>
                                                     <div class="col-auto m-0 p-0">
                                                         <field name="frequency" class="ms-1"/>
@@ -229,9 +212,9 @@
                                                     <div class="pe-0 me-0" style="width: 6rem;">
                                                         Cap:
                                                     </div>
-                                                    <div class="col-3 m-0 ps-1 d-flex">
-                                                        <t t-if="record.cap_accrued_time.raw_value and record.maximum_leave.raw_value > 0">
-                                                            <field name="maximum_leave" widget="float_without_trailing_zeros"/> <field class="ms-1" name="added_value_type"/>
+                                                    <div class="col-3 m-0 ps-1">
+                                                        <t t-if="record.cap_accrued_time.raw_value &amp;&amp; record.maximum_leave.raw_value > 0">
+                                                            <field name="maximum_leave" widget="FloatWithoutTrailingZeros"/> <field name="added_value_type"/>
                                                         </t>
                                                         <t t-else="">
                                                             Unlimited
@@ -242,17 +225,9 @@
                                                     <div class="pe-0 me-0" style="width: 6rem;">
                                                         Carry over:
                                                     </div>
-                                                    <div class="col-6 m-0 ps-1">
-                                                        <t t-if="record.action_with_unused_accruals.raw_value === 'all'">all
-                                                            <span invisible="not accrual_validity">
-                                                                - Valid for <field name="accrual_validity_count"/> <field name="accrual_validity_type"/>
-                                                            </span>
-                                                        </t>
-                                                        <t t-elif="record.action_with_unused_accruals.raw_value === 'maximum'">up to <field name="postpone_max_days" /> <t t-esc="record.added_value_type.raw_value" />
-                                                            <span invisible="not accrual_validity">
-                                                                - Valid for <field name="accrual_validity_count"/> <field name="accrual_validity_type"/>
-                                                            </span>
-                                                        </t>
+                                                    <div class="col-3 m-0 ps-1">
+                                                        <t t-if="record.action_with_unused_accruals.raw_value === 'all'">all</t>
+                                                        <t t-elif="record.action_with_unused_accruals.raw_value == 'maximum'">up to <field name="postpone_max_days" /> <t t-esc="record.added_value_type.raw_value" /></t>
                                                         <t t-else="">no</t>
                                                     </div>
                                                 </div>
@@ -263,7 +238,7 @@
                             </kanban>
                         </field>
                     </div>
-                </sheet>
+               </sheet>
             </form>
         </field>
     </record>
@@ -281,7 +256,7 @@
     <record id="open_view_accrual_plans" model="ir.actions.act_window">
         <field name="name">Accrual Plans</field>
         <field name="res_model">hr.leave.accrual.plan</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">tree,form</field>
     </record>
 
 </odoo>

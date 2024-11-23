@@ -7,10 +7,11 @@ from odoo import api, fields, models
 from odoo.exceptions import UserError
 from odoo.http import request
 from odoo.osv import expression
+from odoo.tools import float_is_zero
 
 
 class SaleOrder(models.Model):
-    _inherit = 'sale.order'
+    _inherit = "sale.order"
 
     # List of disabled rewards for automatic claim
     disabled_auto_rewards = fields.Many2many("loyalty.reward", relation="sale_order_disabled_auto_rewards_rel")
@@ -160,14 +161,6 @@ class SaleOrder(models.Model):
             request.session.pop('successful_code')
         return code
 
-    def _set_delivery_method(self, *args, **kwargs):
-        super()._set_delivery_method(*args, **kwargs)
-        self._update_programs_and_rewards()
-
-    def _remove_delivery_line(self):
-        super()._remove_delivery_line()
-        self._update_programs_and_rewards()
-
     def _cart_update(self, product_id, line_id=None, add_qty=0, set_qty=0, **kwargs):
         line = self.order_line.filtered(lambda sol: sol.product_id.id == product_id)[:1]
         reward_id = line.reward_id
@@ -214,16 +207,12 @@ class SaleOrder(models.Model):
                 ('program_id.trigger', '=', 'with_code'),
                 '&', ('program_id.trigger', '=', 'auto'), ('program_id.applies_on', '=', 'future'),
         ])
-        total_is_zero = self.currency_id.is_zero(self.amount_total)
+        total_is_zero = float_is_zero(self.amount_total, precision_digits=2)
         global_discount_reward = self._get_applied_global_discount()
         for coupon in loyality_cards:
             points = self._get_real_points_for_coupon(coupon)
             for reward in coupon.program_id.reward_ids:
-                if (
-                    reward.is_global_discount
-                    and global_discount_reward
-                    and self._best_global_discount_already_applied(global_discount_reward, reward)
-                ):
+                if reward.is_global_discount and global_discount_reward and global_discount_reward.discount >= reward.discount:
                     continue
                 if reward.reward_type == 'discount' and total_is_zero:
                     continue
@@ -244,3 +233,10 @@ class SaleOrder(models.Model):
         lines = super()._cart_find_product_line(product_id, line_id, **kwargs)
         lines = lines.filtered(lambda l: not l.is_reward_line) if not line_id else lines
         return lines
+
+    def _check_carrier_quotation(self, **kwargs):
+        check = super()._check_carrier_quotation(**kwargs)
+        if check and not self.only_services:
+            self._update_programs_and_rewards()
+            self.validate_taxes_on_sales_order()
+        return check

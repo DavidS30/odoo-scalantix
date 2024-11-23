@@ -7,7 +7,6 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 
 export class ForecastWidgetField extends FloatField {
-    static template = "stock.ForecastWidget";
     setup() {
         const { data, fields, resId } = this.props.record;
         this.actionService = useService("action");
@@ -52,6 +51,7 @@ export class ForecastWidgetField extends FloatField {
         this.actionService.doAction(action);
     }
 }
+ForecastWidgetField.template = "stock.ForecastWidget";
 
 export const forecastWidgetField = {
     ...floatField,

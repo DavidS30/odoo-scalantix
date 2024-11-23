@@ -3,7 +3,6 @@
 import publicWidget from '@web/legacy/js/public/public_widget';
 import { session } from "@web/session";
 import { renderToElement } from "@web/core/utils/render";
-import { rpc } from "@web/core/network/rpc";
 
 /**
  * Global widget for both fullscreen view and non-fullscreen view of a slide course.
@@ -18,6 +17,11 @@ export const SlideCoursePage = publicWidget.Widget.extend({
     custom_events: {
         'slide_completed': '_onSlideCompleted',
         'slide_mark_completed': '_onSlideMarkCompleted',
+    },
+
+    init() {
+        this._super(...arguments);
+        this.rpc = this.bindService("rpc");
     },
 
     /**
@@ -101,7 +105,7 @@ export const SlideCoursePage = publicWidget.Widget.extend({
             return;
         }
 
-        const data = await rpc(
+        const data = await this.rpc(
             `/slides/slide/${completed ? 'set_completed' : 'set_uncompleted'}`,
             {slide_id: slide.id},
         );

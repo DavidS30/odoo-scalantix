@@ -16,8 +16,8 @@ class TestPointOfSaleFlow(TestPointOfSaleCommon):
         self.stock_location = self.company_data['default_warehouse'].lot_stock_id
         self.product = self.env['product.product'].create({
             'name': 'Product A',
+            'type': 'product',
             'tracking': 'serial',
-            'is_storable': True,
             'lst_price': 10,
             'categ_id': self.env.ref('product.product_category_all').id,
         })
@@ -62,8 +62,8 @@ class TestPointOfSaleFlow(TestPointOfSaleCommon):
         self.pos_config.open_ui()
         current_session = self.pos_config.current_session_id
 
-        pos_order = {
-           'amount_paid': 10,
+        pos_order = {'data':
+          {'amount_paid': 10,
            'amount_return': 0,
            'amount_tax': 0,
            'amount_total': 10,
@@ -79,23 +79,22 @@ class TestPointOfSaleFlow(TestPointOfSaleCommon):
               'product_id': self.product.id,
               'price_subtotal': 10,
               'price_subtotal_incl': 10,
-              'sale_order_line_id': sale_order.order_line[0].id,
-              'sale_order_origin_id': sale_order.id,
+              'sale_order_line_id': sale_order.order_line[0],
+              'sale_order_origin_id': sale_order,
               'qty': 1,
               'tax_ids': []}]],
            'name': 'Order 00044-003-0014',
-           'session_id': current_session.id,
+           'pos_session_id': current_session.id,
            'sequence_number': self.pos_config.journal_id.id,
            'shipping_date': fields.Date.today(),
-           'payment_ids': [[0,
+           'statement_ids': [[0,
              0,
              {'amount': 10,
               'name': fields.Datetime.now(),
               'payment_method_id': self.pos_config.payment_method_ids[0].id}]],
-           'uuid': '00044-003-0014',
-           'last_order_preparation_change': '{}',
-           'user_id': self.env.uid}
+           'uid': '00044-003-0014',
+           'user_id': self.env.uid},
+            }
 
-        order = self.env['pos.order'].sync_from_ui([pos_order])
-        self.assertEqual(self.env['pos.order'].browse(order['pos.order'][0]['id']).picking_ids.move_line_ids.lot_id, lot1)
-        self.assertEqual(sale_order.picking_ids.move_line_ids.lot_id, lot2)
+        order = self.env['pos.order'].create_from_ui([pos_order])
+        self.assertEqual(self.env['pos.order'].browse(order[0]['id']).picking_ids.move_line_ids.lot_id, lot1)

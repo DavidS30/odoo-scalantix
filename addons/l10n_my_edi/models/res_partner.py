@@ -40,7 +40,6 @@ class ResPartner(models.Model):
         help="The identification type and number used by the MyTax/MyInvois system to identify the user.\nNote: For MyPR and MyKAS to use NRIC scheme",
     )
     l10n_my_identification_number = fields.Char(string="ID Number")
-    l10n_my_identification_number_placeholder = fields.Char(compute="_compute_l10n_my_identification_number_placeholder")
 
     # --------------------------------
     # Compute, inverse, search methods
@@ -59,23 +58,6 @@ class ResPartner(models.Model):
         for partner in self:
             # Users with no business number can't be validated using the api
             partner.l10n_my_edi_display_tin_warning = is_edi_used and partner.l10n_my_identification_number
-
-    @api.depends('l10n_my_identification_type')
-    def _compute_l10n_my_identification_number_placeholder(self):
-        """ Computes a dynamic placeholder that depends on the selected type to help the user inputs their data.
-        The placeholders have been taken from the MyInvois doc.
-        """
-        for partner in self:
-            placeholder = 'N/A'
-            if partner.l10n_my_identification_type == 'NRIC':
-                placeholder = '830503-11-4923'
-            elif partner.l10n_my_identification_type == 'BRN':
-                placeholder = '202201234565'
-            elif partner.l10n_my_identification_type == 'PASSPORT':
-                placeholder = 'A00000000'
-            elif partner.l10n_my_identification_type == 'ARMY':
-                placeholder = '830805-13-4983'
-            partner.l10n_my_identification_number_placeholder = placeholder
 
     # --------------
     # Action methods

@@ -2,10 +2,11 @@
 
 from odoo.addons.hr_expense.tests.common import TestExpenseCommon
 from odoo.addons.project.tests.test_project_profitability import TestProjectProfitabilityCommon
+from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo.tests.common import tagged
 
 
-class TestProjectHrExpenseProfitabilityCommon(TestExpenseCommon):
+class TestProjectHrExpenseProfitabilityCommon(TestExpenseCommon, AccountTestInvoicingCommon):
     def check_project_profitability_before_creating_and_approving_expense_sheet(self, expense, project, project_profitability_items_empty):
         self.assertDictEqual(
             project._get_profitability_items(False),
@@ -39,11 +40,7 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
         # Create a new company with the foreign currency.
         foreign_company = self.company_data_2['company']
         foreign_company.currency_id = self.foreign_currency
-        foreign_employee = self.env['hr.employee'].create({
-            'name': 'Foreign employee',
-            'company_id': foreign_company.id,
-            'work_email': 'email@email',
-        })
+        foreign_employee = self.env['hr.employee'].create({'name': 'Foreign employee', 'company_id': foreign_company.id})
 
         expense = self.env['hr.expense'].create({
             'name': 'Car Travel Expenses',
@@ -51,14 +48,13 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
             'product_id': self.product_c.id,
             'total_amount_currency': 350.00,
             'company_id': self.env.company.id,
-            'analytic_distribution': {self.project.account_id.id: 100},
+            'analytic_distribution': {self.project.analytic_account_id.id: 100},
         })
 
         expense_sheet = self.check_project_profitability_before_creating_and_approving_expense_sheet(
             expense,
             self.project,
             self.project_profitability_items_empty)
-        self.assertEqual(expense_sheet.state, 'approve')
 
         sequence_per_invoice_type = self.project._get_profitability_sequence_per_invoice_type()
         self.assertIn('expenses', sequence_per_invoice_type)
@@ -66,8 +62,13 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
 
         self.assertDictEqual(
             self.project._get_profitability_items(False),
-            self.project_profitability_items_empty,
-            'No data should be found since the sheets are not posted or done.',
+            {
+                'costs': {
+                    'data': [{'id': 'expenses', 'sequence': expense_sequence, 'to_bill': 0.0, 'billed': -expense.untaxed_amount_currency}],
+                    'total': {'to_bill': 0.0, 'billed': -expense.untaxed_amount_currency},
+                },
+                'revenues': {'data': [], 'total': {'to_invoice': 0.0, 'invoiced': 0.0}},
+            },
         )
 
         # Create an expense in a foreign company, the expense is linked to the AA of the project.
@@ -77,7 +78,7 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
             'product_id': self.product_c.id,
             'total_amount_currency': 350.00,
             'company_id': foreign_company.id,
-            'analytic_distribution': {self.project.account_id.id: 100},
+            'analytic_distribution': {self.project.analytic_account_id.id: 100},
             'currency_id': self.foreign_currency.id,
         })
         expense_sheet_vals_list = expense_foreign._get_default_expense_sheet_values()
@@ -87,12 +88,8 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
         self.assertEqual(expense_sheet_foreign.state, 'submit')
         expense_sheet_foreign.action_approve_expense_sheets()
         self.assertEqual(expense_sheet_foreign.state, 'approve')
-        expense_sheet_foreign.action_sheet_move_post()
-        self.assertEqual(expense_sheet_foreign.state, 'post')
-        expense_sheet.action_sheet_move_post()
-        self.assertEqual(expense_sheet.state, 'post')
 
-        # Both costs should now be computed in the project profitability, since both expense sheets were posted
+        # The cost of the foreign expense sheet should now be computed in the project profitability, since it is now approved
         self.assertDictEqual(
             self.project._get_profitability_items(False),
             {
@@ -109,9 +106,8 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
             },
         )
 
-        # Reset to draft the expense sheet of the main company. Only the total from the foreign company should be computed
-        expense_sheet.action_reset_expense_sheets()
-        self.assertEqual(expense_sheet.state, 'draft')
+        # Cancel the expense sheet of the main company. Only the total from the foreign company should be computed
+        expense_sheet._do_refuse('Test cancel expense')
         self.assertDictEqual(
             self.project._get_profitability_items(False),
             {
@@ -123,13 +119,11 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
             },
         )
 
-        # Reset to draft the expense sheet of the foreign company. No data should be computed now.
-        expense_sheet_foreign.action_reset_expense_sheets()
-        self.assertEqual(expense_sheet_foreign.state, 'draft')
+        expense_sheet_foreign._do_refuse('Test cancel foreign expense')
         self.assertDictEqual(
             self.project._get_profitability_items(False),
             self.project_profitability_items_empty,
-            'No data should be found since the sheets are not posted or done.',
+            'No data should be found since the sheets are not approved yet.',
         )
 
     def test_project_profitability_after_expense_sheet_actions(self):
@@ -140,7 +134,7 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
                 "product_id": self.product_c.id,
                 "total_amount": 50.00,
                 "company_id": self.project.company_id.id,
-                "analytic_distribution": {self.project.account_id.id: 100},
+                "analytic_distribution": {self.project.analytic_account_id.id: 100},
             }
         )
         expense_sheet = self.env["hr.expense.sheet"].create(
@@ -157,7 +151,7 @@ class TestProjectHrExpenseProfitability(TestProjectProfitabilityCommon, TestProj
 
         expense_sheet.action_submit_sheet()
         expense_sheet.action_approve_expense_sheets()
-        expense_sheet.action_sheet_move_post()
+        expense_sheet.action_sheet_move_create()
 
         self.assertDictEqual(
             self.project._get_profitability_items(False),

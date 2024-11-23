@@ -1,38 +1,32 @@
+/** @odoo-module */
+
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("im_livechat_history_back_and_forth_tour", {
+    test: true,
     steps: () => [
         {
-            isActive: ["enterprise"],
-            content: "open command palette",
-            trigger: ".o_home_menu",
-            run: "click && press ctrl+k",
-        },
-        {
-            isActive: ["community"],
-            content: "open command palette",
             trigger: "body",
-            run: "press ctrl+k",
+            // Open Command Palette
+            run() {
+                this.$anchor[0].dispatchEvent(
+                    new KeyboardEvent("keydown", { key: "K", ctrlKey: true, bubbles: true })
+                );
+            },
         },
         {
             trigger: ".o_command_palette_search input",
-            run: "fill /",
+            run: "text /",
         },
         {
             trigger: ".o_command_palette_search input",
-            run: "fill Live Chat",
+            run: "text Live Chat",
         },
         {
             trigger: ".o_command:contains(Sessions History)",
-            run: "click",
-        },
-        {
-            trigger: "button.o_switch_view.o_list",
-            run: "click",
         },
         {
             trigger: ".o_data_cell:contains(Visitor operator)",
-            run: "click",
         },
         {
             trigger: ".o-mail-DiscussSidebar-item:contains(Visitor).o-active",
@@ -48,7 +42,6 @@ registry.category("web_tour.tours").add("im_livechat_history_back_and_forth_tour
         },
         {
             trigger: ".o-mail-DiscussSidebar-item:contains(Visitor).o-active",
-            run: "click",
         },
         {
             trigger: ".o-mail-DiscussSidebar-item:contains(Visitor).o-active",
@@ -58,6 +51,8 @@ registry.category("web_tour.tours").add("im_livechat_history_back_and_forth_tour
         },
         {
             trigger: ".o_data_cell:contains(Visitor operator)",
+            run() {},
+            isCheck: true,
         },
     ],
 });

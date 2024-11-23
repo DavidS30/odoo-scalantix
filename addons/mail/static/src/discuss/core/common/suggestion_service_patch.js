@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { SuggestionService } from "@mail/core/common/suggestion_service";
 import { cleanTerm } from "@mail/utils/common/format";
 
@@ -32,7 +34,7 @@ patch(SuggestionService.prototype, {
                     return false;
                 }
                 if (command.channel_types) {
-                    return command.channel_types.includes(thread.channel_type);
+                    return command.channel_types.includes(thread.type);
                 }
                 return true;
             })
@@ -75,7 +77,7 @@ patch(SuggestionService.prototype, {
         };
         return {
             type: "ChannelCommand",
-            suggestions: sort ? commands.sort(sortFunc) : commands,
+            mainSuggestions: sort ? commands.sort(sortFunc) : commands,
         };
     },
 });

@@ -3,25 +3,25 @@
 # 	* account_edi
 # 
 # Translators:
-# Lilach Gilliam <lilach.gilliam@gmail.com>, 2024
-# yael terner, 2024
-# Sagi Ahiel, 2024
-# ZVI BLONDER <ZVIBLONDER@gmail.com>, 2024
-# Roy Sayag, 2024
-# Yihya Hugirat <hugirat@gmail.com>, 2024
+# MichaelHadar, 2023
+# Ofir Blum <ofir.blum@gmail.com>, 2023
+# NoaFarkash, 2023
+# Lilach Gilliam <lilach.gilliam@gmail.com>, 2023
+# Sagi Ahiel, 2023
+# Ha Ketem <haketem@gmail.com>, 2023
+# yael terner, 2023
+# Yihya Hugirat <hugirat@gmail.com>, 2023
+# Martin Trigaux, 2023
+# ZVI BLONDER <ZVIBLONDER@gmail.com>, 2023
 # Netta Waizer, 2024
-# Martin Trigaux, 2024
-# NoaFarkash, 2024
-# Ofir Blum <ofir.blum@gmail.com>, 2024
-# Ha Ketem <haketem@gmail.com>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-25 08:39+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
-"Last-Translator: Ha Ketem <haketem@gmail.com>, 2024\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"Last-Translator: Netta Waizer, 2024\n"
 "Language-Team: Hebrew (https://app.transifex.com/odoo/teams/41243/he/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -32,30 +32,35 @@ msgstr ""
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
-msgid "%(count)s Electronic invoicing error(s)"
-msgstr ""
+#, python-format
+msgid " Electronic invoicing error(s)"
+msgstr "שגיאה(ות) בחשבונית הדיגיטלית "
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
-msgid "%(count)s Electronic invoicing info(s)"
-msgstr ""
+#, python-format
+msgid " Electronic invoicing info(s)"
+msgstr "פרט(י) חשבונית דיגיטלית"
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
-msgid "%(count)s Electronic invoicing warning(s)"
-msgstr ""
+#, python-format
+msgid " Electronic invoicing warning(s)"
+msgstr "אזהרה(ות) לגבי חשבונית דיגיטלית"
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid "A cancellation of the EDI has been requested."
 msgstr "התבקש ביטול של ה-EDI"
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid "A request for cancellation of the EDI has been called off."
 msgstr ""
 
@@ -109,6 +114,7 @@ msgstr "בוטל"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_journal.py:0
+#, python-format
 msgid ""
 "Cannot deactivate (%s) on this journal because not all documents are "
 "synchronized"
@@ -170,6 +176,7 @@ msgstr ""
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_blocking_level
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_blocking_level
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_blocking_level
 msgid "Edi Blocking Level"
 msgstr "רמת חסימת EDI"
 
@@ -181,18 +188,21 @@ msgstr ""
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_document_ids
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_document_ids
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_document_ids
 msgid "Edi Document"
 msgstr "מסמך EDI"
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_error_count
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_error_count
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_error_count
 msgid "Edi Error Count"
 msgstr "מספר שגיאות EDI"
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_error_message
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_error_message
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_error_message
 msgid "Edi Error Message"
 msgstr "הודעת שגיאה EDI"
 
@@ -204,24 +214,28 @@ msgstr ""
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_show_abandon_cancel_button
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_show_abandon_cancel_button
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_show_abandon_cancel_button
 msgid "Edi Show Abandon Cancel Button"
 msgstr ""
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_show_cancel_button
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_show_cancel_button
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_show_cancel_button
 msgid "Edi Show Cancel Button"
 msgstr ""
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_show_force_cancel_button
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_show_force_cancel_button
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_show_force_cancel_button
 msgid "Edi Show Force Cancel Button"
 msgstr ""
 
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_web_services_to_process
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_web_services_to_process
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_web_services_to_process
 msgid "Edi Web Services To Process"
 msgstr ""
 
@@ -235,6 +249,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:account_edi.field_account_bank_statement_line__edi_state
 #: model:ir.model.fields,field_description:account_edi.field_account_journal__edi_format_ids
 #: model:ir.model.fields,field_description:account_edi.field_account_move__edi_state
+#: model:ir.model.fields,field_description:account_edi.field_account_payment__edi_state
 msgid "Electronic invoicing"
 msgstr "חשבונית דיגיטלית"
 
@@ -268,6 +283,7 @@ msgstr "שם הפורמט"
 #. module: account_edi
 #: model:ir.model.fields,help:account_edi.field_account_bank_statement_line__edi_error_count
 #: model:ir.model.fields,help:account_edi.field_account_move__edi_error_count
+#: model:ir.model.fields,help:account_edi.field_account_payment__edi_error_count
 msgid "How many EDIs are in error for this move?"
 msgstr ""
 
@@ -286,6 +302,7 @@ msgstr "מידע"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid ""
 "Invalid invoice configuration:\n"
 "\n"
@@ -372,11 +389,12 @@ msgstr "נשלח"
 #. module: account_edi
 #: model:ir.model.fields,field_description:account_edi.field_account_edi_document__state
 msgid "State"
-msgstr "סטטוס"
+msgstr "מדינה"
 
 #. module: account_edi
 #: model:ir.model.fields,help:account_edi.field_account_bank_statement_line__edi_state
 #: model:ir.model.fields,help:account_edi.field_account_move__edi_state
+#: model:ir.model.fields,help:account_edi.field_account_payment__edi_state
 msgid "The aggregated state of all the EDIs with web-service of this move"
 msgstr ""
 
@@ -390,6 +408,7 @@ msgstr ""
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/wizard/account_resequence.py:0
+#, python-format
 msgid ""
 "The following documents have already been sent and cannot be resequenced: %s"
 msgstr ""
@@ -414,12 +433,14 @@ msgstr "הקוד הזה כבר קיים"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_edi_document.py:0
+#, python-format
 msgid "This document is being sent by another process already. "
 msgstr "המסמך הזה כבר נשלח על-ידי תהליך אחר."
 
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid ""
 "This invoice was canceled while the EDIs %s still had a pending cancellation"
 " request."
@@ -446,6 +467,7 @@ msgstr "אזהרה"
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/account_move.py:0
+#, python-format
 msgid ""
 "You can't edit the following journal entry %s because an electronic document"
 " has already been sent. Please use the 'Request EDI Cancellation' button "
@@ -455,6 +477,7 @@ msgstr ""
 #. module: account_edi
 #. odoo-python
 #: code:addons/account_edi/models/ir_attachment.py:0
+#, python-format
 msgid ""
 "You can't unlink an attachment being an EDI document sent to the government."
 msgstr ""

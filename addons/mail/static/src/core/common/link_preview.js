@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { LinkPreviewConfirmDelete } from "@mail/core/common/link_preview_confirm_delete";
 
 import { Component } from "@odoo/owl";
@@ -16,7 +18,6 @@ export class LinkPreview extends Component {
     static components = {};
 
     setup() {
-        super.setup();
         this.dialogService = useService("dialog");
     }
 

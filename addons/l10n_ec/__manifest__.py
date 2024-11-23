@@ -33,10 +33,10 @@ Master Data:
 * Ecuador banks
 * Partners: Consumidor Final, SRI, IESS, and also basic VAT validation
 """,
-    'author': 'TRESCLOUD (https://trescloud.com)',
+    'author': 'TRESCLOUD, OPA CONSULTING (https://opa-consulting.com)',
     'category': 'Accounting/Localizations/Account Charts',
     'maintainer': 'TRESCLOUD',
-    'website': 'https://www.odoo.com/documentation/master/applications/finance/fiscal_localizations/ecuador.html',
+    'website': 'https://www.odoo.com/documentation/17.0/applications/finance/fiscal_localizations/ecuador.html',
     'license': 'LGPL-3',
     'depends': [
         'base',
@@ -46,7 +46,6 @@ Master Data:
         'l10n_latam_base',
         'account',
     ],
-    'auto_install': ['account'],
     'data': [
         'security/ir.model.access.csv',
         'data/account_tax_report_data.xml',

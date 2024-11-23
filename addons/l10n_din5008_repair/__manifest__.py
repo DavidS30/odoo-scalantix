@@ -8,9 +8,6 @@
         'l10n_din5008',
         'repair',
     ],
-    'data': [
-        'report/din5008_repair_templates.xml',
-    ],
     'auto_install': True,
     'license': 'LGPL-3',
 }

@@ -3,28 +3,29 @@
 # 	* crm_iap_mine
 # 
 # Translators:
-# Robin Calvin, 2024
-# Simon S, 2024
-# Haojun Zou <apollo_zhj@msn.com>, 2024
-# 3eec91a23d05c632ffac786ac42b81b8_b6fff7b <8985b7bc57db860af29969457dbb51b3_1018915>, 2024
-# Martin Wilderoth <martin.wilderoth@linserv.se>, 2024
-# Leif Persson <leifpz54@gmail.com>, 2024
-# Kristoffer Grundström <lovaren@gmail.com>, 2024
-# Zou Haojun <haojunzou84@gmail.com>, 2024
-# Martin Trigaux, 2024
-# Christelle Wehbe <libanon_cristelle@hotmail.com>, 2024
-# Mikael Åkerberg <mikael.akerberg@mariaakerberg.com>, 2024
-# Lasse L, 2024
-# Chrille Hedberg <hedberg.chrille@gmail.com>, 2024
+# Leif Persson <leifpz54@gmail.com>, 2023
+# Kim Asplund <kim.asplund@gmail.com>, 2023
+# Martin Wilderoth <martin.wilderoth@linserv.se>, 2023
+# Kristoffer Grundström <lovaren@gmail.com>, 2023
+# Christelle Wehbe <libanon_cristelle@hotmail.com>, 2023
+# Haojun Zou <apollo_zhj@msn.com>, 2023
+# Robin Calvin, 2023
+# Simon S, 2023
+# 3eec91a23d05c632ffac786ac42b81b8_b6fff7b <8985b7bc57db860af29969457dbb51b3_1018915>, 2023
+# Chrille Hedberg <hedberg.chrille@gmail.com>, 2023
+# Mikael Åkerberg <mikael.akerberg@mariaakerberg.com>, 2023
+# Martin Trigaux, 2023
+# Lasse L, 2023
+# Zou Haojun <haojunzou84@gmail.com>, 2023
 # Anders Wallenquist <anders.wallenquist@vertel.se>, 2024
 # Jakob Krabbe <jakob.krabbe@vertel.se>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:55+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Jakob Krabbe <jakob.krabbe@vertel.se>, 2024\n"
 "Language-Team: Swedish (https://app.transifex.com/odoo/teams/41243/sv/)\n"
 "MIME-Version: 1.0\n"
@@ -36,12 +37,9 @@ msgstr ""
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
-msgid ""
-"%(credit_count)d credits will be consumed to find %(company_count)d "
-"companies."
-msgstr ""
-"%(credit_count)d krediter kommer att förbrukas för att "
-"hitta%(company_count)d företag."
+#, python-format
+msgid "%d credits will be consumed to find %d companies."
+msgstr "%d krediter kommer att förbrukas för att hitta %d företag."
 
 #. module: crm_iap_mine
 #: model_terms:ir.ui.view,arch_db:crm_iap_mine.enrich_company
@@ -155,7 +153,7 @@ msgstr "Kommunikation"
 #. module: crm_iap_mine
 #: model:ir.model.fields.selection,name:crm_iap_mine.selection__crm_iap_lead_mining_request__search_type__companies
 msgid "Companies"
-msgstr "Företag"
+msgstr "Bolag"
 
 #. module: crm_iap_mine
 #: model:ir.model.fields.selection,name:crm_iap_mine.selection__crm_iap_lead_mining_request__search_type__people
@@ -205,6 +203,7 @@ msgstr "Länder"
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#, python-format
 msgid "Create a Lead Mining Request"
 msgstr "Skapa en begäran om lead mining"
 
@@ -235,6 +234,11 @@ msgstr "Kundtjänst"
 #: model_terms:ir.ui.view,arch_db:crm_iap_mine.crm_iap_lead_mining_request_view_form
 msgid "Default Tags"
 msgstr "Standardetiketter"
+
+#. module: crm_iap_mine
+#: model:ir.model.fields,field_description:crm_iap_mine.field_crm_iap_lead_mining_request__display_lead_label
+msgid "Display Lead Label"
+msgstr "Display Lead Etikett"
 
 #. module: crm_iap_mine
 #: model:ir.model.fields,field_description:crm_iap_mine.field_crm_iap_lead_helpers__display_name
@@ -306,7 +310,7 @@ msgstr "Filter på storlek"
 #. module: crm_iap_mine
 #: model:crm.iap.lead.role,name:crm_iap_mine.crm_iap_mine_role_7
 msgid "Finance"
-msgstr "Ekonomi"
+msgstr "Finans"
 
 #. module: crm_iap_mine
 #: model:crm.iap.lead.industry,name:crm_iap_mine.crm_iap_mine_industry_153_154
@@ -331,12 +335,14 @@ msgstr "Från"
 #: model_terms:ir.ui.view,arch_db:crm_iap_mine.crm_lead_view_tree_lead
 #: model_terms:ir.ui.view,arch_db:crm_iap_mine.crm_lead_view_tree_opportunity
 #: model_terms:ir.ui.view,arch_db:crm_iap_mine.view_crm_lead_kanban
+#, python-format
 msgid "Generate Leads"
 msgstr "Skapa kundämne"
 
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#, python-format
 msgid "Generate new leads based on their country, industry, size, etc."
 msgstr "Generera nya kundämnen baserat på land, bransch, storlek, etc."
 
@@ -348,7 +354,7 @@ msgstr "Skapa kundämne / Affärsmöjlighet"
 #. module: crm_iap_mine
 #: model_terms:ir.ui.view,arch_db:crm_iap_mine.crm_iap_lead_mining_request_view_search
 msgid "Group By"
-msgstr "Grupp Av"
+msgstr "Gruppera efter"
 
 #. module: crm_iap_mine
 #: model:crm.iap.lead.industry,name:crm_iap_mine.crm_iap_mine_industry_160
@@ -473,7 +479,7 @@ msgstr "Huvudroll Total Credits"
 #. module: crm_iap_mine
 #: model:ir.model,name:crm_iap_mine.model_crm_lead
 msgid "Lead/Opportunity"
-msgstr "Kundämne/Möjlighet"
+msgstr "Affärsmöjlighet/Möjlighet"
 
 #. module: crm_iap_mine
 #: model:ir.model.fields.selection,name:crm_iap_mine.selection__crm_iap_lead_mining_request__lead_type__lead
@@ -484,11 +490,12 @@ msgstr "Kundämnen"
 #. module: crm_iap_mine
 #: model:crm.iap.lead.role,name:crm_iap_mine.crm_iap_mine_role_12
 msgid "Legal"
-msgstr "Rättslig"
+msgstr "Juridisk"
 
 #. module: crm_iap_mine
 #. odoo-javascript
 #: code:addons/crm_iap_mine/static/src/js/tours/crm_iap_lead.js:0
+#, python-format
 msgid ""
 "Looking for more opportunities?<br>Try the <b>Lead Generation</b> tool."
 msgstr ""
@@ -523,12 +530,17 @@ msgstr "Namnet finns redan!"
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_lead.py:0
+#, python-format
 msgid "Need help reaching your target?"
 msgstr "Behöver du hjälp med att nå ditt mål?"
 
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#, python-format
 msgid "New"
 msgstr "Ny"
 
@@ -540,6 +552,7 @@ msgstr "Inget resultat"
 #. module: crm_iap_mine
 #. odoo-javascript
 #: code:addons/crm_iap_mine/static/src/js/tours/crm_iap_lead.js:0
+#, python-format
 msgid "Now, just let the magic happen!"
 msgstr "Låt magin ta vid!"
 
@@ -573,6 +586,7 @@ msgstr "Möjligheter"
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#, python-format
 msgid "Opportunity created by Odoo Lead Generation"
 msgstr "Möjlighet skapad av Odoo Lead Generation"
 
@@ -693,7 +707,7 @@ msgstr "Försäljning"
 #: model:ir.model.fields,field_description:crm_iap_mine.field_crm_iap_lead_mining_request__team_id
 #: model_terms:ir.ui.view,arch_db:crm_iap_mine.crm_iap_lead_mining_request_view_search
 msgid "Sales Team"
-msgstr "Säljlag"
+msgstr "Säljteam"
 
 #. module: crm_iap_mine
 #: model:ir.model.fields,field_description:crm_iap_mine.field_crm_iap_lead_mining_request__user_id
@@ -760,6 +774,7 @@ msgstr "Telekommunikationstjänster"
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#, python-format
 msgid "This makes a total of %d credits for this request."
 msgstr "Detta ger totalt %d krediter för denna begäran."
 
@@ -777,16 +792,18 @@ msgstr "Typ"
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#, python-format
 msgid ""
-"Up to %(credit_count)d additional credits will be consumed to identify "
-"%(contact_count)d contacts per company."
+"Up to %d additional credits will be consumed to identify %d contacts per "
+"company."
 msgstr ""
-"Upp till %(credit_count)d ytterligare krediter kommer att förbrukas för att "
-"identifiera %(contact_count)d kontakter per företag."
+"Upp till %d ytterligare krediter kommer att förbrukas för att identifiera %d"
+" kontakter per företag."
 
 #. module: crm_iap_mine
 #. odoo-javascript
 #: code:addons/crm_iap_mine/static/src/js/tours/crm_iap_lead.js:0
+#, python-format
 msgid "Which Industry do you want to target?"
 msgstr "Vilken bransch vill du rikta in dig på?"
 
@@ -798,6 +815,7 @@ msgstr "Du har inte tillräckligt med poäng för att skicka in denna begäran."
 #. module: crm_iap_mine
 #. odoo-python
 #: code:addons/crm_iap_mine/models/crm_iap_lead_mining_request.py:0
+#, python-format
 msgid "Your request could not be executed: %s"
 msgstr "Din begäran kunde inte utföras: %s"
 

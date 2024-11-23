@@ -3,16 +3,6 @@
 import { Component } from "@odoo/owl";
 
 export class ProjectProfitability extends Component {
-
-    static props = {
-        data: Object,
-        labels: Object,
-        formatMonetary: Function,
-        onProjectActionClick: Function,
-        onClick: Function,
-    };
-    static template = "project.ProjectProfitability";
-
     get revenues() {
         return this.props.data.revenues;
     }
@@ -31,3 +21,11 @@ export class ProjectProfitability extends Component {
         };
     }
 }
+
+ProjectProfitability.props = {
+    data: Object,
+    labels: Object,
+    formatMonetary: Function,
+    onClick: Function,
+};
+ProjectProfitability.template = 'project.ProjectProfitability';

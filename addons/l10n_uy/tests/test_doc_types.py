@@ -8,9 +8,8 @@ from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 class TestDocTypes(AccountTestInvoicingCommon):
 
     @classmethod
-    @AccountTestInvoicingCommon.setup_country('uy')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref='uy'):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         service_vat_22 = cls.env["product.product"].create({
             "name": "Virtual Home Staging (VAT 22)",

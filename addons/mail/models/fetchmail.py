@@ -12,7 +12,7 @@ from socket import gaierror, timeout
 from ssl import SSLError
 
 from odoo import api, fields, models, tools, _
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
 
 
 _logger = logging.getLogger(__name__)
@@ -184,16 +184,16 @@ odoo_mailgate: "|/path/to/odoo-mailgate.py --host=localhost -u %(uid)d -p PASSWO
                 connection = server.connect(allow_archived=True)
                 server.write({'state': 'done'})
             except UnicodeError as e:
-                raise UserError(_("Invalid server name!\n %s", tools.exception_to_unicode(e)))
+                raise UserError(_("Invalid server name!\n %s", tools.ustr(e)))
             except (gaierror, timeout, IMAP4.abort) as e:
-                raise UserError(_("No response received. Check server information.\n %s", tools.exception_to_unicode(e)))
+                raise UserError(_("No response received. Check server information.\n %s", tools.ustr(e)))
             except (IMAP4.error, poplib.error_proto) as err:
-                raise UserError(_("Server replied with following exception:\n %s", tools.exception_to_unicode(err)))
+                raise UserError(_("Server replied with following exception:\n %s", tools.ustr(err)))
             except SSLError as e:
-                raise UserError(_("An SSL exception occurred. Check SSL/TLS configuration on server port.\n %s", tools.exception_to_unicode(e)))
+                raise UserError(_("An SSL exception occurred. Check SSL/TLS configuration on server port.\n %s", tools.ustr(e)))
             except (OSError, Exception) as err:
                 _logger.info("Failed to connect to %s server %s.", server.server_type, server.name, exc_info=True)
-                raise UserError(_("Connection test failed: %s", tools.exception_to_unicode(err)))
+                raise UserError(_("Connection test failed: %s", tools.ustr(err)))
             finally:
                 try:
                     if connection:
@@ -210,9 +210,9 @@ odoo_mailgate: "|/path/to/odoo-mailgate.py --host=localhost -u %(uid)d -p PASSWO
     @api.model
     def _fetch_mails(self):
         """ Method called by cron to fetch mails from servers """
-        return self.search([('state', '=', 'done'), ('server_type', '!=', 'local')]).fetch_mail(raise_exception=False)
+        return self.search([('state', '=', 'done'), ('server_type', '!=', 'local')]).fetch_mail()
 
-    def fetch_mail(self, raise_exception=True):
+    def fetch_mail(self):
         """ WARNING: meant for cron usage only - will commit() after each email! """
         additionnal_context = {
             'fetchmail_cron_running': True
@@ -243,11 +243,8 @@ odoo_mailgate: "|/path/to/odoo-mailgate.py --host=localhost -u %(uid)d -p PASSWO
                         self._cr.commit()
                         count += 1
                     _logger.info("Fetched %d email(s) on %s server %s; %d succeeded, %d failed.", count, server.server_type, server.name, (count - failed), failed)
-                except Exception as e:
-                    if raise_exception:
-                        raise ValidationError(_("Couldn't get your emails. Check out the error message below for more info:\n%s", e)) from e
-                    else:
-                        _logger.info("General failure when trying to fetch mail from %s server %s.", server.server_type, server.name, exc_info=True)
+                except Exception:
+                    _logger.info("General failure when trying to fetch mail from %s server %s.", server.server_type, server.name, exc_info=True)
                 finally:
                     if imap_server:
                         try:
@@ -280,11 +277,8 @@ odoo_mailgate: "|/path/to/odoo-mailgate.py --host=localhost -u %(uid)d -p PASSWO
                         if num_messages < MAX_POP_MESSAGES or failed_in_loop == num:
                             break
                         pop_server.quit()
-                except Exception as e:
-                    if raise_exception:
-                        raise ValidationError(_("Couldn't get your emails. Check out the error message below for more info:\n%s", e)) from e
-                    else:
-                        _logger.info("General failure when trying to fetch mail from %s server %s.", server.server_type, server.name, exc_info=True)
+                except Exception:
+                    _logger.info("General failure when trying to fetch mail from %s server %s.", server.server_type, server.name, exc_info=True)
                 finally:
                     if pop_server:
                         try:

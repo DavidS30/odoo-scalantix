@@ -11,7 +11,7 @@
                     <t t-else="">Tax ID</t>: <span t-field="o.partner_id.vat"/></div>
             </t>
 
-            <t t-set="o_sec" t-value="o.with_context(lang=o.env['res.lang']._get_code('ar_001'))"/>
+            <t t-set="o_sec" t-value="o.with_context(lang='ar_001')"/>
             <t t-set="o" t-value="o.with_context(lang='en_US')"/>
 
             <div class="page">
@@ -152,7 +152,7 @@
                 </div>
 
                 <t t-set="display_discount" t-value="any(l.discount for l in o.invoice_line_ids)"/>
-                <table class="o_has_total_table table table-borderless o_main_table" name="invoice_line_table">
+                <table class="table table-sm o_main_table" name="invoice_line_table">
                     <thead>
                         <tr>
                             <t t-set="colspan" t-value="6"/>
@@ -253,7 +253,7 @@
                             <t t-set="current_subtotal" t-value="current_subtotal + line.price_subtotal"/>
                             <t t-set="current_total" t-value="current_subtotal + line.price_total" t-if="o.tax_calculation_rounding_method == 'round_per_line'"/>
 
-                            <tr t-att-class="'fw-bold o_line_section' if line.display_type == 'line_section' else 'fst-italic o_line_note' if line.display_type == 'line_note' else ''">
+                            <tr t-att-class="'bg-200 fw-bold o_line_section' if line.display_type == 'line_section' else 'fst-italic o_line_note' if line.display_type == 'line_note' else ''">
                                 <t t-if="line.display_type not in ('line_note', 'line_section')" name="account_invoice_line_accountable">
                                     <td class="text-end o_price_total">
                                         <span class="text-nowrap" t-field="line.price_total"/>
@@ -282,7 +282,7 @@
                                     </td>
                                     <td name="account_invoice_line_name">
                                         <t t-set="line_name" t-value="line.name or line.with_context(lang=o.partner_id.lang).product_id.display_name"/>
-                                        <span t-out="line_name" t-options="{'widget': 'text'}" t-att-dir="o.env['res.lang']._get_data(code=o.partner_id.lang).direction"/>
+                                        <span t-out="line_name" t-options="{'widget': 'text'}" t-att-dir="o.env['res.lang']._lang_get_direction(o.partner_id.lang)"/>
                                     </td>
 
                                 </t>
@@ -316,10 +316,10 @@
                 </table>
 
                 <div class="clearfix pt-4 pb-3">
-                    <div id="total" class="row mt-n3">
+                    <div id="total" class="row">
                         <div class="col-6">
-                            <table class="o_total_table table table-borderless" style="page-break-inside: avoid;">
-                                <tr class="o_subtotal">
+                            <table class="table table-sm" style="page-break-inside: avoid;">
+                                <tr class="border-black o_subtotal">
                                     <td class="text-end">
                                         <span t-field="o.amount_untaxed"/>
                                     </td>
@@ -332,49 +332,34 @@
                                     </td>
                                 </tr>
                                 <t t-set="tax_totals" t-value="o.tax_totals"/>
-                                <t t-set="currency" t-value="o.currency_id"/>
-                                <t t-set="same_tax_base" t-value="tax_totals['same_tax_base']"/>
                                 <t t-foreach="tax_totals['subtotals']" t-as="subtotal">
-                                    <t t-foreach="subtotal['tax_groups']" t-as="tax_group">
-                                        <tr class="o_taxes">
+                                    <t t-set="subtotal_to_show" t-value="subtotal['name']"/>
+                                    <!-- copy-pasted template "account.tax_groups_totals" with reversed columns order -->
+                                    <t t-foreach="tax_totals['groups_by_subtotal'][subtotal_to_show]" t-as="amount_by_group">
+                                        <tr>
                                             <td class="text-end o_price_total">
-                                                <span class="text-nowrap"
-                                                      t-out="tax_group['tax_amount_currency']"
-                                                      t-options='{"widget": "monetary", "display_currency": currency}'
-                                                >1.05</span>
+                                                <span class="text-nowrap" t-esc="amount_by_group['formatted_tax_group_amount']"/>
                                             </td>
-                                            <t t-set="arabic_tax_group_name" t-value="o_sec.tax_totals['subtotals'][subtotal_index]['tax_groups'][tax_group_index]['group_name']"/>
-                                            <t t-if="same_tax_base or tax_group['display_base_amount_currency'] is None">
-                                                <td class="text-end">
-                                                    <strong class="text-nowrap" t-out="tax_group['group_name']">Tax 15%</strong>
-                                                    <strong t-if="arabic_tax_group_name != tax_group['group_name']" class="text-nowrap">/
+                                            <td class="text-end">
+                                                <strong>
+                                                    <span t-esc="amount_by_group['tax_group_name']"/>
+                                                    <t t-if="tax_totals['display_tax_base']">
+                                                        <span class="text-nowrap"> on
+                                                            <t t-esc="amount_by_group['formatted_tax_group_base_amount']"/>
+                                                        </span>
+                                                    </t>
+                                                    <!-- Arabic translation of tax group -->
+                                                    <t t-set="arabic_tax_group_name" t-value="o_sec.tax_totals['groups_by_subtotal'][o_sec.tax_totals['subtotals'][subtotal_index]['name']][amount_by_group_index]['tax_group_name']"/>
+                                                    <span t-if="arabic_tax_group_name != amount_by_group['tax_group_name']" class="text-nowrap">/
                                                         <t t-esc="arabic_tax_group_name"/>
-                                                    </strong>
-                                                </td>
-                                            </t>
-                                            <t t-else="">
-                                                <td class="text-end o_price_total">
-                                                    <span class="text-nowrap"
-                                                          t-out="tax_group['display_base_amount_currency']"
-                                                          t-options='{"widget": "monetary", "display_currency": currency}'
-                                                    >4.05</span>
-                                                </td>
-                                                <td>
-                                                    <span t-out="tax_group['group_name']">Tax 15%</span>
-                                                    <strong t-if="arabic_tax_group_name != tax_group['group_name']" class="text-nowrap">/
-                                                        <t t-esc="arabic_tax_group_name"/>
-                                                    </strong>
-                                                    <span> on </span>
-                                                    <span class="text-nowrap"
-                                                          t-out="tax_group['display_base_amount_currency']"
-                                                          t-options='{"widget": "monetary", "display_currency": currency}'
-                                                    >27.00</span>
-                                                </td>
-                                            </t>
+                                                    </span>
+                                                </strong>
+                                            </td>
                                         </tr>
                                     </t>
+
                                 </t>
-                                <tr class="o_total">
+                                <tr class="border-black o_total">
                                     <td class="text-end">
                                         <span class="text-nowrap" t-field="o.amount_total"/>
                                     </td>
@@ -391,7 +376,7 @@
                                     <t t-if="o.payment_state != 'invoicing_legacy'">
                                         <t t-set="payments_vals" t-value="o.sudo().invoice_payments_widget and o.sudo().invoice_payments_widget['content'] or []"/>
                                         <t t-foreach="payments_vals" t-as="payment_vals">
-                                            <tr class="o_total">
+                                            <tr class="border-black o_total">
                                                 <td>
                                                     <i class="row">
                                                         <div class="col-7 oe_form_field oe_payment_label">
@@ -409,7 +394,7 @@
                                             </tr>
                                         </t>
                                         <t t-if="len(payments_vals) > 0">
-                                            <tr class="border-top">
+                                            <tr class="border-black">
                                                 <td>
                                                     <strong>
                                                         Amount Due
@@ -444,34 +429,34 @@
                      class="row clearfix ms-auto text-nowrap border-top border-bottom p-2">
                     <t t-set="exchange_rate"
                        t-value="abs(o.amount_total_signed) / o.amount_total if o.amount_total else 0"/>
-                    <div name="exchange_rate" class="col">
+                    <div name="exchange_rate" t-attf-class="#{'col-auto col-3 mw-100' if report_type != 'html' else 'col'}">
                         <strong>سعر الصرف</strong><br/>
                         <strong>Exchange Rate</strong>
-                        <div
+                        <p class="m-0"
                            t-out="exchange_rate"
                            t-options='{"widget": "float", "precision": 5}'
                         />
                     </div>
-                    <div name="subtotal_company_currency" class="col">
+                    <div name="subtotal_company_currency" t-attf-class="#{'col-auto col-3 mw-100' if report_type != 'html' else 'col'}">
                         <strong>الإجمالي الفرعي</strong><br/>
                         <strong>Subtotal</strong>
-                        <div
+                        <p class="m-0"
                            t-out="abs(o.amount_untaxed_signed)"
                            t-options='{"widget": "monetary", "display_currency": o.company_currency_id}'
                         />
                     </div>
-                    <div name="vat_amount_company_currency" class="col">
+                    <div name="vat_amount_company_currency" t-attf-class="#{'col-auto col-3 mw-100' if report_type != 'html' else 'col'}">
                         <strong>قيمة الضريبة</strong><br/>
                         <strong>VAT Amount</strong>
-                        <div
+                        <p class="m-0"
                            t-out="abs(o.amount_tax_signed)"
                            t-options='{"widget": "monetary", "display_currency": o.company_currency_id}'
                         />
                     </div>
-                    <div name="total_company_currency" class="col">
+                    <div name="total_company_currency" t-attf-class="#{'col-auto col-3 mw-100' if report_type != 'html' else 'col'}">
                         <strong>المجموع</strong><br/>
                         <strong>Total</strong>
-                        <div
+                        <p class="m-0"
                            t-out="abs(o.amount_total_signed)"
                            t-options='{"widget": "monetary", "display_currency": o.company_currency_id}'
                         />
@@ -480,10 +465,10 @@
 
                 <p name="payment_communication" t-if="0"></p>
                 <div class="row" t-if="o.move_type in ('out_invoice', 'in_refund') and o.payment_reference" name="payment_communication">
-                    <div class="col-2">
+                    <div class="col-2 offset-6">
                         <strong>Payment Reference:</strong>
                     </div>
-                    <div class="col-2 text-center">
+                    <div class="col-2">
                         <span class="fw-bold" t-field="o.payment_reference"/>
                     </div>
                     <div class="col-2 text-end">
@@ -494,10 +479,10 @@
                 <p t-if="o.invoice_payment_term_id" name="payment_term">
                     <div class="row">
                         <div class="col-6 text-start">
-                            <span t-out="o.invoice_payment_term_id.note"/>
+                            <span t-if="o.invoice_payment_term_id.note != o_sec.invoice_payment_term_id.note" t-out="o.invoice_payment_term_id.note"/>
                         </div>
                         <div class="col-6 text-end">
-                            <span dir="rtl" t-if="o.invoice_payment_term_id.note != o_sec.invoice_payment_term_id.note" t-out="o_sec.invoice_payment_term_id.note"/>
+                            <span dir="rtl" t-out="o_sec.invoice_payment_term_id.note"/>
                         </div>
 
                     </div>

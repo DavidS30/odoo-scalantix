@@ -54,9 +54,8 @@ class AccountPayment(models.Model):
                 or tx_sudo.payment_method_id
             )
             if (
-                tx_sudo  # The payment was created by a transaction.
-                and tx_sudo.provider_id.support_refund != 'none'
-                and payment_method.support_refund != 'none'
+                tx_sudo.provider_id.support_refund
+                and payment_method.support_refund
                 and tx_sudo.operation != 'refund'
             ):
                 # Only consider refund transactions that are confirmed by summing the amounts of
@@ -112,12 +111,12 @@ class AccountPayment(models.Model):
             self.payment_token_id = False
             return
 
-        self.payment_token_id = self.env['payment.token'].search([
+        self.payment_token_id = self.env['payment.token'].sudo().search([
             *self.env['payment.token']._check_company_domain(self.company_id),
             ('partner_id', '=', self.partner_id.id),
             ('provider_id.capture_manually', '=', False),
             ('provider_id', '=', self.payment_method_line_id.payment_provider_id.id),
-         ], limit=1)
+         ], limit=1)  # In sudo mode to read the provider fields.
 
     #=== ACTION METHODS ===#
 
@@ -138,7 +137,7 @@ class AccountPayment(models.Model):
             tx._send_payment_request()
 
         # Post payments for issued transactions
-        transactions._post_process()
+        transactions._finalize_post_processing()
         payments_tx_done = payments_need_tx.filtered(
             lambda p: p.payment_transaction_id.state == 'done'
         )
@@ -174,7 +173,7 @@ class AccountPayment(models.Model):
             action['res_id'] = refund_tx.id
             action['view_mode'] = 'form'
         else:
-            action['view_mode'] = 'list,form'
+            action['view_mode'] = 'tree,form'
             action['domain'] = [('source_payment_id', '=', self.id)]
         return action
 
@@ -204,7 +203,7 @@ class AccountPayment(models.Model):
             'provider_id': self.payment_token_id.provider_id.id,
             'payment_method_id': self.payment_token_id.payment_method_id.id,
             'reference': self.env['payment.transaction']._compute_reference(
-                self.payment_token_id.provider_id.code, prefix=self.memo
+                self.payment_token_id.provider_id.code, prefix=self.ref
             ),
             'amount': self.amount,
             'currency_id': self.currency_id.id,

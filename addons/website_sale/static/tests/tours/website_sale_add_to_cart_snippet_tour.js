@@ -1,59 +1,85 @@
 /** @odoo-module **/
 
-import { goToCart, assertCartContains } from '@website_sale/js/tours/tour_utils';
-import { registerWebsitePreviewTour, clickOnEditAndWaitEditMode, clickOnSnippet, insertSnippet, selectElementInWeSelectWidget, clickOnSave, clickOnElement, assertPathName } from '@website/js/tours/tour_utils';
-
+import wsTourUtils from '@website_sale/js/tours/tour_utils';
+import wTourUtils from '@website/js/tours/tour_utils';
 
 function editAddToCartSnippet() {
     return [
-        ...clickOnEditAndWaitEditMode(),
-        ...clickOnSnippet({id: 's_add_to_cart'})
+        ...wTourUtils.clickOnEditAndWaitEditMode(),
+        wTourUtils.clickOnSnippet({id: 's_add_to_cart'})
     ]
 }
 
-registerWebsitePreviewTour('add_to_cart_snippet_tour', {
+wTourUtils.registerWebsitePreviewTour('add_to_cart_snippet_tour', {
         url: '/',
         edition: true,
+        test: true,
     },
     () => [
-        ...insertSnippet({name: 'Add to Cart Button'}),
+        wTourUtils.dragNDrop({name: 'Add to Cart Button'}),
 
         // Basic product with no variants
-        ...clickOnSnippet({id: 's_add_to_cart'}),
-        ...selectElementInWeSelectWidget('product_template_picker_opt', 'Pedal Bin', true),
-        ...clickOnSave(),
-        clickOnElement('add to cart button', ':iframe .s_add_to_cart_btn'),
-
+        wTourUtils.clickOnSnippet({id: 's_add_to_cart'}),
+        ...wTourUtils.selectElementInWeSelectWidget('product_template_picker_opt', 'Product No Variant', true),
+        ...wTourUtils.clickOnSave(),
+        wTourUtils.clickOnElement('add to cart button', 'iframe .s_add_to_cart_btn'),
+        {
+            trigger: "iframe nav li.o_wsale_my_cart sup:contains(1)",
+            run: () => null,
+        },
         // Product with 2 variants with visitor choice (will open modal)
         ...editAddToCartSnippet(),
-        ...selectElementInWeSelectWidget('product_template_picker_opt', 'Conference Chair', true),
-        ...clickOnSave(),
-        clickOnElement('add to cart button', ':iframe .s_add_to_cart_btn'),
-        clickOnElement('continue shopping', ':iframe span:contains(Continue Shopping)'),
+        ...wTourUtils.selectElementInWeSelectWidget('product_template_picker_opt', 'Product Yes Variant 1', true),
+        ...wTourUtils.clickOnSave(),
+        wTourUtils.clickOnElement('add to cart button', 'iframe .s_add_to_cart_btn'),
+        wTourUtils.clickOnElement('continue shopping', 'iframe span:contains(Continue Shopping)'),
+        {
+            trigger: "body:not(:has(.modal))",
+            run: () => null,
+        },
+        {
+            trigger: "iframe nav li.o_wsale_my_cart sup:contains(2)",
+            run: () => null,
+        },
 
         // Product with 2 variants with a variant selected
-        ...editAddToCartSnippet(),
-        ...selectElementInWeSelectWidget('product_template_picker_opt', 'Conference Chair', true),
-        ...selectElementInWeSelectWidget('product_variant_picker_opt', 'Conference Chair (Aluminium)'),
-        ...clickOnSave(),
-        clickOnElement('add to cart button', ':iframe .s_add_to_cart_btn'),
+        // ...editAddToCartSnippet(),
+        // ...wTourUtils.selectElementInWeSelectWidget('product_template_picker_opt', 'Product Yes Variant 2', true),
+        // {
+        //     run: () => null,
+        //     trigger:
+        //         `we-select[data-name=product_variant_picker_opt] we-toggler:contains("Visitor's Choice")`,
+        // },
+        // ...wTourUtils.selectElementInWeSelectWidget('product_variant_picker_opt', 'Product Yes Variant 2 (Pink)'),
+        // ...wTourUtils.clickOnSave(),
+        // wTourUtils.clickOnElement('add to cart button', 'iframe .s_add_to_cart_btn'),
+        // {
+        //     trigger: "iframe nav li.o_wsale_my_cart sup:contains(3)",
+        //     run: () => null,
+        // },
+        // TODO edm: re-enable this part when this isn't an indeterminist error anymore
 
         // Basic product with no variants and action=buy now
         ...editAddToCartSnippet(),
-        ...selectElementInWeSelectWidget('product_template_picker_opt', 'Pedal Bin', true),
-        ...selectElementInWeSelectWidget('action_picker_opt', 'Buy Now'),
-        ...clickOnSave(),
-        clickOnElement('add to cart button', ':iframe .s_add_to_cart_btn'),
+        ...wTourUtils.selectElementInWeSelectWidget('product_template_picker_opt', 'Product No Variant', true),
         {
-            // wait for the page to load, as the next check was sometimes too fast
-            content: "Wait for the redirection to the payment page",
-            trigger: 'body',
+            trigger: `we-select[data-name=action_picker_opt] we-toggler:contains("Add to Cart")`,
+            run: () => null,
         },
-        assertPathName('/shop/payment', ':iframe a[href="/shop/cart"]'),
+        ...wTourUtils.selectElementInWeSelectWidget('action_picker_opt', 'Buy Now'),
+        ...wTourUtils.clickOnSave(),
+        wTourUtils.clickOnElement('add to cart button', 'iframe .s_add_to_cart_btn'),
+        {
+            content: "Wait for the redirection to the payment page",
+            trigger: "iframe h3:contains('Confirm order')",
+            timeout: 20000,
+            run: () => null,
+        },
+        wTourUtils.assertPathName('/shop/payment', 'iframe a[href="/shop/cart"]'),
 
-        goToCart({quantity: 4, backend: true}),
-        assertCartContains({productName: 'Pedal Bin', backend: true}),
-        assertCartContains({productName: 'Conference Chair (Steel)', backend: true}),
-        assertCartContains({productName: 'Conference Chair (Aluminium)', backend: true}),
+        wsTourUtils.goToCart({quantity: 3, backend: true}),
+        wsTourUtils.assertCartContains({productName: 'Product No Variant', backend: true}),
+        wsTourUtils.assertCartContains({productName: 'Product Yes Variant 1 (Red)', backend: true}),
+        // wsTourUtils.assertCartContains({productName: 'Product Yes Variant 2 (Pink)'}),
     ],
 );

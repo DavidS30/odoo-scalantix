@@ -3,30 +3,30 @@
 # 	* gamification
 # 
 # Translators:
-# Tiffany Chang, 2024
-# Jenni Heikkilä <jenni.heikkila@sv-oy.fi>, 2024
-# Eino Mäkitalo <eino.makitalo@netitbe.fi>, 2024
-# Svante Suominen <svante.suominen@web-veistamo.fi>, 2024
-# Timo Koukkari <ti.ko@netikka.fi>, 2024
-# Jussi Lehto <jussi@gulfeo.com>, 2024
-# Sari Mäyrä <sari.mayra@sv-oy.fi>, 2024
-# Miku Laitinen <miku.laitinen@gmail.com>, 2024
-# Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2024
-# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2024
-# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2024
-# Kari Lindgren <kari.lindgren@emsystems.fi>, 2024
-# Johanna Valkonen <miujohanna@gmail.com>, 2024
-# Martin Trigaux, 2024
-# Miika Nissi <miika.nissi@tawasta.fi>, 2024
-# Topi Aura <topi@aurat.fi>, 2024
+# Timo Koukkari <ti.ko@netikka.fi>, 2023
+# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2023
+# Svante Suominen <svante.suominen@web-veistamo.fi>, 2023
+# Johanna Valkonen <miujohanna@gmail.com>, 2023
+# Jussi Lehto <jussi@gulfeo.com>, 2023
+# Sari Mäyrä <sari.mayra@sv-oy.fi>, 2023
+# Kari Lindgren <kari.lindgren@emsystems.fi>, 2023
+# Jenni Heikkilä <jenni.heikkila@sv-oy.fi>, 2023
+# Eino Mäkitalo <eino.makitalo@netitbe.fi>, 2023
+# Miku Laitinen <miku.laitinen@gmail.com>, 2023
+# Joni Winsten, 2023
+# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2023
+# Martin Trigaux, 2023
+# Topi Aura <topi@aurat.fi>, 2023
+# Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2023
+# Miika Nissi <miika.nissi@tawasta.fi>, 2023
 # Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:56+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024\n"
 "Language-Team: Finnish (https://app.transifex.com/odoo/teams/41243/fi/)\n"
 "MIME-Version: 1.0\n"
@@ -44,19 +44,21 @@ msgstr "# Käyttäjiä"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid "%s has joined the challenge"
 msgstr "%s on liittynyt haasteeseen"
 
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid "%s has refused the challenge"
 msgstr "%s on hylännyt haasteen"
 
 #. module: gamification
 #: model:mail.template,body_html:gamification.mail_template_data_new_rank_reached
 msgid ""
-"<div style=\"color:#515166;padding:10px 0px;font-family:Arial,Helvetica,sans-serif;font-size:14px;\">\n"
+"<div style=\"background:#F0F0F0;color:#515166;padding:10px 0px;font-family:Arial,Helvetica,sans-serif;font-size:14px;\">\n"
 "<table style=\"width:600px;margin:0px auto;background:white;border:1px solid #e1e1e1;\">\n"
 "    <tbody>\n"
 "        <tr>\n"
@@ -86,18 +88,53 @@ msgid ""
 "                </p>\n"
 "            </td>\n"
 "        </tr>\n"
-"        <tr>\n"
-"            <td t-if=\"not user.share and user.active\" style=\"padding:15px 20px 10px 20px;\">\n"
+"        <tr t-if=\"user.signature\">\n"
+"            <td style=\"padding:15px 20px 10px 20px;\">\n"
 "                <t t-out=\"user.signature or ''\">--<br>Mitchell Admin</t>\n"
-"            </td>\n"
-"            <td t-else=\"\" style=\"padding:15px 20px 10px 20px;\">\n"
-"                <t t-out=\"user.company_id.name or ''\"></t>\n"
 "            </td>\n"
 "        </tr>\n"
 "    </tbody>\n"
 " </table>\n"
 "</div>"
 msgstr ""
+"<div style=\"background:#F0F0F0;color:#515166;padding:10px 0px;font-family:Arial,Helvetica,sans-serif;font-size:14px;\">\n"
+"<table style=\"width:600px;margin:0px auto;background:white;border:1px solid #e1e1e1;\">\n"
+"    <tbody>\n"
+"        <tr>\n"
+"            <td style=\"padding:15px 20px 10px 20px;\">\n"
+"                <p>\n"
+"                    Onnittelut\n"
+"                   <span t-out=\"object.name or ''\">Joel Willis</span>!\n"
+"                </p>\n"
+"                <p>\n"
+"                    Saavutit juuri uuden sijoituksen: <strong t-out=\"object.rank_id.name or ''\">Aloittelija</strong>\n"
+"                </p>\n"
+"                <t t-if=\"object.next_rank_id.name\">\n"
+"                    <p>Jatka työtäsi tullaksesi <strong t-out=\"object.next_rank_id.name or ''\">opiskelijaksi</strong>!</p>\n"
+"                </t>\n"
+"                <div style=\"margin: 16px 0px 16px 0px;\">\n"
+"                    <t t-set=\"gamification_redirection_data\" t-value=\"object.get_gamification_redirection_data()\"></t>\n"
+"                    <t t-foreach=\"gamification_redirection_data\" t-as=\"data\">\n"
+"                        <t t-set=\"url\" t-value=\"data['url']\"></t>\n"
+"                        <t t-set=\"label\" t-value=\"data['label']\"></t>\n"
+"                        <a t-att-href=\"url\" style=\"background-color: #875A7B; padding: 8px 16px 8px 16px; text-decoration: none; color: #fff; border-radius: 5px; font-size:13px;\" t-out=\"label or ''\">LABEL</a>\n"
+"                    </t>\n"
+"                </div>\n"
+"            </td>\n"
+"            <td style=\"padding:15px 20px 10px 20px;\">\n"
+"                <p style=\"text-align: center;\">\n"
+"                    <img t-attf-src=\"/web/image/gamification.karma.rank/{{ object.rank_id.id }}/image_128\">\n"
+"                </p>\n"
+"            </td>\n"
+"        </tr>\n"
+"        <tr t-if=\"user.signature\">\n"
+"            <td style=\"padding:15px 20px 10px 20px;\">\n"
+"                <t t-out=\"user.signature or ''\">--<br>Mitchell Ylläpitäjä</t>\n"
+"            </td>\n"
+"        </tr>\n"
+"    </tbody>\n"
+" </table>\n"
+"</div>"
 
 #. module: gamification
 #: model:mail.template,body_html:gamification.email_template_goal_reminder
@@ -806,6 +843,7 @@ msgstr "Aktiivinen"
 #: code:addons/gamification/models/gamification_karma_tracking.py:0
 #: code:addons/gamification/models/res_users.py:0
 #: code:addons/gamification/tests/test_karma_tracking.py:0
+#, python-format
 msgid "Add Manually"
 msgstr "Lisää manuaalisesti"
 
@@ -883,7 +921,7 @@ msgstr "Kandidaatti (B.Sc)"
 #: model:ir.model.fields,field_description:gamification.field_gamification_badge_user_wizard__badge_id
 #: model_terms:ir.ui.view,arch_db:gamification.badge_form_view
 msgid "Badge"
-msgstr "Nimilappu"
+msgstr "Ansiomerkki"
 
 #. module: gamification
 #: model_terms:ir.ui.view,arch_db:gamification.badge_form_view
@@ -953,6 +991,7 @@ msgstr "Ei voida myöntää"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_goal.py:0
+#, python-format
 msgid "Can not modify the configuration of a started goal"
 msgstr "Käynnistyneen tavoitteen asetuksia ei voida muuttaa"
 
@@ -964,7 +1003,7 @@ msgstr "Peruuta"
 
 #. module: gamification
 #: model:ir.model.fields.selection,name:gamification.selection__gamification_goal__state__canceled
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Peruttu"
 
 #. module: gamification
@@ -1029,11 +1068,6 @@ msgid "Closed goal"
 msgstr "Suljetut tavoitteet"
 
 #. module: gamification
-#: model:ir.model.fields,field_description:gamification.field_gamification_goal__color
-msgid "Color Index"
-msgstr "Väri-indeksi"
-
-#. module: gamification
 #: model:ir.model.fields,field_description:gamification.field_gamification_badge_user__comment
 #: model:ir.model.fields,field_description:gamification.field_gamification_badge_user_wizard__comment
 msgid "Comment"
@@ -1070,8 +1104,9 @@ msgstr "Konsolidoitu"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_karma_tracking.py:0
-msgid "Consolidation from %(from_date)s to %(end_date)s"
-msgstr ""
+#, python-format
+msgid "Consolidation from %s to %s"
+msgstr "Konsolidointi %s :sta %s :een"
 
 #. module: gamification
 #: model:ir.actions.act_window,name:gamification.action_new_simplified_res_users
@@ -1772,6 +1807,7 @@ msgstr "Karman seuranta"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/res_users.py:0
+#, python-format
 msgid "Karma Updates"
 msgstr "Karman päivitykset"
 
@@ -2001,6 +2037,7 @@ msgstr "Ei kukaan, haasteiden kautta määrätty"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid ""
 "Nobody has succeeded to reach every goal, no badge is rewarded for this "
 "challenge."
@@ -2011,6 +2048,7 @@ msgstr ""
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid "Nobody reached the required conditions to receive special badges."
 msgstr ""
 "Kukaan käyttäjistä ei saavuttanut vaadittavia ehtoja ansaitakseen "
@@ -2085,6 +2123,11 @@ msgstr "Vain nämä henkilöt voivat möyntää tämän ansiomerkin"
 #: model_terms:ir.ui.view,arch_db:gamification.goal_definition_form_view
 msgid "Optimisation"
 msgstr "Optimointi"
+
+#. module: gamification
+#: model_terms:ir.ui.view,arch_db:gamification.badge_kanban_view
+msgid "Owner"
+msgstr "Omistaja"
 
 #. module: gamification
 #: model:ir.model.fields,field_description:gamification.field_gamification_badge__owner_ids
@@ -2237,7 +2280,7 @@ msgstr "Raportoitu manuaalisesti"
 #. module: gamification
 #: model_terms:ir.ui.view,arch_db:gamification.goal_form_view
 msgid "Reference"
-msgstr "Viite"
+msgstr "Numero"
 
 #. module: gamification
 #: model_terms:ir.ui.view,arch_db:gamification.challenge_form_view
@@ -2297,6 +2340,7 @@ msgstr "Vastuuhenkilö"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid "Retrieving progress for personal challenge without user information"
 msgstr ""
 "Haetaan edistymistä henkilökohtaiseen haasteeseen ilman käyttäjätietoja"
@@ -2309,6 +2353,7 @@ msgstr "Palkinto"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid ""
 "Reward (badge %(badge_name)s) for every succeeding user was sent to "
 "%(users)s."
@@ -2491,6 +2536,7 @@ msgstr "Lähdetyyppi"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid ""
 "Special rewards were sent to the top competing users. The ranking for this "
 "challenge is:"
@@ -2568,6 +2614,8 @@ msgstr "Tavoite: vähemmän kuin"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/tests/test_karma_tracking.py:0
+#: code:addons/gamification/tests/test_karma_tracking.py:0
+#, python-format
 msgid "Test Reason"
 msgstr "Testisyy"
 
@@ -2579,6 +2627,7 @@ msgstr "Toiminto, jota kutsutaan päivittämään tavoitearvo."
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid "The challenge %s is finished."
 msgstr "Haaste on %s valmis."
 
@@ -2615,11 +2664,15 @@ msgstr ""
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_goal_definition.py:0
+#, python-format
 msgid ""
-"The domain for the definition %(definition)s seems incorrect, please check it.\n"
+"The domain for the definition %s seems incorrect, please check it.\n"
 "\n"
-"%(error_message)s"
+"%s"
 msgstr ""
+"Määritelmän %s toimialue vaikuttaa virheelliseltä, tarkista se.\n"
+"\n"
+"%s"
 
 #. module: gamification
 #: model:ir.model.fields,help:gamification.field_gamification_goal_definition__res_id_field
@@ -2667,6 +2720,7 @@ msgstr ""
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_goal_definition.py:0
+#, python-format
 msgid ""
 "The model configuration for the definition %(name)s seems incorrect, please check it.\n"
 "\n"
@@ -2679,6 +2733,7 @@ msgstr ""
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_goal_definition.py:0
+#, python-format
 msgid ""
 "The model configuration for the definition %(name)s seems incorrect, please check it.\n"
 "\n"
@@ -2782,6 +2837,7 @@ msgstr ""
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_badge.py:0
+#, python-format
 msgid "This badge can not be sent by users."
 msgstr "Käyttäjät eivät voi lähettää tätä ansiomerkkiä."
 
@@ -2849,6 +2905,7 @@ msgstr "Päivitä"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_goal.py:0
+#, python-format
 msgid "Update %s"
 msgstr "Päivitä %s"
 
@@ -2861,12 +2918,14 @@ msgstr "Päivitä %s"
 #: model:ir.model.fields,field_description:gamification.field_gamification_goal__user_id
 #: model:ir.model.fields,field_description:gamification.field_gamification_karma_tracking__user_id
 #: model_terms:ir.ui.view,arch_db:gamification.goal_search_view
+#, python-format
 msgid "User"
 msgstr "Käyttäjä"
 
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/res_users.py:0
+#, python-format
 msgid "User Creation"
 msgstr "Käyttäjän luominen"
 
@@ -2920,18 +2979,21 @@ msgstr "Vuosittainen"
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_badge.py:0
+#, python-format
 msgid "You are not in the user allowed list."
 msgstr "Et ole hyväksyttyjen käyttäjien listalla."
 
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/wizard/grant_badge.py:0
+#, python-format
 msgid "You can not grant a badge to yourself."
 msgstr "Et voi myöntää ansiomerkkiä itsellesi."
 
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_challenge.py:0
+#, python-format
 msgid "You can not reset a challenge with unfinished goals."
 msgstr "Et voi nollata haastetta, jolla on keskeneräisiä tavoitteita."
 
@@ -2948,12 +3010,14 @@ msgstr "Olet onnistunut työssäsi loistavasti."
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_badge.py:0
+#, python-format
 msgid "You do not have the required badges."
 msgstr "Sinulla ei ole vaadittuja ansiomerkkejä."
 
 #. module: gamification
 #. odoo-python
 #: code:addons/gamification/models/gamification_badge.py:0
+#, python-format
 msgid "You have already sent this badge too many time this month."
 msgstr "Olet jo lähettänyt tämän ansiomerkin liian monta kertaa tässä kuussa."
 

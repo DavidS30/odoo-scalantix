@@ -1,4 +1,5 @@
-import { rpc } from "@web/core/network/rpc";
+/* @odoo-module */
+
 import { Component, useState } from "@odoo/owl";
 
 import { Dialog } from "@web/core/dialog/dialog";
@@ -17,7 +18,7 @@ export class LinkPreviewConfirmDelete extends Component {
     static template = "mail.LinkPreviewConfirmDelete";
 
     setup() {
-        super.setup();
+        this.rpc = useService("rpc");
         this.store = useState(useService("mail.store"));
     }
 
@@ -26,8 +27,8 @@ export class LinkPreviewConfirmDelete extends Component {
     }
 
     onClickOk() {
-        rpc(
-            "/mail/link_preview/hide",
+        this.rpc(
+            "/mail/link_preview/delete",
             { link_preview_ids: [this.props.linkPreview.id] },
             { silent: true }
         );
@@ -35,8 +36,8 @@ export class LinkPreviewConfirmDelete extends Component {
     }
 
     onClickDeleteAll() {
-        rpc(
-            "/mail/link_preview/hide",
+        this.rpc(
+            "/mail/link_preview/delete",
             { link_preview_ids: this.message.linkPreviews.map((lp) => lp.id) },
             { silent: true }
         );

@@ -145,11 +145,11 @@ patch(BarcodeParser.prototype, {
      * @override
      * @returns {Object|Array|null} If nomenclature is GS1, returns an array or null
      */
-    parseBarcodeNomenclature(barcode) {
+    parse_barcode(barcode) {
         if (this.nomenclature && this.nomenclature.is_gs1_nomenclature) {
             return this.gs1_decompose_extanded(barcode);
         }
-        return super.parseBarcodeNomenclature(...arguments);
+        return super.parse_barcode(...arguments);
     },
 
     /**

@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { formatX2many } from "../formatters";
 import { standardFieldProps } from "../standard_field_props";

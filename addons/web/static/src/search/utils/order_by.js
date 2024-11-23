@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 /**
  * @typedef {Object} OrderTerm
  * @property {string} name

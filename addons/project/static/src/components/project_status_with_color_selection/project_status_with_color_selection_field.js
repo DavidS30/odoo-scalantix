@@ -6,14 +6,6 @@ import { registry } from '@web/core/registry';
 import { STATUS_COLORS, STATUS_COLOR_PREFIX } from '../../utils/project_utils';
 
 export class ProjectStatusWithColorSelectionField extends SelectionField {
-    static props = {
-        ...SelectionField.props,
-        statusLabel: { type: String, optional: true },
-        hideStatusName: { type: Boolean, optional: true },
-    };
-
-    static template = "project.ProjectStatusWithColorSelectionField";
-
     setup() {
         super.setup();
         this.colorPrefix = STATUS_COLOR_PREFIX;
@@ -29,13 +21,19 @@ export class ProjectStatusWithColorSelectionField extends SelectionField {
     }
 }
 
+ProjectStatusWithColorSelectionField.props = {
+    ...SelectionField.props,
+    statusLabel: { type: String, optional: true },
+};
+
+ProjectStatusWithColorSelectionField.template = 'project.ProjectStatusWithColorSelectionField';
+
 export const projectStatusWithColorSelectionField = {
     ...selectionField,
     component: ProjectStatusWithColorSelectionField,
     extractProps: (fieldInfo, dynamicInfo) => {
         const props = selectionField.extractProps(fieldInfo, dynamicInfo);
         props.statusLabel = fieldInfo.attrs.status_label;
-        props.hideStatusName = Boolean(fieldInfo.attrs.hideStatusName);
         return props;
     },
 };

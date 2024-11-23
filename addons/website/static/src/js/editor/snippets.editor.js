@@ -2,41 +2,36 @@
 
 import { _t } from "@web/core/l10n/translation";
 import { Dialog } from "@web/core/dialog/dialog";
-import { useChildRef, useService } from "@web/core/utils/hooks";
-import { user } from "@web/core/user";
+import { useChildRef } from "@web/core/utils/hooks";
 import weSnippetEditor from "@web_editor/js/editor/snippets.editor";
 import wSnippetOptions from "@website/js/editor/snippets.options";
+import wUtils from "@website/js/utils";
 import * as OdooEditorLib from "@web_editor/js/editor/odoo-editor/src/utils/utils";
-import { Component, onMounted, onWillStart, useEffect, useRef, useState } from "@odoo/owl";
+import { Component, onMounted, useRef, useState } from "@odoo/owl";
 import { throttleForAnimation } from "@web/core/utils/timing";
 import { applyTextHighlight, switchTextHighlight } from "@website/js/text_processing";
-import { registry } from "@web/core/registry";
-
-const snippetsEditorRegistry = registry.category("snippets_editor");
-snippetsEditorRegistry.add("no_parent_editor_snippets", ["s_popup", "o_mega_menu"]);
 
 const getDeepRange = OdooEditorLib.getDeepRange;
 const getTraversedNodes = OdooEditorLib.getTraversedNodes;
 
 const FontFamilyPickerUserValueWidget = wSnippetOptions.FontFamilyPickerUserValueWidget;
 
-const ANIMATED_TEXT_SELECTOR = ".o_animated_text";
-const HIGHLIGHTED_TEXT_SELECTOR = ".o_text_highlight";
-
-export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
-
-    static custom_events = Object.assign({}, weSnippetEditor.SnippetsMenu.custom_events, {
-        'service_context_get': '_onServiceContextGet',
-        'get_switchable_related_views': '_onGetSwitchableRelatedViews',
+const wSnippetMenu = weSnippetEditor.SnippetsMenu.extend({
+    events: Object.assign({}, weSnippetEditor.SnippetsMenu.prototype.events, {
+        'click .o_we_customize_theme_btn': '_onThemeTabClick',
+        'click .o_we_animate_text': '_onAnimateTextClick',
+        'click .o_we_highlight_animated_text': '_onHighlightAnimatedTextClick',
+        "click .o_we_text_highlight": "_onTextHighlightClick",
+    }),
+    custom_events: Object.assign({}, weSnippetEditor.SnippetsMenu.prototype.custom_events, {
         'gmap_api_request': '_onGMapAPIRequest',
         'gmap_api_key_request': '_onGMapAPIKeyRequest',
         'reload_bundles': '_onReloadBundles',
-    });
-
-    static tabs = Object.assign({}, weSnippetEditor.SnippetsMenu.tabs, {
+    }),
+    tabs: Object.assign({}, weSnippetEditor.SnippetsMenu.prototype.tabs, {
         THEME: 'theme',
-    });
-    static optionsTabStructure = [
+    }),
+    optionsTabStructure: [
         ['theme-colors', _t("Colors")],
         ['website-settings', _t("Website")],
         ['theme-paragraph', _t("Paragraph")],
@@ -45,50 +40,25 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
         ['theme-link', _t("Link")],
         ['theme-input', _t("Input Fields")],
         ['theme-advanced', _t("Advanced")],
-    ];
-
-    static props = {
-        ...weSnippetEditor.SnippetsMenu.props,
-        getSwitchableRelatedViews: { type: Function },
-    };
-
-    static template = "website.SnippetsMenu";
+    ],
 
     /**
      * @override
      */
-    setup() {
-        super.setup();
-        this.notification = useService("notification");
-        this.dialog = useService("dialog");
-        this.websiteService = useService("website");
-        this._notActivableElementsSelector += ', .o_mega_menu_toggle';
-
-        onWillStart(async () => {
-            this.isDesigner = await user.hasGroup("website.group_website_designer");
-        });
-
-        // Displays the button that allows to highlight the animated text if
-        // there is animated text in the page.
-        useEffect(
-            () => {
-                this.state.hasAnimatedText = !!this.getEditableArea().find('.o_animated_text').length;
-            },
-            () => [this.state.isTextAnimated],
-        );
-    }
+    init() {
+        this._super(...arguments);
+        this.notification = this.bindService("notification");
+        this.dialog = this.bindService("dialog");
+    },
     /**
      * @override
      */
     async start() {
-        if (this.$body[0].ownerDocument !== this.ownerDocument) {
-            this.$body.on('click.snippets_menu', '*', this._onClick);
-        }
-        await super.start(...arguments);
+        await this._super(...arguments);
 
         this.__onSelectionChange = ev => {
-            this.state.isTextAnimated = this._getTextOptionState(ANIMATED_TEXT_SELECTOR);
-            this.state.isTextHighlighted = this._getTextOptionState(HIGHLIGHTED_TEXT_SELECTOR);
+            this._toggleTextOptionsButton(".o_we_animate_text");
+            this._toggleTextOptionsButton(".o_we_text_highlight");
         };
         this.$body[0].ownerDocument.addEventListener('selectionchange', this.__onSelectionChange);
 
@@ -105,7 +75,17 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
         };
         this.$body[0].addEventListener("dragstart", this.__onDragStart);
 
-        this._adaptHighlightOnEdit = throttleForAnimation(switchTextHighlight);
+        // editor_has_snippets is, amongst other things, in charge of hiding the
+        // backend navbar with a CSS animation. But we also need to make it
+        // display: none when the animation finishes for efficiency but also so
+        // that the tour tooltips pointing at the navbar disappear. This could
+        // rely on listening to the transitionend event but it seems more future
+        // proof to just add a delay after which the navbar is hidden.
+        this._hideBackendNavbarTimeout = setTimeout(() => {
+            this.el.ownerDocument.body.classList.add('editor_has_snippets_hide_backend_navbar');
+        }, 500);
+
+        this._adaptHighlightOnEdit = throttleForAnimation(this._adaptHighlightOnEdit.bind(this));
 
         // Used to adjust highlight SVGs when the text is edited.
         this.textHighlightObserver = new MutationObserver(mutations => {
@@ -154,61 +134,18 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
             characterData: true,
             subtree: true,
         });
-    }
+    },
     /**
      * @override
      */
-    get invalidateSnippetCache() {
-        return this.websiteService.invalidateSnippetCache;
-    }
-    set invalidateSnippetCache(value) {
-        this.websiteService.invalidateSnippetCache = value;
-    }
-    /**
-     * @override
-     */
-    onWillUnmount() {
-        super.onWillUnmount(...arguments);
+    destroy() {
+        this._super(...arguments);
         this.$body[0].ownerDocument.removeEventListener('selectionchange', this.__onSelectionChange);
         this.$body[0].removeEventListener("dragstart", this.__onDragStart);
         this.$body[0].classList.remove('o_animated_text_highlighted');
         clearTimeout(this._hideBackendNavbarTimeout);
-    }
-
-    //--------------------------------------------------------------------------
-    // Public
-    //--------------------------------------------------------------------------
-
-    /**
-     * @override
-     */
-    async cleanForSave() {
-        this.textHighlightObserver.disconnect();
-        const getFromEditable = selector => this.options.editable[0].querySelectorAll(selector);
-        // Clean unstyled translations
-        return super.cleanForSave(...arguments).then(() => {
-            for (const el of getFromEditable('.o_translation_without_style')) {
-                el.classList.remove('o_translation_without_style');
-                if (el.dataset.oeTranslationSaveSha) {
-                    el.dataset.oeTranslationSourceSha = el.dataset.oeTranslationSaveSha;
-                    delete el.dataset.oeTranslationSaveSha;
-                }
-            }
-            // Adapt translation values for `select` > `options`s and remove all
-            // temporary `.o_translation_select` elements.
-            for (const optionsEl of getFromEditable('.o_translation_select')) {
-                const selectEl = optionsEl.nextElementSibling;
-                const translatedOptions = optionsEl.children;
-                const selectOptions = selectEl.tagName === 'SELECT' ? [...selectEl.options] : [];
-                if (selectOptions.length === translatedOptions.length) {
-                    selectOptions.map((option, i) => {
-                        option.text = translatedOptions[i].textContent;
-                    });
-                }
-                optionsEl.remove();
-            }
-        });
-    }
+        this.el.ownerDocument.body.classList.remove('editor_has_snippets_hide_backend_navbar');
+    },
 
     //--------------------------------------------------------------------------
     // Private
@@ -217,45 +154,76 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
     /**
      * @override
      */
-    _computeSnippetTemplates(html) {
+    _computeSnippetTemplates: function (html) {
         const $html = $(html);
-
-        // TODO Remove in master. This patches the snippet move selectors.
-        const oldSelector = ".s_showcase .row:not(.s_col_no_resize) > div";
-        let optionEl = $html[0].querySelector(`[data-js="SnippetMove"][data-selector*="${oldSelector}"]`);
-        if (optionEl) {
-            const newSelector = oldSelector.replace(".row", ".row .row");
-            optionEl.dataset.selector = optionEl.dataset.selector.replace(oldSelector, newSelector);
-        }
-        const oldExclude = ".s_showcase .row > div";
-        optionEl = $html[0].querySelector(`[data-js="SnippetMove"][data-exclude*="${oldExclude}"]`);
-        if (optionEl) {
-            const newExclude = oldExclude.replace(".row", ".row .row");
-            optionEl.dataset.exclude = optionEl.dataset.exclude.replace(oldExclude, newExclude);
-        }
-
-        // TODO remove in master: changing the `data-apply-to` attribute of the
-        // grid spacing option so it is not applied on inner rows.
-        const gridSpacingOptionEls = html.querySelectorAll('[data-css-property="row-gap"], [data-css-property="column-gap"]');
-        gridSpacingOptionEls.forEach(gridSpacingOptionEl => gridSpacingOptionEl.dataset.applyTo = ".row.o_grid_mode");
-
         const toFind = $html.find("we-fontfamilypicker[data-variable]").toArray();
         const fontVariables = toFind.map((el) => el.dataset.variable);
         FontFamilyPickerUserValueWidget.prototype.fontVariables = fontVariables;
+        return this._super(...arguments);
+    },
+    /**
+     * @override
+     */
+    _patchForComputeSnippetTemplates($html) {
+        this._super(...arguments);
 
-        // TODO remove in master: adds back the "Layout" and "Content Width"
-        // options on some carousels.
-        const layoutOptionEl = html.querySelector('[data-js="layout_column"][data-selector="section"]');
-        const containerWidthOptionEl = html.querySelector('[data-js="ContainerWidth"][data-selector="section"]');
-        if (layoutOptionEl) {
-            layoutOptionEl.dataset.selector += ", section.s_carousel_wrapper .carousel-item";
+        // TODO adapt in master: as a stable fix we corrected the behavior of
+        // the logo button that led to an error when switching from Text to
+        // Logo. Remove me in master.
+        const logoViewName = 'website.option_header_brand_logo';
+        const logoButtonEl = $html.find(`[data-customize-website-views="${logoViewName}"]`)[0];
+        if (logoButtonEl) {
+            logoButtonEl.dataset.customizeWebsiteViews = `|website.option_header_brand_name|${logoViewName}`;
+            logoButtonEl.dataset.resetViewArch = "true";
         }
-        if (containerWidthOptionEl) {
-            containerWidthOptionEl.dataset.selector += ", .s_carousel .carousel-item";
+        const brandSelectorEl = $html.find('[data-name="option_header_brand_none"]')[0]
+            ?.closest("[data-selector]");
+        if (brandSelectorEl) {
+            brandSelectorEl.dataset.selector = brandSelectorEl.dataset.selector
+                .replace('.navbar-brand.logo', '.navbar-brand');
         }
 
-        return super._computeSnippetTemplates(html);
-    }
+        // TODO adapt in master: as a stable imp we added a preview for the
+        // "Effect" option of the "On Hover" animation option.
+        const hoverEffectSelectEl = $html.find('[data-set-img-shape-hover-effect]')[0];
+        delete hoverEffectSelectEl.dataset.noPreview;
+
+        // TODO remove in master: as a stable fix we exclude the form fields
+        // from the grid cell's Padding (Y, X) option.
+        const gridColumnsEl = $html.find('[data-js="GridColumns"]')[0];
+        if (gridColumnsEl) {
+            gridColumnsEl.dataset.selector = ".row:not(.s_col_no_resize) > div";
+        }
+
+        // Remove the input-border-width-sm and input-border-width-lg from the input-border-width
+        ['input-border-width-sm', 'input-border-width-lg'].forEach(variable => {
+            const element = $html.find(
+                `[data-selector='theme-input'] we-input[data-customize-website-variable][data-variable='${variable}']`
+            )[0];
+            element.remove();
+        });
+
+        // TODO remove in master: should be simply replaced by a
+        // `data-text-selector` attribute to mark text options.
+        const AnimationOptionEl = $html.find('[data-js="WebsiteAnimate"]')[0];
+        const HighlightOptionEl = $html.find('[data-js="TextHighlight"]')[0];
+        if (AnimationOptionEl) {
+            AnimationOptionEl.dataset.textSelector = ".o_animated_text";
+        }
+        if (HighlightOptionEl) {
+            HighlightOptionEl.dataset.textSelector = HighlightOptionEl.dataset.selector;
+        }
+        
+        // TODO remove in master: see snippets.xml
+        $html.find('we-checkbox[data-dependencies="!footer_copyright_opt"]')[0]?.remove();
+        $html.find('[data-name="header_language_selector_none_opt"]')[0]?.remove();
+        $html.find('we-select[data-dependencies="!header_language_selector_none_opt"]')[0]?.removeAttribute("data-dependencies");
+
+        // TODO remove in master: changing the `data-apply-to` attribute of the
+        // grid spacing option so it is not applied on inner rows.
+        const $gridSpacingOptions = $html.find('[data-css-property="row-gap"], [data-css-property="column-gap"]');
+        $gridSpacingOptions.attr("data-apply-to", ".row.o_grid_mode");
+    },
     /**
      * Depending of the demand, reconfigure they gmap key or configure it
      * if not already defined.
@@ -271,7 +239,7 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
         }
 
         const apiKey = await new Promise(resolve => {
-            this.websiteService.websiteRootInstance.trigger_up("gmap_api_key_request", {
+            this.getParent()._websiteRootEvent("gmap_api_key_request", {
                 onSuccess: key => resolve(key),
             });
         });
@@ -283,7 +251,10 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
             return false;
         }
 
-        const websiteId = this.websiteService.currentWebsite.id;
+        let websiteId;
+        this.trigger_up('context_get', {
+            callback: ctx => websiteId = ctx['website_id'],
+        });
 
         function applyError(message) {
             const $apiKeyInput = this.find('#api_key_input');
@@ -341,7 +312,7 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
                 onClose: () => resolve(invalidated),
             });
         });
-    }
+    },
     /**
      * @private
      */
@@ -352,7 +323,7 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
             return {
                 isValid: isValid,
                 message: !isValid &&
-                    _t("Invalid API Key. The following error was returned by Google: %(error)s", {error: await response.text()}),
+                    _t("Invalid API Key. The following error was returned by Google:") + " " + (await response.text()),
             };
         } catch {
             return {
@@ -360,7 +331,7 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
                 message: _t("Check your connection and try again"),
             };
         }
-    }
+    },
     /**
      * @override
      */
@@ -368,7 +339,7 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
         // TODO: This is currently not in use by Odoo's D&D
         // There is currently no way in Odoo D&D to offset the edge scrolling.
         // When there is, this code should be adapted.
-        const finalOptions = super._getDragAndDropOptions(...arguments);
+        const finalOptions = this._super(...arguments);
         if (!options.offsetElements || !options.offsetElements.$top) {
             const $header = $('#top');
             if ($header.length) {
@@ -377,7 +348,7 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
             }
         }
         return finalOptions;
-    }
+    },
     /**
      * @private
      * @param {OdooEvent} ev
@@ -389,12 +360,19 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
             alwaysReconfigure: ev.data.reconfigure,
             configureIfNecessary: ev.data.configureIfNecessary,
         });
-        this.websiteService.websiteRootInstance.trigger_up(gmapRequestEventName, {
+        this.getParent()._websiteRootEvent(gmapRequestEventName, {
             refetch: reconfigured,
             editableMode: true,
             onSuccess: key => ev.data.onSuccess(key),
         });
-    }
+    },
+    /**
+     * @override
+     */
+    _updateRightPanelContent: function ({content, tab}) {
+        this._super(...arguments);
+        this.$('.o_we_customize_theme_btn').toggleClass('active', tab === this.tabs.THEME);
+    },
     /**
      * Returns the text option element wrapping the selection if it exists.
      *
@@ -406,48 +384,71 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
         const editable = this.options.wysiwyg.$editable[0];
         const textOptionNode = getTraversedNodes(editable).find(n => n.parentElement.closest(selector));
         return textOptionNode ? textOptionNode.parentElement.closest(selector) : false;
-    }
+    },
     /**
      * @private
      * @return {Selection|null}
      */
     _getSelection() {
         return this.options.wysiwyg.odooEditor.document.getSelection();
-    }
+    },
     /**
      * @override
      */
     _addToolbar() {
-        super._addToolbar(...arguments);
-        this.state.animatedTextHighlighted = this.$body[0].classList.contains("o_animated_text_highlighted");
-        this.state.isTextAnimated = this._getTextOptionState(ANIMATED_TEXT_SELECTOR);
-        this.state.isTextHighlighted = this._getTextOptionState(HIGHLIGHTED_TEXT_SELECTOR);
+        this._super(...arguments);
+        this.$('#o_we_editor_toolbar_container > we-title > span').after($(`
+            <we-button class="fa fa-fw o_we_link o_we_highlight_animated_text d-none
+                ${this.$body.hasClass('o_animated_text_highlighted') ? 'fa-eye text-success' : 'fa-eye-slash'}"
+                title="${_t('Highlight Animated Text')}"
+                aria-label="Highlight Animated Text">
+            </we-button>
+        `));
+        this._toggleTextOptionsButton(".o_we_animate_text");
+        this._toggleHighlightAnimatedTextButton();
+        this._toggleTextOptionsButton(".o_we_text_highlight");
 
         // As the toolbar displays css variable that are customizable by users,
         // we have the recompute the font size selector values.
         this.options.wysiwyg.odooEditor.computeFontSizeSelectorValues();
-    }
+    },
     /**
     * @override
     */
-    _checkEditorToolbarVisibility(e) {
-        super._checkEditorToolbarVisibility(...arguments);
+    _checkEditorToolbarVisibility: function (e) {
+        this._super(...arguments);
         // Close the option's dropdowns manually on outside click if any open.
-        this._toolbarWrapperEl.querySelectorAll(".dropdown-toggle.show").forEach(toggleEl => {
-            Dropdown.getOrCreateInstance(toggleEl).hide();
-        });
-    }
+        if (this._$toolbarContainer && this._$toolbarContainer.length) {
+            this._$toolbarContainer[0].querySelectorAll(".dropdown-toggle.show").forEach(toggleEl => {
+                Dropdown.getOrCreateInstance(toggleEl).hide();
+            });
+        }
+    },
     /**
-     * Returns true if the selected text matches the selector.
+     * Activates & deactivates the button used to add text options, depending
+     * on the selected element.
      *
      * @private
      */
-    _getTextOptionState(textSelector) {
+    _toggleTextOptionsButton(selector) {
         if (!this._isValidSelection(this._getSelection())) {
             return;
         }
-        return !!this._getSelectedTextElement(textSelector);
-    }
+        const textOptionsButton = this.el.querySelector(selector);
+        if (textOptionsButton) {
+            textOptionsButton.classList.toggle("active", !!this._getSelectedTextElement(textOptionsButton.dataset.textSelector));
+        }
+    },
+    /**
+     * Displays the button that allows to highlight the animated text if there
+     * is animated text in the page.
+     *
+     * @private
+     */
+    _toggleHighlightAnimatedTextButton() {
+        const $animatedText = this.getEditableArea().find('.o_animated_text');
+        this.$('#o_we_editor_toolbar_container .o_we_highlight_animated_text').toggleClass('d-none', !$animatedText.length);
+    },
     /**
      * @private
      * @param {Node} node
@@ -455,37 +456,40 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
      */
     _isValidSelection(sel) {
         return sel.rangeCount && [...this.getEditableArea()].some(el => el.contains(sel.anchorNode));
-    }
+    },
     /**
      * @override
      */
     _isMobile() {
-        return this.websiteService.context.isMobile;
-    }
+        return wUtils.isMobile(this);
+    },
     /**
-     * This callback type is used to identify the function used to apply some
-     * actions on the activated text snippet.
+     * This callback type is used to identify the function used to apply the
+     * text option on a selected text.
      *
+     * @deprecated
      * @callback TextOptionCallback
-     * @param {jQuery} $snippet The selected text element on which the option
-     * should be applied.
+     * @param {HTMLElement} selectedTextEl The selected text element on which
+     * the option should be applied.
      */
     /**
      * Used to handle "text options" button click according to whether the
      * selected text has the option activated or not.
      *
      * @private
-     * @param {string} classSelector
+     * @param {HTMLElement} targetEl
      * @param {Array<String>} optionClassList
-     * @param {TextOptionCallback} textOptionsPostActivate callback to trigger
-     * actions when the text snippet is activated.
-     * @returns {boolean} true if the option was applied, false if it was
-     * removed or could not be applied.
+     * @param {TextOptionCallback} applyTextOption callback function to set
+     * text option's classes, updates...
      */
-    _handleTextOptions(classSelector, optionClassList, textOptionsPostActivate = () => {}) {
+    _handleTextOptions(targetEl, optionClassList, applyTextOption = () => {}) {
+        // TODO adapt in master
+        const __handleTextOptionsPostActivate = this.__handleTextOptionsPostActivate;
+
+        const classSelector = targetEl.dataset.textSelector;
         const sel = this._getSelection();
         if (!this._isValidSelection(sel)) {
-            return false;
+            return;
         }
         const editable = this.options.wysiwyg.$editable[0];
         const range = getDeepRange(editable, {splitText: true, select: true, correctTripleClick: true});
@@ -508,12 +512,12 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
             selectedTextParent.removeChild(selectedTextEl);
             // Update the option's UI.
             this.options.wysiwyg.odooEditor.historyResetLatestComputedSelection();
+            this._disableTextOptions(targetEl);
             this.options.wysiwyg.odooEditor.historyStep(true);
             restoreCursor();
             if (this.options.enableTranslation) {
                 $(selectedTextParent).trigger("content_changed");
             }
-            return false;
         } else {
             if (sel.getRangeAt(0).collapsed) {
                 return;
@@ -535,48 +539,67 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
             }
             if ($snippet) {
                 $snippet[0].normalize();
-                this._activateSnippet($snippet, false).then(() => {
-                    textOptionsPostActivate($snippet);
+                applyTextOption($snippet[0]); // TODO remove in master, useless in standard
+                this.trigger_up('activate_snippet', {
+                    $snippet: $snippet,
+                    previewMode: false,
+                    onSuccess: () => {
+                        if (__handleTextOptionsPostActivate) {
+                            __handleTextOptionsPostActivate($snippet);
+                        }
+                    },
                 });
                 this.options.wysiwyg.odooEditor.historyStep();
-                return true;
             } else {
                 this.notification.add(
                     _t("Cannot apply this option on current text selection. Try clearing the format and try again."),
                     { type: 'danger', sticky: true }
                 );
             }
-            return false;
         }
-    }
+    },
     /**
      * @private
-     * @param {string} textSelector;
+     * @param {HTMLElement} targetEl
      */
-    _getOptionTextClass(textSelector) {
-        return textSelector.slice(1);
-    }
+    _disableTextOptions(targetEl) {
+        if (targetEl.classList.contains('o_we_animate_text')) {
+            this._toggleHighlightAnimatedTextButton();
+        }
+        targetEl.classList.remove('active');
+    },
     /**
-     * The goal here is to disable parents editors for snippets that should not
-     * display their parents options.
+     * Used to adjust the highlight effect when the text content is edited.
+     *
+     * TODO: Should be directly replaced by `switchTextHighlight()` in master
+     * (left in stable for compatibility).
+     *
+     * @private
+     * @param {HTMLElement} target
+     * @param {String} [highlightID]
+     */
+    _adaptHighlightOnEdit(target, highlightID) {
+        return switchTextHighlight(target, highlightID);
+    },
+    /**
+     * @private
+     * @param {HTMLElement} buttonEl
+     */
+    _getOptionTextClass(buttonEl) {
+        return buttonEl.dataset.textSelector.slice(1);
+    },
+
+    /**
+     * The goal here is to disable parents editors for `s_popup` snippets
+     * since they should not display their parents options.
+     * TODO: Update in master to set the `o_no_parent_editor` class in the
+     * snippet's XML.
      *
      * @override
      */
-     _allowParentsEditors($snippet) {
-        return super._allowParentsEditors(...arguments) && !snippetsEditorRegistry.get("no_parent_editor_snippets")
-            .some(snippetClass => $snippet[0].classList.contains(snippetClass));
-    }
-    /**
-     * @override
-     */
-    _insertDropzone($hook) {
-        var $hookParent = $hook.parent();
-        var $dropzone = super._insertDropzone(...arguments);
-        $dropzone.attr('data-editor-message-default', $hookParent.attr('data-editor-message-default'));
-        $dropzone.attr('data-editor-message', $hookParent.attr('data-editor-message'));
-        $dropzone.attr('data-editor-sub-message', $hookParent.attr('data-editor-sub-message'));
-        return $dropzone;
-    }
+    _allowParentsEditors($snippet) {
+        return this._super(...arguments) && !$snippet[0].classList.contains("s_popup");
+    },
     /**
      * @override
      */
@@ -585,8 +608,8 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
         for (const textEl of $target[0]?.querySelectorAll(".o_text_highlight") || []) {
             applyTextHighlight(textEl);
         }
-        return super._updateDroppedSnippet(...arguments);
-    }
+        return this._super(...arguments);
+    },
 
     //--------------------------------------------------------------------------
     // Handlers
@@ -598,20 +621,70 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
      */
     _onGMapAPIRequest(ev) {
         this._handleGMapRequest(ev, 'gmap_api_request');
-    }
+    },
     /**
      * @private
      * @param {OdooEvent} ev
      */
     _onGMapAPIKeyRequest(ev) {
         this._handleGMapRequest(ev, 'gmap_api_key_request');
-    }
+    },
     /**
      * @private
      */
-    _onThemeTabClick(ev) {
-        this._enableFakeOptionsTab(WebsiteSnippetsMenu.tabs.THEME);
-    }
+    async _onThemeTabClick(ev) {
+        // Note: nothing async here but start the loading effect asap
+        let releaseLoader;
+        try {
+            const promise = new Promise(resolve => releaseLoader = resolve);
+            this._execWithLoadingEffect(() => promise, false, 0);
+            // loader is added to the DOM synchronously
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            // ensure loader is rendered: first call asks for the (already done) DOM update,
+            // second call happens only after rendering the first "updates"
+
+            if (!this.topFakeOptionEl) {
+                let el;
+                for (const [elementName, title] of this.optionsTabStructure) {
+                    const newEl = document.createElement(elementName);
+                    newEl.dataset.name = title;
+                    if (el) {
+                        el.appendChild(newEl);
+                    } else {
+                        this.topFakeOptionEl = newEl;
+                    }
+                    el = newEl;
+                }
+                this.bottomFakeOptionEl = el;
+                this.$body[0].appendChild(this.topFakeOptionEl);
+            }
+
+            // Need all of this in that order so that:
+            // - the element is visible and can be enabled and the onFocus method is
+            //   called each time.
+            // - the element is hidden afterwards so it does not take space in the
+            //   DOM, same as the overlay which may make a scrollbar appear.
+            this.topFakeOptionEl.classList.remove('d-none');
+            const editorPromise = this._activateSnippet($(this.bottomFakeOptionEl));
+            releaseLoader(); // because _activateSnippet uses the same mutex as the loader
+            releaseLoader = undefined;
+            const editor = await editorPromise;
+            this.topFakeOptionEl.classList.add('d-none');
+            editor.toggleOverlay(false);
+
+            this._updateRightPanelContent({
+                tab: this.tabs.THEME,
+            });
+        } catch (e) {
+            // Normally the loading effect is removed in case of error during the action but here
+            // the actual activity is happening outside of the action, the effect must therefore
+            // be cleared in case of error as well
+            if (releaseLoader) {
+                releaseLoader();
+            }
+            throw e;
+        }
+    },
     /**
      * @override
      */
@@ -619,7 +692,12 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
         if (!ev.currentTarget.classList.contains('active')) {
             this._activateSnippet(false);
             this._mutex.exec(async () => {
-                const switchableViews = await this.props.getSwitchableRelatedViews();
+                const switchableViews = await new Promise((resolve, reject) => {
+                    this.trigger_up('get_switchable_related_views', {
+                        onSuccess: resolve,
+                        onFailure: reject,
+                    });
+                });
                 if (switchableViews.length) {
                     // These do not need to be awaited as we're in teh context
                     // of the mutex.
@@ -640,53 +718,51 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
                 }
             });
         }
-    }
+    },
     /**
      * @private
      * @param {Event} ev
      */
     _onAnimateTextClick(ev) {
-        const active = this._handleTextOptions(ANIMATED_TEXT_SELECTOR, [
-            this._getOptionTextClass(ANIMATED_TEXT_SELECTOR),
+        const target = ev.currentTarget;
+        this._handleTextOptions(target, [
+            this._getOptionTextClass(target),
             "o_animate",
             "o_animate_preview",
-            "o_anim_fade_in",
+            "o_anim_fade_in"
         ]);
-        this.state.isTextAnimated = active;
-    }
+    },
     /**
      * @private
      */
     _onHighlightAnimatedTextClick(ev) {
-        const highlighted = this.$body[0].classList.toggle('o_animated_text_highlighted');
-        this.state.animatedTextHighlighted = highlighted;
+        this.$body.toggleClass('o_animated_text_highlighted');
         $(ev.target).toggleClass('fa-eye fa-eye-slash').toggleClass('text-success');
-    }
+    },
     /**
      * @private
+     * @param {Event} ev
      */
-    _onTextHighlightClick() {
+    _onTextHighlightClick(ev) {
         // To be able to open the highlights grid immediately, we need to
         // prevent the `_onClick()` handler from closing the widget (using
         // the `_closeWidgets()` method) right after opening it.
+        ev.stopPropagation();
         this._closeWidgets();
-        const active = this._handleTextOptions(
-            HIGHLIGHTED_TEXT_SELECTOR,
-            [
-                this._getOptionTextClass(HIGHLIGHTED_TEXT_SELECTOR),
-                "o_text_highlight_underline",
-                "o_translate_inline",
-            ],
-            ($snippet) => {
-                // TODO should be reviewed
-                $snippet.data("snippet-editor")?.trigger_up("option_update", {
-                    optionName: "TextHighlight",
-                    name: "new_text_highlight",
-                });
-            }
+        const target = ev.currentTarget;
+        this.__handleTextOptionsPostActivate = ($snippet) => {
+            // TODO should be reviewed
+            $snippet.data("snippet-editor")?.trigger_up("option_update", {
+                optionName: "TextHighlight",
+                name: "new_text_highlight",
+            });
+        };
+        this._handleTextOptions(
+            target,
+            [this._getOptionTextClass(target), "o_text_highlight_underline", "o_translate_inline"],
         );
-        this.state.isTextHighlighted = active;
-    }
+        delete this.__handleTextOptionsPostActivate;
+    },
     /**
      * On reload bundles, when it's from the theme tab, destroy any
      * snippetEditor as they might hold outdated style values. (e.g. color palettes).
@@ -700,14 +776,7 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
      * @private
      */
     _onReloadBundles(ev) {
-        const excludeSelector = this.constructor.optionsTabStructure.map(element => element[0]).join(', ');
-        const oldSuccess = ev.data.onSuccess;
-        ev.data.onSuccess = (...args) => {
-            // Update the panel so that color previews reflect the ones used by the
-            // edited content.
-            this.props.setCSSVariables(this.el);
-            oldSuccess(...args);
-        };
+        const excludeSelector = this.optionsTabStructure.map(element => element[0]).join(', ');
         for (const editor of this.snippetEditors) {
             if (!editor.$target[0].matches(excludeSelector)) {
                 if (this._currentTab === this.tabs.THEME) {
@@ -721,36 +790,8 @@ export class WebsiteSnippetsMenu extends weSnippetEditor.SnippetsMenu {
                 }
             }
         }
-    }
-    /**
-     * Notifies the website service that mobile preview is toggled.
-     * This will toggle the iframe between mobile and desktop view.
-     *
-     * @private
-     */
-    _toggleMobilePreview() {
-        this.websiteService.context.isMobile = !this.websiteService.context.isMobile;
-    }
-    /**
-     * Used by legacy widgets to fetch the state of the mobile preview.
-     *
-     * @private
-     * @param {CustomEvent} ev
-     */
-    _onServiceContextGet(ev) {
-        ev.data.callback({
-            isMobile: this.websiteService.context.isMobile,
-        });
-    }
-    /**
-     * Returns the list of views that can be toggled on the current page.
-     *
-     * @param {CustomEvent} ev
-     */
-    _onGetSwitchableRelatedViews(ev) {
-        this.props.getSwitchableRelatedViews().then(ev.data.onSuccess);
-    }
-}
+    },
+});
 
 weSnippetEditor.SnippetEditor.include({
     layoutElementsSelector: [
@@ -767,6 +808,20 @@ weSnippetEditor.SnippetEditor.include({
             return _t("Logo");
         }
         return this._super(...arguments);
+    },
+    /**
+     * @override
+     * @returns {Promise}
+     */
+    async updateOptionsUIVisibility() {
+        await this._super(...arguments);
+        // TODO improve this: some website text options (like text animations,
+        // text highlights...) are moved to the toolbar, which leads to an empty
+        // "options section". The goal of this override is to hide options
+        // sections with no option elements.
+        if (!this.$optionsSection[0].querySelector(":scope > we-customizeblock-option")) {
+            this.$optionsSection[0].classList.add("d-none");
+        }
     },
     /**
      * Changes some behaviors before the drag and drop.
@@ -791,8 +846,110 @@ weSnippetEditor.SnippetEditor.include({
         }
         return restore;
     },
+    /**
+     * TODO: Remove in master (left in stable for compatibility)
+     *
+     * @private
+     */
+    _highlightResizeObserve() {
+        // The callback of `this.editorResizeObserver` will fire automatically
+        // when observation starts, which triggers a useless highlight
+        // adjustment. We use `this.observerLock` to prevent it.
+        this.observerLock = true;
+        this.editorResizeObserver.observe(this.$target[0]);
+    },
+    /**
+     * TODO: Remove in master (left in stable for compatibility)
+     *
+     * @private
+     */
+    _adaptOnOptionResize() {
+        [...this.$target[0].querySelectorAll(".o_text_highlight")].forEach(textEl => {
+            switchTextHighlight(textEl);
+        });
+    },
+});
+
+wSnippetMenu.include({
+    /**
+     * @override
+     */
+    init: function () {
+        this._super(...arguments);
+        this._notActivableElementsSelector += ', .o_mega_menu_toggle';
+    },
+    /**
+     * @override
+     */
+    start() {
+        const _super = this._super(...arguments);
+        if (this.$body[0].ownerDocument !== this.ownerDocument) {
+            this.$body.on('click.snippets_menu', '*', this._onClick);
+        }
+        return _super;
+    },
+    /**
+    * @override
+    */
+    destroy() {
+        if (this.$body[0].ownerDocument !== this.ownerDocument) {
+            this.$body.off('.snippets_menu');
+        }
+        return this._super(...arguments);
+    },
+
+    //--------------------------------------------------------------------------
+    // Public
+    //--------------------------------------------------------------------------
+
+    /**
+     * @override
+     */
+    async cleanForSave() {
+        this.textHighlightObserver.disconnect();
+        const getFromEditable = selector => this.options.editable[0].querySelectorAll(selector);
+        // Clean unstyled translations
+        return this._super(...arguments).then(() => {
+            for (const el of getFromEditable('.o_translation_without_style')) {
+                el.classList.remove('o_translation_without_style');
+                if (el.dataset.oeTranslationSaveSha) {
+                    el.dataset.oeTranslationInitialSha = el.dataset.oeTranslationSaveSha;
+                    delete el.dataset.oeTranslationSaveSha;
+                }
+            }
+            // Adapt translation values for `select` > `options`s and remove all
+            // temporary `.o_translation_select` elements.
+            for (const optionsEl of getFromEditable('.o_translation_select')) {
+                const selectEl = optionsEl.nextElementSibling;
+                const translatedOptions = optionsEl.children;
+                const selectOptions = selectEl.tagName === 'SELECT' ? [...selectEl.options] : [];
+                if (selectOptions.length === translatedOptions.length) {
+                    selectOptions.map((option, i) => {
+                        option.text = translatedOptions[i].textContent;
+                    });
+                }
+                optionsEl.remove();
+            }
+        });
+    },
+
+    //--------------------------------------------------------------------------
+    // Private
+    //--------------------------------------------------------------------------
+
+    /**
+     * @override
+     */
+    _insertDropzone: function ($hook) {
+        var $hookParent = $hook.parent();
+        var $dropzone = this._super(...arguments);
+        $dropzone.attr('data-editor-message-default', $hookParent.attr('data-editor-message-default'));
+        $dropzone.attr('data-editor-message', $hookParent.attr('data-editor-message'));
+        $dropzone.attr('data-editor-sub-message', $hookParent.attr('data-editor-sub-message'));
+        return $dropzone;
+    },
 });
 
 export default {
-    SnippetsMenu: WebsiteSnippetsMenu,
+    SnippetsMenu: wSnippetMenu,
 };

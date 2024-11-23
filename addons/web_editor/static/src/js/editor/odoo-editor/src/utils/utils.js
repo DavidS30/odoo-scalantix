@@ -951,10 +951,7 @@ export function getDeepRange(editable, { range, sel, splitText, select, correctT
         correctTripleClick &&
         !endOffset &&
         (start !== end || startOffset !== endOffset) &&
-        (!beforeEnd ||
-            (beforeEnd.nodeType === Node.TEXT_NODE &&
-                !isVisibleTextNode(beforeEnd) &&
-                !isZWS(beforeEnd))) &&
+        (!beforeEnd || (beforeEnd.nodeType === Node.TEXT_NODE && !isVisibleTextNode(beforeEnd) && !isZWS(beforeEnd))) &&
         !closestElement(endLeaf, 'table')
     ) {
         const previous = previousLeaf(endLeaf, editable, true);
@@ -1039,14 +1036,14 @@ export function getDeepestPosition(node, offset) {
         } else if (
             direction &&
             next.nextSibling &&
-            closestBlock(node).contains(next.nextSibling)
+            closestBlock(node)?.contains(next.nextSibling)
         ) {
             // Invalid node: skip to next sibling (without crossing blocks).
             next = next.nextSibling;
         } else {
             // Invalid node: skip to previous sibling (without crossing blocks).
             direction = DIRECTIONS.LEFT;
-            next = closestBlock(node).contains(next.previousSibling) && next.previousSibling;
+            next = closestBlock(node)?.contains(next.previousSibling) && next.previousSibling;
         }
         // Avoid too-deep ranges inside self-closing elements like [BR, 0].
         next = !isSelfClosingElement(next) && next;
@@ -1694,18 +1691,13 @@ export function containsUnbreakable(node) {
     }
     return isUnbreakable(node) || containsUnbreakable(node.firstChild);
 }
-
+// TODO rename this function in master: it also handles Odoo icons, not only
+// font awesome ones. Also maybe just use the ICON_SELECTOR and `matches`?
 const iconTags = ['I', 'SPAN'];
 const iconClasses = ['fa', 'fab', 'fad', 'far', 'oi'];
-/**
- * Indicates if the given node is an icon element.
- *
- * @see ICON_SELECTOR
- * @param {?Node} [node]
- * @returns {boolean}
- */
-export function isIconElement(node) {
-    return !!(
+export function isFontAwesome(node) {
+    // See ICON_SELECTOR
+    return (
         node &&
         iconTags.includes(node.nodeName) &&
         iconClasses.some(cls => node.classList.contains(cls))
@@ -1740,7 +1732,7 @@ export function isEditorTab(node) {
 }
 export function isMediaElement(node) {
     return (
-        isIconElement(node) ||
+        isFontAwesome(node) ||
         (node.classList &&
             (node.classList.contains('o_image') || node.classList.contains('media_iframe_video')))
     );
@@ -1854,7 +1846,7 @@ export const paragraphRelatedElements = [
  * @returns {boolean}
  */
 export function allowsParagraphRelatedElements(node) {
-    return isBlock(node) && !paragraphRelatedElements.includes(node.nodeName);
+    return isBlock(node) && !['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(node.nodeName);
 }
 
 /**
@@ -1946,7 +1938,7 @@ export function isVisible(node) {
         (node.nodeType === Node.ELEMENT_NODE &&
             (node.getAttribute("t-esc") || node.getAttribute("t-out"))) ||
         isSelfClosingElement(node) ||
-        isIconElement(node) ||
+        isFontAwesome(node) ||
         hasVisibleContent(node)
     );
 }
@@ -2159,7 +2151,7 @@ export function isEmptyBlock(blockEl) {
     if (!blockEl || blockEl.nodeType !== Node.ELEMENT_NODE) {
         return false;
     }
-    if (isIconElement(blockEl) || visibleCharRegex.test(blockEl.textContent)) {
+    if (isFontAwesome(blockEl) || visibleCharRegex.test(blockEl.textContent)) {
         return false;
     }
     if (blockEl.querySelectorAll('br').length >= 2) {
@@ -2169,7 +2161,7 @@ export function isEmptyBlock(blockEl) {
     for (const node of nodes) {
         // There is no text and no double BR, the only thing that could make
         // this visible is a "visible empty" node like an image.
-        if (node.nodeName != 'BR' && (isSelfClosingElement(node) || isIconElement(node))) {
+        if (node.nodeName != 'BR' && (isSelfClosingElement(node) || isFontAwesome(node))) {
             return false;
         }
     }
@@ -2492,7 +2484,6 @@ export function setTagName(el, newTagName) {
     }
     const n = document.createElement(newTagName);
     if (el.nodeName !== 'LI') {
-        el.style.removeProperty('list-style');
         const attributes = el.attributes;
         for (const attr of attributes) {
             n.setAttribute(attr.name, attr.value);

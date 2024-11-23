@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { Domain } from "@web/core/domain";
 import { DataPoint } from "./datapoint";
 
@@ -65,7 +67,7 @@ export class Group extends DataPoint {
     }
 
     async addNewRecord(_unused, atFirstPosition = false) {
-        const canProceed = await this.model.root.leaveEditMode();
+        const canProceed = await this.model.root.leaveEditMode({ discard: true });
         if (canProceed) {
             const record = await this.list.addNewRecord(atFirstPosition);
             if (record) {

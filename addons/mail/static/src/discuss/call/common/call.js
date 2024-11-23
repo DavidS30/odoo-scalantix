@@ -1,6 +1,7 @@
+/* @odoo-module */
+
 import { CallActionList } from "@mail/discuss/call/common/call_action_list";
 import { CallParticipantCard } from "@mail/discuss/call/common/call_participant_card";
-import { PttAdBanner } from "@mail/discuss/call/common/ptt_ad_banner";
 import { isEventHandled, markEventHandled } from "@web/core/utils/misc";
 
 import {
@@ -32,15 +33,15 @@ import { useService } from "@web/core/utils/hooks";
  * @extends {Component<Props, Env>}
  */
 export class Call extends Component {
-    static components = { CallActionList, CallParticipantCard, PttAdBanner };
+    static components = { CallActionList, CallParticipantCard };
     static props = ["thread", "compact?"];
     static template = "discuss.Call";
 
     overlayTimeout;
 
     setup() {
-        super.setup();
         this.grid = useRef("grid");
+        this.call = useRef("call");
         this.notification = useService("notification");
         this.rtc = useState(useService("discuss.rtc"));
         this.state = useState({
@@ -54,6 +55,7 @@ export class Call extends Component {
             insetCard: undefined,
         });
         this.store = useState(useService("mail.store"));
+        this.userSettings = useState(useService("mail.user_settings"));
         onMounted(() => {
             this.resizeObserver = new ResizeObserver(() => this.arrangeTiles());
             this.resizeObserver.observe(this.grid.el);
@@ -72,10 +74,10 @@ export class Call extends Component {
     }
 
     get minimized() {
-        if (this.state.isFullscreen || this.props.thread.activeRtcSession) {
+        if (this.state.isFullscreen || this.props.compact || this.props.thread.activeRtcSession) {
             return false;
         }
-        if (!this.isActiveCall || this.props.thread.videoCount === 0 || this.props.compact) {
+        if (!this.isActiveCall || this.props.thread.videoCount === 0) {
             return true;
         }
         return false;
@@ -86,7 +88,7 @@ export class Call extends Component {
         const raisingHandCards = [];
         const sessionCards = [];
         const invitationCards = [];
-        const filterVideos = this.store.settings.showOnlyVideo && this.props.thread.videoCount > 0;
+        const filterVideos = this.props.thread.showOnlyVideo && this.props.thread.videoCount > 0;
         for (const session of this.props.thread.rtcSessions) {
             const target = session.raisingHand ? raisingHandCards : sessionCards;
             const cameraStream = session.isCameraOn
@@ -191,8 +193,8 @@ export class Call extends Component {
     }
 
     onMouseleaveMain(ev) {
-        if (ev.relatedTarget && ev.relatedTarget.closest(".o-dropdown--menu")) {
-            // the overlay should not be hidden when the cursor leaves to enter the controller dropdown
+        if (ev.relatedTarget && ev.relatedTarget.closest(".o-discuss-Call-overlay")) {
+            // the overlay should not be hidden when the cursor leaves to enter the controller popover
             return;
         }
         this.state.overlay = false;
@@ -264,7 +266,7 @@ export class Call extends Component {
     }
 
     async enterFullScreen() {
-        const el = document.body;
+        const el = this.call.el;
         try {
             if (el.requestFullscreen) {
                 await el.requestFullscreen();

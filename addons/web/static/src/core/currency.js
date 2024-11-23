@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { formatFloat, humanNumber } from "@web/core/utils/numbers";
 import { session } from "@web/session";
 import { nbsp } from "@web/core/utils/strings";

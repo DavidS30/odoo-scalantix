@@ -1,5 +1,7 @@
+/** @odoo-module **/
+
 import { App, blockDom, Component, markup } from "@odoo/owl";
-import { getTemplate } from "@web/core/templates";
+import { templates } from "@web/core/assets";
 import { _t } from "@web/core/l10n/translation";
 
 export function renderToElement(template, context = {}) {
@@ -39,7 +41,7 @@ Object.defineProperty(renderToString, "app", {
         if (!app) {
             app = new App(Component, {
                 name: "renderToString",
-                getTemplate,
+                templates,
                 translatableAttributes: ["data-tooltip"],
                 translateFn: _t,
             });

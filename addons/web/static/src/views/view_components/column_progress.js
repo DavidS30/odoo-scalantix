@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { Component } from "@odoo/owl";
 import { AnimatedNumber } from "./animated_number";
 

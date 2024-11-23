@@ -5,12 +5,6 @@ import { registry } from "@web/core/registry";
 import { deserializeDateTime } from "@web/core/l10n/dates";
 
 export class KioskGreetings extends Component {
-    static template = "hr_attendance.public_kiosk_greetings";
-    static props = {
-        employeeData: { type: Object },
-        kioskReturn: { type: Function },
-    };
-
     setup() {
         this.formatDateTime = registry.category("formatters").get("datetime");
         this.formatFloatTime = registry.category("formatters").get("float_time");
@@ -30,3 +24,9 @@ export class KioskGreetings extends Component {
         onWillDestroy(() => clearTimeout(this.kiosk_delay));
     }
 }
+
+KioskGreetings.template = "hr_attendance.public_kiosk_greetings";
+KioskGreetings.props = {
+    employeeData : {type: Object},
+    kioskReturn: {type: Function}
+};

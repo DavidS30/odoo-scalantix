@@ -1,14 +1,23 @@
-import { DiscussCoreCommon } from "@mail/discuss/core/common/discuss_core_common_service";
+/* @odoo-module */
 
 import { patch } from "@web/core/utils/patch";
+import { DiscussCoreCommon, discussCoreCommon } from "../common/discuss_core_common_service";
 
-/** @type {DiscussCoreCommon} */
-const discussCoreCommon = {
-    async _handleNotificationNewMessage(...args) {
-        // initChannelsUnreadCounter becomes unreliable
-        await this.store.channels.fetch();
-        return super._handleNotificationNewMessage(...args);
+discussCoreCommon.dependencies.push("ui");
+
+patch(DiscussCoreCommon.prototype, {
+    setup(env, services) {
+        this.ui = services.ui;
+        super.setup(...arguments);
     },
-};
-
-patch(DiscussCoreCommon.prototype, discussCoreCommon);
+    insertInitChannel(channelData) {
+        const thread = super.insertInitChannel(...arguments);
+        if (channelData.is_minimized && channelData.state !== "closed" && !this.ui.isSmall) {
+            this.store.ChatWindow.insert({
+                autofocus: 0,
+                folded: channelData.state === "folded",
+                thread,
+            });
+        }
+    },
+});

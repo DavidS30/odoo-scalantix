@@ -10,9 +10,8 @@ from lxml import etree
 class TestUBLNL(TestUBLCommon):
 
     @classmethod
-    @TestUBLCommon.setup_country('nl')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref="nl"):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         cls.partner_1 = cls.env['res.partner'].create({
             'name': "partner_1",
@@ -83,6 +82,17 @@ class TestUBLNL(TestUBLCommon):
             'amount': 10.0,
             'sequence': 1,
         })
+
+    @classmethod
+    def setup_company_data(cls, company_name, chart_template):
+        # OVERRIDE
+        # to force the company to be dutch
+        res = super().setup_company_data(
+            company_name,
+            chart_template=chart_template,
+            country_id=cls.env.ref("base.nl").id,
+        )
+        return res
 
     ####################################################
     # Test export - import
@@ -228,13 +238,6 @@ class TestUBLNL(TestUBLCommon):
 
     def test_import_invoice_xml(self):
         # test files https://github.com/peppolautoriteit-nl/validation ?
-        self._assert_imported_invoice_from_file(
-            subfolder='tests/test_files/from_odoo',
-            filename='nlcius_out_invoice.xml',
-            invoice_vals={
-                'currency_id': self.other_currency.id,
-                'amount_total': 3083.58,
-                'amount_tax': 401.58,
-                'invoice_lines': [{'price_subtotal': x} for x in (1782, 1000, -100)]
-            },
-        )
+        self._assert_imported_invoice_from_file(subfolder='tests/test_files/from_odoo',
+            filename='nlcius_out_invoice.xml', amount_total=3083.58, amount_tax=401.58,
+            list_line_subtotals=[1782, 1000, -100], currency_id=self.currency_data['currency'].id)

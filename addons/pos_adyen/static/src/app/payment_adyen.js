@@ -1,7 +1,8 @@
+/** @odoo-module */
+
 import { _t } from "@web/core/l10n/translation";
 import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
-import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
-import { register_payment_method } from "@point_of_sale/app/store/pos_store";
+import { ErrorPopup } from "@point_of_sale/app/errors/popups/error_popup";
 import { sprintf } from "@web/core/utils/strings";
 const { DateTime } = luxon;
 
@@ -11,12 +12,12 @@ export class PaymentAdyen extends PaymentInterface {
         this.paymentLineResolvers = {};
     }
 
-    send_payment_request(uuid) {
-        super.send_payment_request(uuid);
-        return this._adyen_pay(uuid);
+    send_payment_request(cid) {
+        super.send_payment_request(cid);
+        return this._adyen_pay(cid);
     }
-    send_payment_cancel(order, uuid) {
-        super.send_payment_cancel(order, uuid);
+    send_payment_cancel(order, cid) {
+        super.send_payment_cancel(order, cid);
         return this._adyen_cancel();
     }
 
@@ -44,9 +45,10 @@ export class PaymentAdyen extends PaymentInterface {
     }
 
     _call_adyen(data, operation = false) {
-        return this.pos.data
-            .silentCall("pos.payment.method", "proxy_adyen_request", [
-                [this.payment_method_id.id],
+        // FIXME POSREF TIMEOUT 10000
+        return this.env.services.orm.silent
+            .call("pos.payment.method", "proxy_adyen_request", [
+                [this.payment_method.id],
                 data,
                 operation,
             ])
@@ -69,14 +71,14 @@ export class PaymentAdyen extends PaymentInterface {
             MessageType: "Request",
             SaleID: this._adyen_get_sale_id(config),
             ServiceID: this.most_recent_service_id,
-            POIID: this.payment_method_id.adyen_terminal_identifier,
+            POIID: this.payment_method.adyen_terminal_identifier,
         };
     }
 
     _adyen_pay_data() {
         var order = this.pos.get_order();
         var config = this.pos.config;
-        var line = order.get_selected_paymentline();
+        var line = order.selected_paymentline;
         var data = {
             SaleToPOIRequest: {
                 MessageHeader: Object.assign(this._adyen_common_message_header(), {
@@ -85,7 +87,7 @@ export class PaymentAdyen extends PaymentInterface {
                 PaymentRequest: {
                     SaleData: {
                         SaleTransactionID: {
-                            TransactionID: `${order.uuid}--${order.session_id.id}`,
+                            TransactionID: `${order.uid}--${order.pos_session_id}`,
                             TimeStamp: DateTime.now().toFormat("yyyy-MM-dd'T'HH:mm:ssZZ"), // iso format: '2018-01-10T11:30:15+00:00'
                         },
                     },
@@ -107,16 +109,16 @@ export class PaymentAdyen extends PaymentInterface {
         return data;
     }
 
-    _adyen_pay(uuid) {
+    _adyen_pay(cid) {
         var order = this.pos.get_order();
 
-        if (order.get_selected_paymentline().amount < 0) {
+        if (order.selected_paymentline.amount < 0) {
             this._show_error(_t("Cannot process transactions with negative amount."));
             return Promise.resolve();
         }
 
         var data = this._adyen_pay_data();
-        var line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
+        var line = order.paymentlines.find((paymentLine) => paymentLine.cid === cid);
         line.setTerminalServiceId(this.most_recent_service_id);
         return this._call_adyen(data).then((data) => {
             return this._adyen_handle_response(data);
@@ -206,7 +208,7 @@ export class PaymentAdyen extends PaymentInterface {
 
     waitForPaymentConfirmation() {
         return new Promise((resolve) => {
-            this.paymentLineResolvers[this.pending_adyen_line().uuid] = resolve;
+            this.paymentLineResolvers[this.pending_adyen_line().cid] = resolve;
         });
     }
 
@@ -215,10 +217,10 @@ export class PaymentAdyen extends PaymentInterface {
      * confirmation from Adyen is received via the webhook.
      */
     async handleAdyenStatusResponse() {
-        const notification = await this.pos.data.silentCall(
+        const notification = await this.env.services.orm.silent.call(
             "pos.payment.method",
             "get_latest_adyen_status",
-            [[this.payment_method_id.id]]
+            [[this.payment_method.id]]
         );
 
         if (!notification) {
@@ -240,7 +242,7 @@ export class PaymentAdyen extends PaymentInterface {
         // that will be resolved when the payment response is received.
         // In case this resolver is lost ( for example on a refresh ) we
         // we use the handle_payment_response method on the payment line
-        const resolver = this.paymentLineResolvers?.[line.uuid];
+        const resolver = this.paymentLineResolvers?.[line.cid];
         if (resolver) {
             resolver(isPaymentSuccessful);
         } else {
@@ -257,6 +259,7 @@ export class PaymentAdyen extends PaymentInterface {
     }
     handleSuccessResponse(line, notification, additional_response) {
         const config = this.pos.config;
+        const order = this.pos.get_order();
         const payment_response = notification.SaleToPOIResponse.PaymentResponse;
         const payment_result = payment_response.PaymentResult;
 
@@ -282,7 +285,7 @@ export class PaymentAdyen extends PaymentInterface {
 
         const tip_amount = payment_result.AmountsResp.TipAmount;
         if (config.adyen_ask_customer_for_tip && tip_amount > 0) {
-            this.pos.set_tip(tip_amount);
+            order.set_tip(tip_amount);
             line.set_amount(payment_result.AmountsResp.AuthorizedAmount);
         }
 
@@ -295,11 +298,9 @@ export class PaymentAdyen extends PaymentInterface {
         if (!title) {
             title = _t("Adyen Error");
         }
-        this.env.services.dialog.add(AlertDialog, {
+        this.env.services.popup.add(ErrorPopup, {
             title: title,
             body: msg,
         });
     }
 }
-
-register_payment_method("adyen", PaymentAdyen);

@@ -3,15 +3,15 @@
 # 	* payment_adyen
 # 
 # Translators:
-# Wil Odoo, 2024
+# Wil Odoo, 2023
 # Larissa Manderfeld, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:56+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Larissa Manderfeld, 2024\n"
 "Language-Team: Spanish (https://app.transifex.com/odoo/teams/41243/es/)\n"
 "MIME-Version: 1.0\n"
@@ -32,12 +32,10 @@ msgstr ""
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
-msgid ""
-"A request was sent to void the transaction with reference %(reference)s "
-"(%(provider)s)."
+#, python-format
+msgid "A request was sent to void the transaction with reference %s (%s)."
 msgstr ""
-"Se envió una solicitud para anular la transacción con referencia "
-"%(reference)s (%(provider)s)."
+"Se envió una solicitud para anular la transacción con referencia %s (%s)."
 
 #. module: payment_adyen
 #: model:ir.model.fields,field_description:payment_adyen.field_payment_provider__adyen_api_key
@@ -57,6 +55,7 @@ msgstr "Adyen"
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid ""
 "An error occurred during the processing of your payment. Please try again."
 msgstr ""
@@ -66,6 +65,7 @@ msgstr ""
 #. module: payment_adyen
 #. odoo-javascript
 #: code:addons/payment_adyen/static/src/js/payment_form.js:0
+#, python-format
 msgid "Cannot display the payment form"
 msgstr "No se puede mostrar el formulario de pago"
 
@@ -82,6 +82,7 @@ msgstr "Código"
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_provider.py:0
+#, python-format
 msgid "Could not establish the connection to the API."
 msgstr "No se ha podido establecer la conexión con el API."
 
@@ -98,6 +99,7 @@ msgstr "Tiene Adyen Tx"
 #. module: payment_adyen
 #. odoo-javascript
 #: code:addons/payment_adyen/static/src/js/payment_form.js:0
+#, python-format
 msgid "Incorrect payment details"
 msgstr "Detalles de pago incorrectos "
 
@@ -114,6 +116,7 @@ msgstr "Cuenta de comerciante"
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "No transaction found matching reference %s."
 msgstr ""
 "No se ha encontrado ninguna transacción que coincida con la referencia %s."
@@ -141,12 +144,16 @@ msgstr "Transacción de pago"
 #. module: payment_adyen
 #. odoo-javascript
 #: code:addons/payment_adyen/static/src/js/payment_form.js:0
+#: code:addons/payment_adyen/static/src/js/payment_form.js:0
+#: code:addons/payment_adyen/static/src/js/payment_form.js:0
+#, python-format
 msgid "Payment processing failed"
 msgstr "Error al procesar el pago"
 
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "Received data for child transaction with missing transaction values"
 msgstr ""
 "Datos recibidos para transacción hija con valores de transacción faltante."
@@ -154,24 +161,28 @@ msgstr ""
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "Received data with invalid payment state: %s"
 msgstr "Datos recibidos con un estado de pago no válido: %s"
 
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "Received data with missing merchant reference"
 msgstr "Datos recibidos sin referencia del comerciante."
 
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "Received data with missing payment state."
 msgstr "Datos recibidos sin estado de pago."
 
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/controllers/main.py:0
+#, python-format
 msgid "Received tampered payment request data."
 msgstr "Datos recibidos de solicitud de pago manipulados."
 
@@ -193,6 +204,7 @@ msgstr "La clave HMAC del webhook"
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid ""
 "The amount processed by Adyen for the transaction %s is different than the "
 "one requested. Another transaction is created with the correct amount."
@@ -208,6 +220,8 @@ msgstr "La URL de base para los puntos de conexión de la API"
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "The capture of the transaction with reference %s failed."
 msgstr "Falló la captura de la transacción con referencia %s ."
 
@@ -223,6 +237,7 @@ msgstr ""
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid ""
 "The capture request of %(amount)s for the transaction with reference %(ref)s"
 " has been requested (%(provider_name)s)."
@@ -243,6 +258,7 @@ msgstr "El código de la cuenta comercial que se debe usar con este proveedor"
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_provider.py:0
+#, python-format
 msgid "The communication with the API failed. Details: %s"
 msgstr "Falló la comunicación con la API. Más información: %s"
 
@@ -254,6 +270,7 @@ msgstr "El código técnico de este proveedor de pagos."
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "The transaction is not linked to a token."
 msgstr "La transacción no está vinculada a un token."
 
@@ -265,11 +282,14 @@ msgstr "La referencia única del contacto propietario de este token"
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "The void of the transaction with reference %s failed."
 msgstr "Falló la anulación de la transacción con referencia %s."
 
 #. module: payment_adyen
 #. odoo-python
 #: code:addons/payment_adyen/models/payment_transaction.py:0
+#, python-format
 msgid "Your payment was refused. Please try again."
 msgstr "Su pago ha sido rechazado. Por favor, inténtelo de nuevo."

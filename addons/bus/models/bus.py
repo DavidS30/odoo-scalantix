@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import os
+import random
 import selectors
 import threading
 import time
@@ -13,7 +14,8 @@ from psycopg2 import InterfaceError
 import odoo
 from odoo import api, fields, models
 from odoo.service.server import CommonServer
-from odoo.tools import json_default, SQL
+from odoo.tools.misc import DEFAULT_SERVER_DATETIME_FORMAT
+from odoo.tools import date_utils, SQL
 from odoo.tools.misc import OrderedSet
 
 _logger = logging.getLogger(__name__)
@@ -43,7 +45,7 @@ NOTIFY_PAYLOAD_MAX_LENGTH = get_notify_payload_max_length()
 # Bus
 # ---------------------------------------------------------
 def json_dump(v):
-    return json.dumps(v, separators=(',', ':'), default=json_default)
+    return json.dumps(v, separators=(',', ':'), default=date_utils.json_default)
 
 def hashable(key):
     if isinstance(key, list):
@@ -91,23 +93,20 @@ class ImBus(models.Model):
 
     @api.autovacuum
     def _gc_messages(self):
-        timeout_ago = fields.Datetime.now() - datetime.timedelta(seconds=TIMEOUT*2)
-        domain = [('create_date', '<', timeout_ago)]
+        timeout_ago = datetime.datetime.utcnow()-datetime.timedelta(seconds=TIMEOUT*2)
+        domain = [('create_date', '<', timeout_ago.strftime(DEFAULT_SERVER_DATETIME_FORMAT))]
         records = self.search(domain, limit=models.GC_UNLINK_LIMIT)
         if len(records) >= models.GC_UNLINK_LIMIT:
             self.env.ref('base.autovacuum_job')._trigger()
         return records.unlink()
 
     @api.model
+    def _sendmany(self, notifications):
+        for notification in notifications:
+            self._sendone(*notification)
+
+    @api.model
     def _sendone(self, target, notification_type, message):
-        """Low-level method to send ``notification_type`` and ``message`` to ``target``.
-
-        Using ``_bus_send()`` from ``bus.listener.mixin`` is recommended for simplicity and
-        security.
-
-        When using ``_sendone`` directly, ``target`` (if str) should not be guessable by an
-        attacker.
-        """
         self._ensure_hooks()
         channel = channel_with_db(self.env.cr.dbname, target)
         self.env.cr.precommit.data["bus.bus.values"].append(
@@ -162,8 +161,8 @@ class ImBus(models.Model):
     def _poll(self, channels, last=0, ignore_ids=None):
         # first poll return the notification in the 'buffer'
         if last == 0:
-            timeout_ago = fields.Datetime.now() - datetime.timedelta(seconds=TIMEOUT)
-            domain = [('create_date', '>', timeout_ago)]
+            timeout_ago = datetime.datetime.utcnow()-datetime.timedelta(seconds=TIMEOUT)
+            domain = [('create_date', '>', timeout_ago.strftime(DEFAULT_SERVER_DATETIME_FORMAT))]
         else:  # else returns the unread notifications
             domain = [('id', '>', last)]
         if ignore_ids:

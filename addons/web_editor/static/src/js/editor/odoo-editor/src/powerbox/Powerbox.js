@@ -198,7 +198,7 @@ export class Powerbox {
                 commandElWrapper.querySelector('.oe-powerbox-commandDescription').innerText = command.description;
                 categoryWrapperEl.append(commandElWrapper);
                 // Handle events on command (activate and pick).
-                commandElWrapper.addEventListener('mouseenter', () => {
+                commandElWrapper.addEventListener('mousemove', () => {
                     this.el.querySelector('.oe-powerbox-commandWrapper.active').classList.remove('active');
                     this._context.selectedCommand = command;
                     commandElWrapper.classList.add('active');
@@ -363,7 +363,7 @@ export class Powerbox {
      * @param {KeyboardEvent} ev
      */
     _onKeydown(ev) {
-        if (['Enter', 'Tab'].includes(ev.key)) {
+        if (ev.key === 'Enter') {
             ev.stopImmediatePropagation();
             this._pickCommand();
             ev.preventDefault();

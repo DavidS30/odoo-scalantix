@@ -1,11 +1,10 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+# -*- coding: utf-8 -*-
 
 from odoo import fields, models
 
 
 class ResPartner(models.Model):
-    _name = "res.partner"
-    _inherit = ["res.partner", "bus.listener.mixin"]
+    _inherit = 'res.partner'
 
     im_status = fields.Char('IM Status', compute='_compute_im_status')
 

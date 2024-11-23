@@ -6,12 +6,6 @@ import { ProjectTaskKanbanCompiler } from "./project_task_kanban_compiler";
 import { SubtaskKanbanList } from "@project/components/subtask_kanban_list/subtask_kanban_list"
 
 export class ProjectTaskKanbanRecord extends KanbanRecord {
-    static Compiler = ProjectTaskKanbanCompiler;
-    static components = {
-        ...KanbanRecord.components,
-        SubtaskKanbanList,
-    };
-
     setup() {
         super.setup();
         this.state = useState({folded: true});
@@ -26,3 +20,9 @@ export class ProjectTaskKanbanRecord extends KanbanRecord {
         return context;
     }
 }
+
+ProjectTaskKanbanRecord.Compiler = ProjectTaskKanbanCompiler;
+ProjectTaskKanbanRecord.components = {
+    ...KanbanRecord.components,
+    SubtaskKanbanList,
+};

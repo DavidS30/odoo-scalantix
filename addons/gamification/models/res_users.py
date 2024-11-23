@@ -2,7 +2,6 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import _, api, fields, models
-from odoo.tools import SQL
 
 
 class Users(models.Model):
@@ -150,30 +149,39 @@ class Users(models.Model):
             return []
 
         where_query = self.env['res.users']._where_calc(user_domain)
+        user_from_clause, user_where_clause, where_clause_params = where_query.get_sql()
 
-        sql = SQL("""
+        params = []
+        if from_date:
+            date_from_condition = 'AND tracking.tracking_date::DATE >= %s::DATE'
+            params.append(from_date)
+        if to_date:
+            date_to_condition = 'AND tracking.tracking_date::DATE <= %s::DATE'
+            params.append(to_date)
+        params.append(tuple(self.ids))
+
+        query = """
 SELECT final.user_id, final.karma_gain_total, final.karma_position
 FROM (
     SELECT intermediate.user_id, intermediate.karma_gain_total, row_number() OVER (ORDER BY intermediate.karma_gain_total DESC) AS karma_position
     FROM (
         SELECT "res_users".id as user_id, COALESCE(SUM("tracking".new_value - "tracking".old_value), 0) as karma_gain_total
-        FROM %s
+        FROM %(user_from_clause)s
         LEFT JOIN "gamification_karma_tracking" as "tracking"
         ON "res_users".id = "tracking".user_id AND "res_users"."active" = TRUE
-        WHERE %s %s %s
+        WHERE %(user_where_clause)s %(date_from_condition)s %(date_to_condition)s
         GROUP BY "res_users".id
         ORDER BY karma_gain_total DESC
     ) intermediate
 ) final
-WHERE final.user_id IN %s""",
-            where_query.from_clause,
-            where_query.where_clause or SQL("TRUE"),
-            SQL("AND tracking.tracking_date::DATE >= %s::DATE", from_date) if from_date else SQL(),
-            SQL("AND tracking.tracking_date::DATE <= %s::DATE", to_date) if to_date else SQL(),
-            tuple(self.ids),
-        )
+WHERE final.user_id IN %%s""" % {
+            'user_from_clause': user_from_clause,
+            'user_where_clause': user_where_clause or (not from_date and not to_date and 'TRUE') or '',
+            'date_from_condition': date_from_condition if from_date else '',
+            'date_to_condition': date_to_condition if to_date else ''
+        }
 
-        self.env.cr.execute(sql)
+        self.env.cr.execute(query, tuple(where_clause_params + params))
         return self.env.cr.dictfetchall()
 
     def _get_karma_position(self, user_domain):
@@ -198,22 +206,23 @@ WHERE final.user_id IN %s""",
             return {}
 
         where_query = self.env['res.users']._where_calc(user_domain)
+        user_from_clause, user_where_clause, where_clause_params = where_query.get_sql()
 
         # we search on every user in the DB to get the real positioning (not the one inside the subset)
         # then, we filter to get only the subset.
-        sql = SQL("""
+        query = """
 SELECT sub.user_id, sub.karma_position
 FROM (
     SELECT "res_users"."id" as user_id, row_number() OVER (ORDER BY res_users.karma DESC) AS karma_position
-    FROM %s
-    WHERE %s
+    FROM %(user_from_clause)s
+    WHERE %(user_where_clause)s
 ) sub
-WHERE sub.user_id IN %s""",
-            where_query.from_clause,
-            where_query.where_clause or SQL("TRUE"),
-            tuple(self.ids),
-        )
-        self.env.cr.execute(sql)
+WHERE sub.user_id IN %%s""" % {
+            'user_from_clause': user_from_clause,
+            'user_where_clause': user_where_clause or 'TRUE',
+        }
+
+        self.env.cr.execute(query, tuple(where_clause_params + [tuple(self.ids)]))
         return self.env.cr.dictfetchall()
 
     def _rank_changed(self):
@@ -351,7 +360,7 @@ WHERE sub.user_id IN %s""",
             'res_model': 'gamification.karma.tracking',
             'target': 'current',
             'type': 'ir.actions.act_window',
-            'view_mode': 'list',
+            'view_mode': 'tree',
             'context': {
                 'default_user_id': self.id,
                 'search_default_user_id': self.id,

@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { Dialog } from "@web/core/dialog/dialog";
 import { evaluateBooleanExpr } from "@web/core/py_js/py";
@@ -9,32 +11,40 @@ import { formatMany2one } from "@web/views/fields/formatters";
 import { FormViewDialog } from "@web/views/view_dialogs/form_view_dialog";
 
 import { Component, onWillStart, useState, xml } from "@odoo/owl";
-import { serializeDate, serializeDateTime } from "../core/l10n/dates";
+import {serializeDate, serializeDateTime} from "../core/l10n/dates";
 
 const debugRegistry = registry.category("debug");
+
+function viewSeparator() {
+    return { type: "separator", sequence: 300 };
+}
+
+debugRegistry.category("view").add("viewSeparator", viewSeparator);
 
 //------------------------------------------------------------------------------
 // Get view
 //------------------------------------------------------------------------------
 
 class GetViewDialog extends Component {
-    static template = "web.DebugMenu.GetViewDialog";
-    static components = { Dialog };
-    static props = {
-        arch: { type: String },
-        close: { type: Function },
-    };
+    setup() {
+        this.title = _t("Get View");
+    }
 }
+GetViewDialog.template = "web.DebugMenu.GetViewDialog";
+GetViewDialog.components = { Dialog };
+GetViewDialog.props = {
+    arch: { type: Element },
+    close: { type: Function },
+};
 
 export function getView({ component, env }) {
     return {
         type: "item",
-        description: _t("Computed Arch"),
+        description: _t("Get View"),
         callback: () => {
-            env.services.dialog.add(GetViewDialog, { arch: component.env.config.rawArch });
+            env.services.dialog.add(GetViewDialog, { arch: component.props.arch });
         },
-        sequence: 270,
-        section: "ui",
+        sequence: 340,
     };
 }
 
@@ -48,20 +58,25 @@ export function editView({ accessRights, component, env }) {
     if (!accessRights.canEditView) {
         return null;
     }
-    const { viewId, viewType: type } = component.env.config;
+    let { viewId, viewType: type } = component.env.config || {}; // fallback is there for legacy
+    if ("viewInfo" in component.props) {
+        // legacy
+        viewId = component.props.viewInfo.view_id;
+        type = component.props.viewInfo.type;
+        type = type === "tree" ? "list" : type;
+    }
     if (!type) {
         return;
     }
     const displayName = type[0].toUpperCase() + type.slice(1);
-    const description = _t("View: %(displayName)s", { displayName });
+    const description = _t("Edit View: ") + displayName;
     return {
         type: "item",
         description,
         callback: () => {
             editModelDebug(env, description, "ir.ui.view", viewId);
         },
-        sequence: 240,
-        section: "ui",
+        sequence: 350,
     };
 }
 
@@ -75,19 +90,25 @@ export function editSearchView({ accessRights, component, env }) {
     if (!accessRights.canEditView) {
         return null;
     }
-    const { searchViewId } = component.componentProps.info;
+    let { searchViewId } = component.props.info || {}; // fallback is there for legacy
+    if ("viewParams" in component.props) {
+        //legacy
+        if (!component.props.viewParams.action.controlPanelFieldsView) {
+            return null;
+        }
+        searchViewId = component.props.viewParams.action.controlPanelFieldsView.view_id;
+    }
     if (searchViewId === undefined) {
         return null;
     }
-    const description = _t("SearchView");
+    const description = _t("Edit SearchView");
     return {
         type: "item",
         description,
         callback: () => {
             editModelDebug(env, description, "ir.ui.view", searchViewId);
         },
-        sequence: 230,
-        section: "ui",
+        sequence: 360,
     };
 }
 
@@ -98,13 +119,6 @@ debugRegistry.category("view").add("editSearchView", editSearchView);
 // -----------------------------------------------------------------------------
 
 class GetMetadataDialog extends Component {
-    static template = "web.DebugMenu.GetMetadataDialog";
-    static components = { Dialog };
-    static props = {
-        resModel: String,
-        resId: Number,
-        close: Function,
-    };
     setup() {
         this.orm = useService("orm");
         this.dialogService = useService("dialog");
@@ -148,6 +162,8 @@ class GetMetadataDialog extends Component {
         this.state.writeDate = formatDateTime(deserializeDateTime(metadata.write_date));
     }
 }
+GetMetadataDialog.template = "web.DebugMenu.GetMetadataDialog";
+GetMetadataDialog.components = { Dialog };
 
 export function viewMetadata({ component, env }) {
     const resId = component.model.root.resId;
@@ -156,15 +172,14 @@ export function viewMetadata({ component, env }) {
     }
     return {
         type: "item",
-        description: _t("Metadata"),
+        description: _t("View Metadata"),
         callback: () => {
             env.services.dialog.add(GetMetadataDialog, {
                 resModel: component.props.resModel,
                 resId,
             });
         },
-        sequence: 110,
-        section: "record",
+        sequence: 320,
     };
 }
 
@@ -175,41 +190,39 @@ debugRegistry.category("form").add("viewMetadata", viewMetadata);
 // -----------------------------------------------------------------------------
 
 class RawRecordDialog extends Component {
-    static template = xml`
-        <Dialog title="props.title">
-            <pre t-esc="content"/>
-        </Dialog>
-    `;
-    static components = { Dialog };
-    static props = {
-        record: { type: Object },
-        title: { type: String },
-        close: { type: Function },
-    };
     get content() {
         const record = this.props.record;
         return JSON.stringify(record, Object.keys(record).sort(), 2);
     }
 }
+RawRecordDialog.template = xml`
+<Dialog title="props.title">
+    <pre t-esc="content"/>
+</Dialog>`;
+RawRecordDialog.components = { Dialog };
+RawRecordDialog.props = {
+    record: { type: Object },
+    title: { type: String },
+    close: { type: Function },
+};
 
 export function viewRawRecord({ component, env }) {
     const { resId, resModel } = component.model.config;
     if (!resId) {
         return null;
     }
-    const description = _t("Data");
+    const description = _t("View Raw Record Data");
     return {
         type: "item",
         description,
         callback: async () => {
             const records = await component.model.orm.read(resModel, [resId]);
             env.services.dialog.add(RawRecordDialog, {
-                title: _t("Data: %(model)s(%(id)s)", { model: resModel, id: resId }),
+                title: _t("Raw Record Data: %s(%s)", resModel, resId),
                 record: records[0],
             });
         },
-        sequence: 120,
-        section: "record",
+        sequence: 325,
     };
 }
 
@@ -220,16 +233,9 @@ debugRegistry.category("form").add("viewRawRecord", viewRawRecord);
 // -----------------------------------------------------------------------------
 
 class SetDefaultDialog extends Component {
-    static template = "web.DebugMenu.SetDefaultDialog";
-    static components = { Dialog };
-    static props = {
-        record: { type: Object },
-        fieldNodes: { type: Object },
-        close: { type: Function },
-    };
-
     setup() {
         this.orm = useService("orm");
+        this.title = _t("Set Defaults");
         this.state = {
             fieldToSet: "",
             condition: "",
@@ -320,9 +326,9 @@ class SetDefaultDialog extends Component {
             return field.name === this.state.fieldToSet;
         }).value;
 
-        if (fieldToSet.constructor.name.toLowerCase() === "date") {
+        if(fieldToSet.constructor.name.toLowerCase() === "date"){
             fieldToSet = serializeDate(fieldToSet);
-        } else if (fieldToSet.constructor.name.toLowerCase() === "datetime") {
+        } else if (fieldToSet.constructor.name.toLowerCase() === "datetime"){
             fieldToSet = serializeDateTime(fieldToSet);
         }
         await this.orm.call("ir.default", "set", [
@@ -336,19 +342,25 @@ class SetDefaultDialog extends Component {
         this.props.close();
     }
 }
+SetDefaultDialog.template = "web.DebugMenu.SetDefaultDialog";
+SetDefaultDialog.components = { Dialog };
+SetDefaultDialog.props = {
+    record: { type: Object },
+    fieldNodes: { type: Object },
+    close: { type: Function },
+};
 
 export function setDefaults({ component, env }) {
     return {
         type: "item",
-        description: _t("Set Default Values"),
+        description: _t("Set Defaults"),
         callback: () => {
             env.services.dialog.add(SetDefaultDialog, {
                 record: component.model.root,
                 fieldNodes: component.props.archInfo.fieldNodes,
             });
         },
-        sequence: 150,
-        section: "record",
+        sequence: 310,
     };
 }
 debugRegistry.category("form").add("setDefaults", setDefaults);
@@ -362,7 +374,7 @@ export function manageAttachments({ component, env }) {
     if (!resId) {
         return null; // No record
     }
-    const description = _t("Attachments");
+    const description = _t("Manage Attachments");
     return {
         type: "item",
         description,
@@ -386,8 +398,7 @@ export function manageAttachments({ component, env }) {
                 },
             });
         },
-        sequence: 140,
-        section: "record",
+        sequence: 330,
     };
 }
 

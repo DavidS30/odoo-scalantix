@@ -29,7 +29,7 @@ class AccountMove(models.Model):
             create_column(self.env.cr, 'account_move', 'l10n_it_document_type', 'integer')
         return super()._auto_init()
 
-    @api.depends('line_ids.matching_number', 'payment_state', 'matched_payment_ids')
+    @api.depends('line_ids.matching_number', 'payment_state')
     def _compute_l10n_it_payment_method(self):
         if self.env.company.account_fiscal_country_id.code != 'IT':
             return
@@ -49,12 +49,9 @@ class AccountMove(models.Model):
                     if payment_method_line:
                         move.l10n_it_payment_method = payment_method_line.l10n_it_payment_method
                         continue  # Skip to the next move
-            if linked_payment := move.matched_payment_ids.filtered(lambda p: p.state != 'draft')[:1]:
-                move.l10n_it_payment_method = linked_payment.payment_method_line_id.l10n_it_payment_method
-                continue
 
             # Default handling if no valid matching lines found or if conditions don't match
-            move.l10n_it_payment_method = move.origin_payment_id.payment_method_line_id.l10n_it_payment_method or move.l10n_it_payment_method or 'MP05'
+            move.l10n_it_payment_method = move.payment_id.payment_method_line_id.l10n_it_payment_method or move.l10n_it_payment_method or 'MP05'
 
     @api.depends('state')
     def _compute_l10n_it_document_type(self):

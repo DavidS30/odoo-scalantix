@@ -7,11 +7,6 @@ const { registries } = spreadsheet;
 const { figureRegistry } = registries;
 
 export class MobileFigureContainer extends Component {
-    static template = "documents_spreadsheet.MobileFigureContainer";
-    static props = {
-        spreadsheetModel: Object,
-    };
-
     setup() {
         useSubEnv({
             model: this.props.spreadsheetModel,
@@ -41,3 +36,9 @@ export class MobileFigureContainer extends Component {
         return f1.x < f2.x ? f1.y < f2.y : f1.y < f2.y;
     }
 }
+
+MobileFigureContainer.template = "documents_spreadsheet.MobileFigureContainer";
+
+MobileFigureContainer.props = {
+    spreadsheetModel: Object,
+};

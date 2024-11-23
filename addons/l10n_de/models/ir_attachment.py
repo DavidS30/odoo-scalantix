@@ -20,7 +20,8 @@ class IrAttachment(models.Model):
                 'application/xml',
             )
         )
-        id2move = self.env['account.move'].browse(set(audit_trail_attachments.mapped('res_id'))).exists().grouped('id')
+        moves = self.env['account.move'].browse(audit_trail_attachments.mapped('res_id')).exists()
+        id2move = {move.id: move for move in moves}
         for attachment in audit_trail_attachments:
             move = id2move.get(attachment.res_id)
             if move and move.posted_before and move.country_code == 'DE':
@@ -35,7 +36,7 @@ class IrAttachment(models.Model):
         invoice_pdf_attachments = self.filtered(lambda attachment:
             attachment.res_model == 'account.move'
             and attachment.res_id
-            and attachment.res_field in ('invoice_pdf_report_file', 'ubl_cii_xml_id')
+            and attachment.res_field in ('invoice_pdf_report_file', 'ubl_cii_xml_file')
         )
         if invoice_pdf_attachments:
             # only detach the document from the field, but keep it in the database for the audit trail

@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { hasTouch } from "@web/core/browser/feature_detection";
 import {
@@ -8,50 +10,42 @@ import { makeContext } from "@web/core/context";
 import { useDebugCategory } from "@web/core/debug/debug_context";
 import { registry } from "@web/core/registry";
 import { SIZES } from "@web/core/ui/ui_service";
-import { user } from "@web/core/user";
 import { useBus, useService } from "@web/core/utils/hooks";
 import { omit } from "@web/core/utils/objects";
 import { createElement, parseXML } from "@web/core/utils/xml";
 import { evaluateBooleanExpr } from "@web/core/py_js/py";
-import { useSetupAction } from "@web/search/action_hook";
 import { Layout } from "@web/search/layout";
 import { usePager } from "@web/search/pager_hook";
 import { standardViewProps } from "@web/views/standard_view_props";
 import { isX2Many } from "@web/views/utils";
 import { executeButtonCallback, useViewButtons } from "@web/views/view_button/view_button_hook";
+import { useSetupView } from "@web/views/view_hook";
 import { ViewButton } from "@web/views/view_button/view_button";
 import { Field } from "@web/views/fields/field";
 import { useModel } from "@web/model/model";
 import { addFieldDependencies, extractFieldsFromArchInfo } from "@web/model/relational_model/utils";
 import { useViewCompiler } from "@web/views/view_compiler";
-import { Widget } from "@web/views/widgets/widget";
+import { CogMenu } from "@web/search/cog_menu/cog_menu";
 import { STATIC_ACTIONS_GROUP_NUMBER } from "@web/search/action_menus/action_menus";
 
 import { ButtonBox } from "./button_box/button_box";
 import { FormCompiler } from "./form_compiler";
 import { FormErrorDialog } from "./form_error_dialog/form_error_dialog";
 import { FormStatusIndicator } from "./form_status_indicator/form_status_indicator";
-import { StatusBarDropdownItems } from "./status_bar_dropdown_items/status_bar_dropdown_items";
-import { FormCogMenu } from "./form_cog_menu/form_cog_menu";
 
-import {
-    Component,
-    onError,
-    onMounted,
-    onRendered,
-    onWillUnmount,
-    status,
-    useComponent,
-    useEffect,
-    useRef,
-    useState,
-} from "@odoo/owl";
-import { FetchRecordError } from "@web/model/relational_model/errors";
-import { effect } from "@web/core/utils/reactive";
+import { Component, onRendered, useEffect, useRef, useState } from "@odoo/owl";
 
 const viewRegistry = registry.category("views");
 
-export async function loadSubViews(fieldNodes, fields, context, resModel, viewService, isSmall) {
+export async function loadSubViews(
+    fieldNodes,
+    fields,
+    context,
+    resModel,
+    viewService,
+    userService,
+    isSmall
+) {
     for (const fieldInfo of Object.values(fieldNodes)) {
         const fieldName = fieldInfo.name;
         const field = fields[fieldName];
@@ -67,6 +61,7 @@ export async function loadSubViews(fieldNodes, fields, context, resModel, viewSe
 
         fieldInfo.views = fieldInfo.views || {};
         let viewType = fieldInfo.viewMode || "list,kanban";
+        viewType = viewType.replace("tree", "list");
         if (viewType.includes(",")) {
             viewType = isSmall ? "kanban" : "list";
         }
@@ -89,6 +84,10 @@ export async function loadSubViews(fieldNodes, fields, context, resModel, viewSe
                 refinedContext[key] = context[key];
             }
         }
+        // specify the main model to prevent access rights defined in the context
+        // (e.g. create: 0) to apply to sub views (same logic as the one applied by
+        // the server for inline views)
+        refinedContext.base_model_name = resModel;
 
         const comodel = field.relation;
         const {
@@ -98,7 +97,7 @@ export async function loadSubViews(fieldNodes, fields, context, resModel, viewSe
         } = await viewService.loadViews({
             resModel: comodel,
             views: [[false, viewType]],
-            context: makeContext([fieldContext, user.context, refinedContext]),
+            context: makeContext([fieldContext, userService.context, refinedContext]),
         });
         const { ArchParser } = viewRegistry.get(viewType);
         const xmlDoc = parseXML(views[viewType].arch);
@@ -112,63 +111,17 @@ export async function loadSubViews(fieldNodes, fields, context, resModel, viewSe
     }
 }
 
-export function useFormViewInDialog() {
-    const component = useComponent();
-    onMounted(() => {
-        component.env.bus.trigger("FORM-CONTROLLER:FORM-IN-DIALOG:ADD");
-    });
-
-    onWillUnmount(() => {
-        component.env.bus.trigger("FORM-CONTROLLER:FORM-IN-DIALOG:REMOVE");
-    });
-}
 // -----------------------------------------------------------------------------
 
 export class FormController extends Component {
-    static template = `web.FormView`;
-    static components = {
-        FormStatusIndicator,
-        Layout,
-        ButtonBox,
-        ViewButton,
-        Field,
-        CogMenu: FormCogMenu,
-        StatusBarDropdownItems,
-        Widget,
-    };
-
-    static props = {
-        ...standardViewProps,
-        discardRecord: { type: Function, optional: true },
-        mode: {
-            optional: true,
-            validate: (m) => ["edit", "readonly"].includes(m),
-        },
-        saveRecord: { type: Function, optional: true },
-        removeRecord: { type: Function, optional: true },
-        Model: Function,
-        Renderer: Function,
-        Compiler: Function,
-        archInfo: Object,
-        buttonTemplate: String,
-        preventCreate: { type: Boolean, optional: true },
-        preventEdit: { type: Boolean, optional: true },
-        onDiscard: { type: Function, optional: true },
-        onSave: { type: Function, optional: true },
-    };
-    static defaultProps = {
-        preventCreate: false,
-        preventEdit: false,
-        updateActionState: () => {},
-    };
-
     setup() {
         this.evaluateBooleanExpr = evaluateBooleanExpr;
         this.dialogService = useService("dialog");
+        this.router = useService("router");
         this.orm = useService("orm");
+        this.user = useService("user");
         this.viewService = useService("view");
         this.ui = useService("ui");
-        this.companyService = useService("company");
         useBus(this.ui.bus, "resize", this.render);
 
         this.archInfo = this.props.archInfo;
@@ -182,11 +135,6 @@ export class FormController extends Component {
             this.display.controlPanel = false;
         }
 
-        this.formInDialog = 0;
-
-        useBus(this.env.bus, "FORM-CONTROLLER:FORM-IN-DIALOG:ADD", () => this.formInDialog++);
-        useBus(this.env.bus, "FORM-CONTROLLER:FORM-IN-DIALOG:REMOVE", () => this.formInDialog--);
-
         const beforeFirstLoad = async () => {
             await loadSubViews(
                 this.archInfo.fieldNodes,
@@ -194,6 +142,7 @@ export class FormController extends Component {
                 this.props.context,
                 this.props.resModel,
                 this.viewService,
+                this.user,
                 this.env.isSmall
             );
             const { activeFields, fields } = extractFieldsFromArchInfo(
@@ -210,26 +159,11 @@ export class FormController extends Component {
         };
         this.model = useState(useModel(this.props.Model, this.modelParams, { beforeFirstLoad }));
 
-        onMounted(() => {
-            effect(
-                (model) => {
-                    if (status(this) === "mounted") {
-                        this.props.updateActionState({ resId: model.root.resId });
-                    }
-                },
-                [this.model]
-            );
-        });
+        this.cpButtonsRef = useRef("cpButtons");
 
-        onError((error) => {
-            const suggestedCompany = error.cause?.data?.context?.suggested_company;
-            if (error.cause?.data?.name === "odoo.exceptions.AccessError" && suggestedCompany) {
-                this.env.pushStateBeforeReload();
-                const activeCompanyIds = this.companyService.activeCompanyIds;
-                activeCompanyIds.push(suggestedCompany.id);
-                this.companyService.setCompanies(activeCompanyIds, true);
-            } else {
-                throw error;
+        useEffect(() => {
+            if (!this.env.inDialog) {
+                this.updateURL();
             }
         });
 
@@ -256,21 +190,10 @@ export class FormController extends Component {
             this.buttonBoxTemplate = buttonBoxTemplates.ButtonBox;
         }
 
-        const xmlDocHeader = this.archInfo.xmlDoc.querySelector("header");
-        if (xmlDocHeader) {
-            const { StatusBarDropdownItems } = useViewCompiler(
-                this.props.Compiler || FormCompiler,
-                { StatusBarDropdownItems: xmlDocHeader },
-                { isSubView: true, asDropdownItems: true }
-            );
-            this.statusBarDropdownItemsTemplate = StatusBarDropdownItems;
-        }
-
         this.rootRef = useRef("root");
-        useViewButtons(this.rootRef, {
+        useViewButtons(this.model, this.rootRef, {
             beforeExecuteAction: this.beforeExecuteActionButton.bind(this),
             afterExecuteAction: this.afterExecuteActionButton.bind(this),
-            reload: () => this.model.load(),
         });
 
         const state = this.props.state || {};
@@ -281,9 +204,8 @@ export class FormController extends Component {
             }
         };
 
-        useSetupAction({
+        useSetupView({
             rootRef: this.rootRef,
-            beforeVisibilityChange: () => this.beforeVisibilityChange(),
             beforeLeave: () => this.beforeLeave(),
             beforeUnload: (ev) => this.beforeUnload(ev),
             getLocalState: () => {
@@ -333,24 +255,6 @@ export class FormController extends Component {
                 () => [this.model.root.isInEdition]
             );
         }
-
-        if (this.env.inDialog) {
-            useFormViewInDialog();
-        }
-    }
-
-    get cogMenuProps() {
-        return {
-            getActiveIds: () => (this.model.root.isNew ? [] : [this.model.root.resId]),
-            context: this.props.context,
-            items: this.props.info.actionMenus ? this.actionMenuItems : {},
-            isDomainSelected: this.model.root.isDomainSelected,
-            resModel: this.model.root.resModel,
-            domain: this.props.domain,
-            onActionExecuted: () =>
-                this.model.load({ resId: this.model.root.resId, resIds: this.model.root.resIds }),
-            shouldExecuteAction: this.shouldExecuteAction.bind(this),
-        };
     }
 
     get modelParams() {
@@ -440,34 +344,19 @@ export class FormController extends Component {
 
     async onPagerUpdate({ offset, resIds }) {
         const dirty = await this.model.root.isDirty();
-        try {
-            if (dirty) {
-                await this.model.root.save({
-                    onError: this.onSaveError.bind(this),
-                    nextId: resIds[offset],
-                });
-            } else {
-                await this.model.load({ resId: resIds[offset] });
-            }
-        } catch (e) {
-            if (e instanceof FetchRecordError) {
-                this.model.load({
-                    resIds: this.model.config.resIds.filter((id) => !e.resIds.includes(id)),
-                });
-            }
-            throw e;
-        }
-    }
-
-    beforeVisibilityChange() {
-        if (document.visibilityState === "hidden" && this.formInDialog === 0) {
-            return this.model.root.save();
+        if (dirty) {
+            return this.model.root.save({
+                onError: this.onSaveError.bind(this),
+                nextId: resIds[offset],
+            });
+        } else {
+            return this.model.load({ resId: resIds[offset] });
         }
     }
 
     async beforeLeave() {
         if (this.model.root.dirty) {
-            return this.save({
+            return this.model.root.save({
                 reload: false,
                 onError: this.onSaveError.bind(this),
             });
@@ -480,6 +369,10 @@ export class FormController extends Component {
             ev.preventDefault();
             ev.returnValue = "Unsaved changes";
         }
+    }
+
+    updateURL() {
+        this.router.pushState({ id: this.model.root.resId || undefined });
     }
 
     getStaticActionMenuItems() {
@@ -681,3 +574,36 @@ export class FormController extends Component {
         return result;
     }
 }
+
+FormController.template = `web.FormView`;
+FormController.components = {
+    FormStatusIndicator,
+    Layout,
+    ButtonBox,
+    ViewButton,
+    Field,
+    CogMenu,
+};
+FormController.props = {
+    ...standardViewProps,
+    discardRecord: { type: Function, optional: true },
+    mode: {
+        optional: true,
+        validate: (m) => ["edit", "readonly"].includes(m),
+    },
+    saveRecord: { type: Function, optional: true },
+    removeRecord: { type: Function, optional: true },
+    Model: Function,
+    Renderer: Function,
+    Compiler: Function,
+    archInfo: Object,
+    buttonTemplate: String,
+    preventCreate: { type: Boolean, optional: true },
+    preventEdit: { type: Boolean, optional: true },
+    onDiscard: { type: Function, optional: true },
+    onSave: { type: Function, optional: true },
+};
+FormController.defaultProps = {
+    preventCreate: false,
+    preventEdit: false,
+};

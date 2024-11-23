@@ -4,7 +4,8 @@
 from odoo import SUPERUSER_ID
 from odoo.addons.crm.tests import common as crm_common
 from odoo.fields import Datetime
-from odoo.tests import Form, tagged, users
+from odoo.tests.common import tagged, users
+from odoo.tests.common import Form
 
 @tagged('lead_manage')
 class TestLeadConvertForm(crm_common.TestLeadConvertCommon):

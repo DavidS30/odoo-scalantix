@@ -86,7 +86,7 @@ options.registry.SocialMedia = options.Class.extend({
     async renderListItems(previewMode, widgetValue, params) {
         const ariaLabelsOfSocialNetworks = {
             "facebook": _t("Facebook"),
-            "twitter": _t("X"),
+            "twitter": _t("Twitter"),
             "linkedin": _t("LinkedIn"),
             "youtube": _t("YouTube"),
             "instagram": _t("Instagram"),

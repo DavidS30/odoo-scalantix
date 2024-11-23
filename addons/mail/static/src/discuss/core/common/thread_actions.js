@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { threadActionsRegistry } from "@mail/core/common/thread_actions";
 import { AttachmentPanel } from "@mail/discuss/core/common/attachment_panel";
 import { ChannelInvitation } from "@mail/discuss/core/common/channel_invitation";
@@ -14,8 +16,8 @@ threadActionsRegistry
         condition(component) {
             return (
                 component.thread?.model === "discuss.channel" &&
-                component.store.self.type !== "guest" &&
-                (!component.props.chatWindow || component.props.chatWindow.isOpen)
+                !component.props.chatWindow &&
+                component.store.self.type !== "guest"
             );
         },
         setup(action) {
@@ -40,18 +42,17 @@ threadActionsRegistry
         },
         component: NotificationSettings,
         icon(component) {
-            return component.thread.isMuted
+            return component.thread.muteUntilDateTime
                 ? "fa fa-fw text-danger fa-bell-slash"
                 : "fa fa-fw fa-bell";
         },
         iconLarge(component) {
-            return component.thread.isMuted
+            return component.thread.muteUntilDateTime
                 ? "fa fa-fw fa-lg text-danger fa-bell-slash"
                 : "fa fa-fw fa-lg fa-bell";
         },
         name: _t("Notification Settings"),
-        sequence: 10,
-        sequenceGroup: 30,
+        sequence: 5,
         toggle: true,
     })
     .add("attachments", {
@@ -61,12 +62,12 @@ threadActionsRegistry
         component: AttachmentPanel,
         icon: "fa fa-fw fa-paperclip",
         iconLarge: "fa fa-fw fa-lg fa-paperclip",
-        name: _t("Attachments"),
-        sequence: 10,
-        sequenceGroup: 10,
+        name: _t("Show Attachments"),
+        nameActive: _t("Hide Attachments"),
+        sequence: 25,
         toggle: true,
     })
-    .add("invite-people", {
+    .add("add-users", {
         close(component, action) {
             action.popover?.close();
         },
@@ -80,20 +81,18 @@ threadActionsRegistry
                 (!component.props.chatWindow || component.props.chatWindow.isOpen)
             );
         },
-        panelOuterClass(component) {
-            return `o-discuss-ChannelInvitation ${component.props.chatWindow ? "bg-inherit" : ""}`;
-        },
+        panelOuterClass: "o-discuss-ChannelInvitation",
         icon: "fa fa-fw fa-user-plus",
         iconLarge: "fa fa-fw fa-lg fa-user-plus",
-        name: _t("Invite People"),
+        name: _t("Add Users"),
+        nameActive: _t("Stop Adding Users"),
         open(component, action) {
             action.popover?.open(component.root.el.querySelector(`[name="${action.id}"]`), {
                 hasSizeConstraints: true,
                 thread: component.thread,
             });
         },
-        sequence: 10,
-        sequenceGroup: 20,
+        sequence: 30,
         setup(action) {
             const component = useComponent();
             if (!component.props.chatWindow) {
@@ -117,16 +116,16 @@ threadActionsRegistry
             return {
                 openChannelInvitePanel({ keepPrevious } = {}) {
                     component.threadActions.actions
-                        .find(({ id }) => id === "invite-people")
+                        .find(({ id }) => id === "add-users")
                         ?.open({ keepPrevious });
                 },
             };
         },
-        panelOuterClass: "o-discuss-ChannelMemberList bg-inherit",
+        panelOuterClass: "o-discuss-ChannelMemberList",
         icon: "fa fa-fw fa-users",
         iconLarge: "fa fa-fw fa-lg fa-users",
-        name: _t("Members"),
-        sequence: 30,
-        sequenceGroup: 10,
+        name: _t("Show Member List"),
+        nameActive: _t("Hide Member List"),
+        sequence: 40,
         toggle: true,
     });

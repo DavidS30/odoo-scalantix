@@ -1,4 +1,6 @@
-import { loadBundle } from "@web/core/assets";
+/** @odoo-module **/
+
+import { loadCSS, loadJS } from "@web/core/assets";
 import { browser } from "@web/core/browser/browser";
 import { usePopover } from "@web/core/popover/popover_hook";
 import { useService } from "@web/core/utils/hooks";
@@ -8,6 +10,7 @@ import {
     onPatched,
     onWillStart,
     onWillUnmount,
+    onWillUpdateProps,
     useComponent,
     useExternalListener,
     useRef,
@@ -88,7 +91,31 @@ export function useFullCalendar(refName, params) {
         return newParams;
     }
 
-    onWillStart(async () => await loadBundle("web.fullcalendar_lib"));
+    async function loadJsFiles() {
+        const files = [
+            "/web/static/lib/fullcalendar/core/main.js",
+            "/web/static/lib/fullcalendar/interaction/main.js",
+            "/web/static/lib/fullcalendar/daygrid/main.js",
+            "/web/static/lib/fullcalendar/luxon/main.js",
+            "/web/static/lib/fullcalendar/timegrid/main.js",
+            "/web/static/lib/fullcalendar/list/main.js",
+        ];
+        for (const file of files) {
+            await loadJS(file);
+        }
+    }
+    async function loadCssFiles() {
+        await Promise.all(
+            [
+                "/web/static/lib/fullcalendar/core/main.css",
+                "/web/static/lib/fullcalendar/daygrid/main.css",
+                "/web/static/lib/fullcalendar/timegrid/main.css",
+                "/web/static/lib/fullcalendar/list/main.css",
+            ].map((file) => loadCSS(file))
+        );
+    }
+
+    onWillStart(() => Promise.all([loadJsFiles(), loadCssFiles()]));
 
     onMounted(() => {
         try {
@@ -99,13 +126,13 @@ export function useFullCalendar(refName, params) {
         }
     });
 
+    let isWeekendVisible = params.isWeekendVisible;
+    onWillUpdateProps((np) => {
+        isWeekendVisible = np.isWeekendVisible;
+    });
     onPatched(() => {
         instance.refetchEvents();
-        instance.setOption("weekends", component.props.isWeekendVisible);
-        if (params.weekNumbers && component.props.model.scale === "year") {
-            instance.destroy();
-            instance.render();
-        }
+        instance.setOption("weekends", isWeekendVisible);
     });
     onWillUnmount(() => {
         instance.destroy();

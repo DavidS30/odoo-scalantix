@@ -6,8 +6,7 @@ import { OdooChart } from "./odoo_chart";
 
 const { chartRegistry } = spreadsheet.registries;
 
-const { getDefaultChartJsRuntime, chartFontColor, ColorGenerator, formatTickValue } =
-    spreadsheet.helpers;
+const { getDefaultChartJsRuntime, chartFontColor, ChartColors } = spreadsheet.helpers;
 
 chartRegistry.add("odoo_pie", {
     match: (type) => type === "odoo_pie",
@@ -25,12 +24,7 @@ function createOdooChartRuntime(chart, getters) {
     const { datasets, labels } = chart.dataSource.getData();
     const locale = getters.getLocale();
     const chartJsConfig = getPieConfiguration(chart, labels, locale);
-    chartJsConfig.options = {
-        ...chartJsConfig.options,
-        ...getters.getChartDatasetActionCallbacks(chart),
-    };
-    const dataSetsLength = Math.max(0, ...datasets.map((ds) => ds?.data?.length ?? 0));
-    const colors = new ColorGenerator(dataSetsLength);
+    const colors = new ChartColors();
     for (const { label, data } of datasets) {
         const backgroundColor = getPieColors(colors, datasets);
         const dataset = {
@@ -38,7 +32,6 @@ function createOdooChartRuntime(chart, getters) {
             data,
             borderColor: "#FFFFFF",
             backgroundColor,
-            hoverOffset: 30,
         };
         chartJsConfig.data.datasets.push(dataset);
     }
@@ -66,11 +59,6 @@ function getPieConfiguration(chart, labels, locale) {
                 return tooltipItem.label;
             },
         },
-    };
-
-    config.options.plugins.chartShowValuesPlugin = {
-        showValues: chart.showValues,
-        callback: formatTickValue({ locale }),
     };
     return config;
 }

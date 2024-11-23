@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {
     append,
     combineAttributes,
@@ -10,9 +12,8 @@ import { toStringExpression, BUTTON_CLICK_PARAMS } from "./utils";
 /**
  * @typedef Compiler
  * @property {string} selector
- * @property {(el: Element, params: Record<string, any>) => Element} fn
  * @property {string} [class]
- * @property {boolean} [doNotCopyAttributes]
+ * @property {(el: Element, params: Record<string, any>) => Element} fn
  */
 
 import { xml } from "@odoo/owl";

@@ -9,7 +9,7 @@ import {
     DIRECTIONS,
     CTYPES,
     leftPos,
-    isIconElement,
+    isFontAwesome,
     rightLeafOnlyNotBlockNotEditablePath,
     rightLeafOnlyPathNotBlockNotEditablePath,
     isNotEditableNode,
@@ -143,7 +143,7 @@ HTMLElement.prototype.oDeleteForward = function (offset) {
         return;
     }
 
-    if (firstLeafNode && (isIconElement(firstLeafNode) || isNotEditableNode(firstLeafNode))) {
+    if (firstLeafNode && (isFontAwesome(firstLeafNode) || isNotEditableNode(firstLeafNode))) {
         const nextSibling = firstLeafNode.nextSibling;
         const nextSiblingText = nextSibling ? nextSibling.textContent : '';
         firstLeafNode.remove();

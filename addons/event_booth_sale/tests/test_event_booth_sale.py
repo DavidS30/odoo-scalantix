@@ -158,8 +158,8 @@ class TestEventBoothSale(TestEventBoothSaleWData):
 class TestEventBoothSaleInvoice(AccountTestInvoicingCommon, TestEventBoothSaleWData):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref=None):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         # Add group `group_account_invoice` to user_sales_salesman to allow to pay the invoice
         cls.user_sales_salesman.groups_id += cls.env.ref('account.group_account_invoice')
@@ -207,8 +207,4 @@ class TestEventBoothSaleInvoice(AccountTestInvoicingCommon, TestEventBoothSaleWD
             f"Invoice payment is in '{invoice.payment_state}' status while it should be '{in_payment_state}'.")
 
         self.assertEqual(booth.state, 'unavailable')
-        # When running without enterprise the payments get reconciled immediately.
-        is_paid = self.env['account.move']._get_invoice_in_payment_state() == 'paid'
-        self.assertEqual(is_paid, booth.is_paid)
-        invoice._invoice_paid_hook()
         self.assertTrue(booth.is_paid)

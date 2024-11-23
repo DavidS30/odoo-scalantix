@@ -1,6 +1,5 @@
 /** @odoo-module **/
 
-import { rpc } from '@web/core/network/rpc';
 import { registry } from '@web/core/registry';
 import { UploadProgressToast } from './upload_progress_toast';
 import { _t } from "@web/core/l10n/translation";
@@ -11,11 +10,10 @@ import { sprintf } from "@web/core/utils/strings";
 import { reactive } from "@odoo/owl";
 
 export const AUTOCLOSE_DELAY = 3000;
-export const AUTOCLOSE_DELAY_LONG = 8000;
 
 export const uploadService = {
-    dependencies: ['notification'],
-    start(env, { notification }) {
+    dependencies: ['rpc', 'notification'],
+    start(env, { rpc, notification }) {
         let fileId = 0;
         const progressToast = reactive({
             files: {},
@@ -161,12 +159,10 @@ export const uploadService = {
                             file.uploaded = true;
                             await onUploaded(attachment);
                         }
-                        // If there's an error, display the error message for longer
-                        let message_autoclose_delay = file.hasError ? AUTOCLOSE_DELAY_LONG : AUTOCLOSE_DELAY;
-                        setTimeout(() => deleteFile(file.id), message_autoclose_delay);
+                        setTimeout(() => deleteFile(file.id), AUTOCLOSE_DELAY);
                     } catch (error) {
                         file.hasError = true;
-                        setTimeout(() => deleteFile(file.id), AUTOCLOSE_DELAY_LONG);
+                        setTimeout(() => deleteFile(file.id), AUTOCLOSE_DELAY);
                         throw error;
                     }
                 }
@@ -175,4 +171,4 @@ export const uploadService = {
     },
 };
 
-// registry.category('services').add('upload', uploadService);
+registry.category('services').add('upload', uploadService);

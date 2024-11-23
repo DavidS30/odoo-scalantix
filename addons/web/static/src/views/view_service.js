@@ -1,4 +1,5 @@
-import { rpcBus } from "@web/core/network/rpc";
+/** @odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { UPDATE_METHODS } from "@web/core/orm_service";
 
@@ -13,8 +14,6 @@ import { UPDATE_METHODS } from "@web/core/orm_service";
  * @property {boolean} is_default
  * @property {string} model_id
  * @property {[number, string] | false} action_id
- * @property {number | false} embedded_action_id
- * @property {number | false} embedded_parent_res_id
  */
 
 /**
@@ -53,7 +52,7 @@ export const viewService = {
         }
 
         env.bus.addEventListener("CLEAR-CACHES", clearCache);
-        rpcBus.addEventListener("RPC:RESPONSE", (ev) => {
+        env.bus.addEventListener("RPC:RESPONSE", (ev) => {
             const { model, method } = ev.detail.data.params;
             if (["ir.ui.view", "ir.filters"].includes(model)) {
                 if (UPDATE_METHODS.includes(method)) {
@@ -74,21 +73,11 @@ export const viewService = {
             const { context, resModel, views } = params;
             const loadViewsOptions = {
                 action_id: options.actionId || false,
-                embedded_action_id: options.embeddedActionId || false,
-                embedded_parent_res_id: options.embeddedParentResId || false,
                 load_filters: options.loadIrFilters || false,
                 toolbar: (!context?.disable_toolbar && options.loadActionMenus) || false,
             };
             for (const key in options) {
-                if (
-                    ![
-                        "actionId",
-                        "embeddedActionId",
-                        "embeddedParentResId",
-                        "loadIrFilters",
-                        "loadActionMenus",
-                    ].includes(key)
-                ) {
+                if (!["actionId", "loadIrFilters", "loadActionMenus"].includes(key)) {
                     loadViewsOptions[key] = options[key];
                 }
             }
@@ -112,7 +101,7 @@ export const viewService = {
                     .then((result) => {
                         const { models, views } = result;
                         const viewDescriptions = {
-                            fields: models[resModel].fields,
+                            fields: models[resModel],
                             relatedModels: models,
                             views: {},
                         };

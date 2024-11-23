@@ -5,6 +5,7 @@ from . import controllers
 from . import models
 from . import report
 from . import wizard
+from . import populate
 
 
 # TODO: Apply proper fix & remove in master

@@ -3,14 +3,16 @@
 
   <t t-name="web.DropdownItem">
     <t
-      t-tag="props.attrs and props.attrs.href ? 'a' : 'span'"
-      class="o-dropdown-item dropdown-item o-navigable"
+      t-tag="props.href ? 'a' : 'span'"
+      t-att-href="props.href"
+      class="dropdown-item"
       t-att-class="props.class"
-      t-on-click.stop="onClick"
-      t-on-mouseenter="() => this.dropdownControl.closeChildren()"
       role="menuitem"
+      t-on-click.stop="onClick"
+      t-att-title="props.title"
+      t-att-data-hotkey="props.hotkey"
+      t-att="dataAttributes"
       tabindex="0"
-      t-att="props.attrs"
     >
       <t t-slot="default" />
     </t>

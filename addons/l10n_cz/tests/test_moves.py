@@ -9,9 +9,8 @@ from odoo import fields, Command
 class TestAccountCZ(AccountTestInvoicingCommon):
 
     @classmethod
-    @AccountTestInvoicingCommon.setup_country('cz')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref='cz'):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         cls.currency_usd = cls.env.ref('base.USD')
         cls.invoice_a = cls.env['account.move'].create({

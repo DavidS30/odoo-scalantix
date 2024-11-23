@@ -12,6 +12,7 @@ Install this if you are using the Point of Sale app in Argentina.
         'l10n_ar',
         'point_of_sale',
     ],
+    'countries': ['ar'],
     'data': [
         'views/templates.xml',
     ],

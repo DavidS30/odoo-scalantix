@@ -22,14 +22,13 @@ QUnit.module('hr_timesheet', function (hooks) {
             models: {
                 'account.analytic.line': {
                     fields: {
-                        unit_amount: { string: "Unit Amount", type: "float", aggregator: "sum", store: true },
+                        unit_amount: { string: "Unit Amount", type: "float", group_operator: "sum", store: true },
                         project_id: {
                             string: "Project",
                             type: "many2one",
                             relation: "project.project",
                             store: true,
                             sortable: true,
-                            groupable: true,
                         },
                     },
                     records: [
@@ -46,7 +45,6 @@ QUnit.module('hr_timesheet', function (hooks) {
                             relation: "project.milestone",
                             store: true,
                             sortable: true,
-                            groupable: true,
                         },
                         project_id: {
                             string: "Project",
@@ -54,7 +52,6 @@ QUnit.module('hr_timesheet', function (hooks) {
                             relation: "project.project",
                             store: true,
                             sortable: true,
-                            groupable: true,
                         },
                     },
                     records: [
@@ -84,7 +81,7 @@ QUnit.module('hr_timesheet', function (hooks) {
             views: {
                 // unit_amount is used as group_by and measure
                 "account.analytic.line,false,graph": `
-                    <graph js_class="hr_timesheet_graphview">
+                    <graph>
                         <field name="unit_amount"/>
                         <field name="unit_amount" type="measure"/>
                     </graph>
@@ -108,7 +105,7 @@ QUnit.module('hr_timesheet', function (hooks) {
         const graph = await makeView({
             serverData,
             resModel: "account.analytic.line",
-            type: "graph",
+            type: "hr_timesheet_graphview",
         });
 
         const renderedData = getGraphRenderer(graph).chart.data.datasets[0].data;
@@ -125,7 +122,7 @@ QUnit.module('hr_timesheet', function (hooks) {
         const graph = await makeView({
             serverData,
             resModel: "account.analytic.line",
-            type: "graph",
+            type: "hr_timesheet_graphview",
         });
 
         const renderedData = getGraphRenderer(graph).chart.data.datasets[0].data;

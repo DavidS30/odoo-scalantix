@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 import { getActiveHotkey } from "@web/core/hotkeys/hotkey_service";
 
 import { useEffect, useRef } from "@odoo/owl";

@@ -26,7 +26,7 @@ options.registry.facebookPage = options.Class.extend({
             width: 350,
             tabs: '',
             small_header: true,
-            hide_cover: "true",
+            hide_cover: true,
         };
         this.fbData = Object.assign({}, defaults, pick(this.$target[0].dataset, ...Object.keys(defaults)));
         if (!this.fbData.href) {
@@ -78,7 +78,7 @@ options.registry.facebookPage = options.Class.extend({
             }
         } else {
             if (optionName === 'show_cover') {
-                this.fbData.hide_cover = widgetValue ? "false" : "true";
+                this.fbData.hide_cover = !widgetValue;
             } else {
                 this.fbData[optionName] = widgetValue;
             }
@@ -99,6 +99,20 @@ options.registry.facebookPage = options.Class.extend({
     // Private
     //--------------------------------------------------------------------------
 
+    /**
+     * @override
+     */
+    _renderCustomXML(uiFragment) {
+        const alertEl = document.createElement("we-alert");
+        const titleEl = document.createElement("we-title");
+        titleEl.textContent = _t("Recent Facebook Issues");
+        const descEl = document.createElement("span");
+        descEl.textContent = _t("This block will temporarily not be shown on mobile due to recent Facebook issues.");
+        alertEl.appendChild(titleEl);
+        alertEl.appendChild(descEl);
+        uiFragment.prepend(alertEl);
+        return this._super(...arguments);
+    },
     /**
      * Sets the correct dataAttributes on the facebook iframe and refreshes it.
      *
@@ -130,7 +144,8 @@ options.registry.facebookPage = options.Class.extend({
                     return this.fbData.tabs.split(',').includes(optionName.replace(/^tab./, ''));
                 } else {
                     if (optionName === 'show_cover') {
-                        return this.fbData.hide_cover === "false";
+                        // Sometimes a string, sometimes a boolean.
+                        return String(this.fbData.hide_cover) === "false";
                     }
                     return this.fbData[optionName];
                 }

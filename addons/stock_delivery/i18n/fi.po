@@ -3,26 +3,25 @@
 # 	* stock_delivery
 # 
 # Translators:
-# Tiffany Chang, 2024
-# Marko Happonen <marko.happonen@sprintit.fi>, 2024
-# Kari Lindgren <kari.lindgren@emsystems.fi>, 2024
-# Mikko Salmela <salmemik@gmail.com>, 2024
-# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2024
-# Jussi Lehto <jussi@gulfeo.com>, 2024
-# Svante Suominen <svante.suominen@web-veistamo.fi>, 2024
-# Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2024
-# Martin Trigaux, 2024
-# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2024
-# Kim Asplund <kim.asplund@gmail.com>, 2024
-# Tuomas Lyyra <tuomas.lyyra@legenda.fi>, 2024
+# Mikko Salmela <salmemik@gmail.com>, 2023
+# Jussi Lehto <jussi@gulfeo.com>, 2023
+# Marko Happonen <marko.happonen@sprintit.fi>, 2023
+# Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2023
+# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2023
+# Tuomas Lyyra <tuomas.lyyra@legenda.fi>, 2023
+# Kari Lindgren <kari.lindgren@emsystems.fi>, 2023
+# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2023
+# Svante Suominen <svante.suominen@web-veistamo.fi>, 2023
+# Martin Trigaux, 2023
+# Kim Asplund <kim.asplund@gmail.com>, 2023
 # Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:56+0000\n"
-"PO-Revision-Date: 2024-09-25 09:42+0000\n"
+"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024\n"
 "Language-Team: Finnish (https://app.transifex.com/odoo/teams/41243/fi/)\n"
 "MIME-Version: 1.0\n"
@@ -34,8 +33,9 @@ msgstr ""
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/sale_order.py:0
-msgid "%(name)s (Estimated Cost: %(cost)s)"
-msgstr ""
+#, python-format
+msgid " (Estimated Cost: %s )"
+msgstr " (Arvioitu kustannus: %s )"
 
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.view_quant_package_weight_form
@@ -61,13 +61,13 @@ msgstr "<span>Toimituspaino: </span>"
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.report_delivery_document2
 #: model_terms:ir.ui.view,arch_db:stock_delivery.report_shipping2
-msgid "<strong>Carrier</strong>"
-msgstr ""
+msgid "<strong>Carrier:</strong>"
+msgstr "<strong>Huolitsija:</strong>"
 
 #. module: stock_delivery
-#: model_terms:ir.ui.view,arch_db:stock_delivery.report_shipping2
-msgid "<strong>Shipping Method:</strong>"
-msgstr ""
+#: model_terms:ir.ui.view,arch_db:stock_delivery.report_delivery_document2
+msgid "<strong>HS Code</strong>"
+msgstr "<strong>HS-koodi</strong>"
 
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.report_package_barcode_delivery
@@ -85,13 +85,17 @@ msgstr ""
 
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.report_delivery_document2
-msgid "<strong>Total Weight</strong>"
+msgid ""
+"<strong>Total Weight:</strong>\n"
+"                <br/>"
 msgstr ""
+"<strong>Kokonaispaino:</strong>\n"
+"                <br/>"
 
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.report_delivery_document2
-msgid "<strong>Tracking Number</strong>"
-msgstr ""
+msgid "<strong>Tracking Number:</strong>"
+msgstr "<strong>Seurantanumero:</strong>"
 
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.report_package_barcode_delivery
@@ -100,13 +104,22 @@ msgstr "<strong>Paino: </strong>"
 
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.report_shipping2
-msgid "<strong>Weight</strong>"
+msgid ""
+"<strong>Weight:</strong>\n"
+"                <br/>"
 msgstr ""
+"<strong>Paino:</strong>\n"
+"                <br/>"
 
 #. module: stock_delivery
 #: model:ir.model.fields,field_description:stock_delivery.field_stock_route__shipping_selectable
 msgid "Applicable on Shipping Methods"
 msgstr "Sovelletaan toimitustapoihin"
+
+#. module: stock_delivery
+#: model:ir.model.fields,field_description:stock_delivery.field_stock_picking__weight_bulk
+msgid "Bulk Weight"
+msgstr "Bulk paino"
 
 #. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.view_picking_withcarrier_out_form
@@ -148,6 +161,7 @@ msgstr "Yritys"
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/stock_picking.py:0
+#, python-format
 msgid "Cost: %(price).2f %(currency)s"
 msgstr "Kustannukset: %(price).2f %(currency)s"
 
@@ -165,11 +179,6 @@ msgstr "Luotu"
 #: model:ir.model,name:stock_delivery.model_choose_delivery_carrier
 msgid "Delivery Carrier Selection Wizard"
 msgstr "Toimituksen huolitsijan valinnan ohjattu toiminto"
-
-#. module: stock_delivery
-#: model:ir.ui.menu,name:stock_delivery.menu_action_delivery_carrier_form
-msgid "Delivery Methods"
-msgstr "Toimitustavat"
 
 #. module: stock_delivery
 #: model:ir.model,name:stock_delivery.model_choose_delivery_package
@@ -217,15 +226,9 @@ msgstr ""
 "Todelliset kustannukset: asiakkaalta laskutetaan todelliset toimituskulut, toimituskulut päivitetään myyntitilauksessa (SO) toimituksen jälkeen."
 
 #. module: stock_delivery
-#: model_terms:ir.ui.view,arch_db:stock_delivery.report_shipping2
-msgid "FedEx"
-msgstr "FedEx"
-
-#. module: stock_delivery
 #: model:ir.model.fields,field_description:stock_delivery.field_product_product__hs_code
 #: model:ir.model.fields,field_description:stock_delivery.field_product_template__hs_code
 #: model_terms:ir.ui.view,arch_db:stock_delivery.product_template_hs_code
-#: model_terms:ir.ui.view,arch_db:stock_delivery.report_delivery_document2
 msgid "HS Code"
 msgstr "Tavaranimike (HS-koodi)"
 
@@ -283,17 +286,20 @@ msgstr "Paketti"
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/stock_picking.py:0
+#, python-format
 msgid "Package Details"
 msgstr "Pakkaustiedot"
 
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/wizard/choose_delivery_package.py:0
+#, python-format
 msgid "Package too heavy!"
 msgstr "Paketti liian raskas!"
 
 #. module: stock_delivery
 #: model:ir.model,name:stock_delivery.model_stock_quant_package
+#: model:ir.model.fields,field_description:stock_delivery.field_stock_picking__package_ids
 msgid "Packages"
 msgstr "Pakkaukset"
 
@@ -382,6 +388,7 @@ msgstr "Lähetä lähettäjälle"
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/stock_picking.py:0
+#, python-format
 msgid ""
 "Shipment sent to carrier %(carrier_name)s for shipping with tracking number "
 "%(ref)s"
@@ -401,12 +408,14 @@ msgstr "Lähetystiedot"
 
 #. module: stock_delivery
 #: model:ir.model,name:stock_delivery.model_delivery_carrier
+#: model:ir.ui.menu,name:stock_delivery.menu_action_delivery_carrier_form
 #: model_terms:ir.ui.view,arch_db:stock_delivery.stock_location_route_view_form_inherit_stock_delivery
 msgid "Shipping Methods"
 msgstr "Toimitustavat"
 
 #. module: stock_delivery
 #: model:ir.model.fields,field_description:stock_delivery.field_choose_delivery_package__shipping_weight
+#: model:ir.model.fields,field_description:stock_delivery.field_stock_quant_package__shipping_weight
 msgid "Shipping Weight"
 msgstr "Toimituksen paino"
 
@@ -418,8 +427,12 @@ msgstr "Lähetyksen paino:"
 #. module: stock_delivery
 #: model:ir.model.fields,help:stock_delivery.field_product_product__hs_code
 #: model:ir.model.fields,help:stock_delivery.field_product_template__hs_code
-msgid "Standardized code for international shipping and goods declaration."
+msgid ""
+"Standardized code for international shipping and goods declaration. At the "
+"moment, only used for the FedEx shipping provider."
 msgstr ""
+"Standardoitu koodi kansainvälistä merenkulkua ja tavarailmoitusta varten. "
+"Tällä hetkellä käytössä vain FedExin kuljetuspalvelun tarjoajalla."
 
 #. module: stock_delivery
 #: model:ir.model,name:stock_delivery.model_stock_move
@@ -448,12 +461,14 @@ msgid ""
 "The ISO country code in two chars. \n"
 "You can use this field for quick search."
 msgstr ""
-"Kaksikirjaiminen ISO-maaatunnus. \n"
+"Kaksikirjaiminen ISO-maaatunnus\n"
 "Voit hakea tämän kentän avulla nopeasti."
 
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/delivery_carrier.py:0
+#: code:addons/stock_delivery/models/delivery_carrier.py:0
+#, python-format
 msgid ""
 "The package cannot be created because the total weight of the products in "
 "the picking is 0.0 %s"
@@ -464,12 +479,14 @@ msgstr ""
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/wizard/choose_delivery_carrier.py:0
+#, python-format
 msgid "The shipping price will be set once the delivery is done."
 msgstr "Toimitushinta vahvistetaan, kun toimitus on tehty."
 
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/wizard/choose_delivery_package.py:0
+#, python-format
 msgid ""
 "The weight of your package is higher than the maximum weight authorized for "
 "this package type. Please choose another package type."
@@ -480,6 +497,7 @@ msgstr ""
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/delivery_carrier.py:0
+#, python-format
 msgid "There is no matching delivery rule."
 msgstr "Soveltuvaa toimitussääntöä ei ole."
 
@@ -487,6 +505,27 @@ msgstr "Soveltuvaa toimitussääntöä ei ole."
 #: model:ir.model.fields,help:stock_delivery.field_stock_quant_package__weight
 msgid "Total weight of all the products contained in the package."
 msgstr "Kaikkien pakkauksen sisältämien tuotteiden kokonaispaino."
+
+#. module: stock_delivery
+#: model:ir.model.fields,help:stock_delivery.field_stock_picking__shipping_weight
+msgid ""
+"Total weight of packages and products not in a package. Packages with no "
+"shipping weight specified will default to their products' total weight. This"
+" is the weight used to compute the cost of the shipping."
+msgstr ""
+"Pakkausten ja pakkauksen ulkopuolisten tuotteiden kokonaispaino. Pakettien, "
+"joiden lähetyspainoa ei ole määritetty, oletusarvo on niiden tuotteiden "
+"kokonaispaino. Tätä painoa käytetään toimituskustannusten laskennassa."
+
+#. module: stock_delivery
+#: model:ir.model.fields,help:stock_delivery.field_stock_picking__weight_bulk
+msgid "Total weight of products which are not in a package."
+msgstr "Niiden tuotteiden kokonaispaino, jotka eivät ole pakkauksessa."
+
+#. module: stock_delivery
+#: model:ir.model.fields,help:stock_delivery.field_stock_quant_package__shipping_weight
+msgid "Total weight of the package."
+msgstr "Pakkauksen kokonaispaino."
 
 #. module: stock_delivery
 #: model:ir.model.fields,help:stock_delivery.field_stock_picking__weight
@@ -516,6 +555,7 @@ msgstr "Seurantalinkki"
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/stock_picking.py:0
+#, python-format
 msgid "Tracking links for shipment:"
 msgstr "Lähetyksen seurantalinkit:"
 
@@ -538,6 +578,11 @@ msgid "Weight"
 msgstr "Paino"
 
 #. module: stock_delivery
+#: model:ir.model.fields,field_description:stock_delivery.field_stock_picking__shipping_weight
+msgid "Weight for Shipping"
+msgstr "Lähetyksen paino"
+
+#. module: stock_delivery
 #: model_terms:ir.ui.view,arch_db:stock_delivery.view_picking_withcarrier_out_form
 msgid "Weight for shipping"
 msgstr "Toimituksen paino"
@@ -557,6 +602,7 @@ msgstr "Paino:"
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/stock_picking.py:0
+#, python-format
 msgid ""
 "You cannot pack products into the same package when they have different "
 "carriers (i.e. check that all of their transfers have a carrier assigned and"
@@ -575,6 +621,7 @@ msgstr ""
 #. module: stock_delivery
 #. odoo-python
 #: code:addons/stock_delivery/models/stock_picking.py:0
+#, python-format
 msgid ""
 "Your delivery method has no redirect on courier provider's website to track "
 "this order."

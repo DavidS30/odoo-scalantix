@@ -1,10 +1,12 @@
+/* @odoo-module */
+
 import { BasePrinter } from "@point_of_sale/app/printer/base_printer";
 import { _t } from "@web/core/l10n/translation";
-import { getTemplate } from "@web/core/templates";
+import { templates } from "@web/core/assets";
 import { createElement, append, createTextNode } from "@web/core/utils/xml";
 
 function ePOSPrint(children) {
-    let ePOSLayout = getTemplate("pos_epson_printer.ePOSLayout");
+    let ePOSLayout = templates.querySelector("[t-name='pos_epson_printer.ePOSLayout'");
     if (!ePOSLayout) {
         throw new Error("'ePOSLayout' not loaded");
     }
@@ -195,7 +197,6 @@ export class EpsonPrinter extends BasePrinter {
         }
         return {
             successful: false,
-            errorCode: errorCode,
             message: {
                 title: _t("Printing failed"),
                 body: message,

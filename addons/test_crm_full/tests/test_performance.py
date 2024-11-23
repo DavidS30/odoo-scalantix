@@ -4,7 +4,8 @@
 from freezegun import freeze_time
 
 from odoo.addons.test_crm_full.tests.common import TestCrmFullCommon
-from odoo.tests import Form, users, warmup, tagged
+from odoo.tests.common import users, warmup, Form
+from odoo.tests import tagged
 
 
 @tagged('crm_performance', 'post_install', '-at_install', '-standard')
@@ -39,7 +40,7 @@ class TestCrmPerformance(CrmPerformanceCase):
         """ Test multiple lead creation (import) """
         batch_size = 10
         country_be = self.env.ref('base.be')
-        lang_be_id = self.env['res.lang']._get_data(code='fr_BE').id
+        lang_be_id = self.env['res.lang']._lang_get_id('fr_BE')
 
         with freeze_time(self.reference_now), self.assertQueryCount(user_sales_leads=192):  # tcf 191
             self.env.cr._now = self.reference_now  # force create_date to check schedulers
@@ -104,7 +105,7 @@ class TestCrmPerformance(CrmPerformanceCase):
     def test_lead_create_single_address(self):
         """ Test multiple lead creation (import) """
         country_be = self.env.ref('base.be')
-        lang_be_id = self.env['res.lang']._get_data(code='fr_BE').id
+        lang_be_id = self.env['res.lang']._lang_get_id('fr_BE')
 
         with freeze_time(self.reference_now), self.assertQueryCount(user_sales_leads=30):  # tcf 29
             self.env.cr._now = self.reference_now  # force create_date to check schedulers

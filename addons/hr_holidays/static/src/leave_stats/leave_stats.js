@@ -4,68 +4,56 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useRecordObserver } from "@web/model/relational_model/utils";
 
+import { formatDate } from "@web/core/l10n/dates";
 import { Component, useState, onWillStart } from "@odoo/owl";
-import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
 
 const { DateTime } = luxon;
 
 export class LeaveStatsComponent extends Component {
-    static template = "hr_holidays.LeaveStatsComponent";
-    static props = { ...standardWidgetProps };
-
     setup() {
         this.orm = useService("orm");
 
         this.state = useState({
             leaves: [],
             departmentLeaves: [],
-            date: DateTime,
-            department: null,
-            employee: null,
-            type: null,
         });
 
-        this.state.date = this.props.record.data.date_from || DateTime.now();
-        this.state.department = this.props.record.data.department_id;
-        this.state.employee = this.props.record.data.employee_id;
+        this.date = this.props.record.data.date_from || DateTime.now();
+        this.department = this.props.record.data.department_id;
+        this.employee = this.props.record.data.employee_id;
 
         onWillStart(async () => {
-            await this.loadLeaves(this.state.date, this.state.employee);
-            await this.loadDepartmentLeaves(
-                this.state.date,
-                this.state.department,
-                this.state.employee
-            );
+            await this.loadLeaves(this.date, this.employee);
+            await this.loadDepartmentLeaves(this.date, this.department, this.employee);
         });
 
         useRecordObserver(async (record) => {
             const dateFrom = record.data.date_from || DateTime.now();
-            const dateChanged = !this.state.date.equals(dateFrom);
+            const dateChanged = this.date !== dateFrom;
             const employee = record.data.employee_id;
             const department = record.data.department_id;
+
             const proms = [];
-            if (
-                dateChanged ||
-                (employee && (this.state.employee && this.state.employee[0]) !== employee[0])
-            ) {
+            if (dateChanged || (employee && (this.employee && this.employee[0]) !== employee[0])) {
                 proms.push(this.loadLeaves(dateFrom, employee));
             }
+
             if (
                 dateChanged ||
-                (department &&
-                    (this.state.department && this.state.department[0]) !== department[0])
+                (department && (this.department && this.department[0]) !== department[0])
             ) {
                 proms.push(this.loadDepartmentLeaves(dateFrom, department, employee));
             }
             await Promise.all(proms);
-            this.state.date = dateFrom;
-            this.state.employee = employee;
-            this.state.department = department;
+
+            this.date = dateFrom;
+            this.employee = employee;
+            this.department = department;
         });
     }
 
     get thisYear() {
-        return this.state.date.toFormat("yyyy");
+        return this.date.toFormat("yyyy");
     }
 
     async loadDepartmentLeaves(date, department, employee) {
@@ -82,40 +70,17 @@ export class LeaveStatsComponent extends Component {
             [
                 ["department_id", "=", department[0]],
                 ["state", "=", "validate"],
+                ["holiday_type", "=", "employee"],
                 ["date_from", "<=", dateTo],
                 ["date_to", ">=", dateFrom],
             ],
-            [
-                "employee_id",
-                "date_from",
-                "date_to",
-                "number_of_days",
-                "number_of_hours",
-                "leave_type_request_unit",
-            ]
+            ["employee_id", "date_from", "date_to", "number_of_days"]
         );
 
         this.state.departmentLeaves = departmentLeaves.map((leave) => {
-            const dateFormat =
-                leave.leave_type_request_unit === "hour"
-                    ? {
-                          ...DateTime.TIME_24_SIMPLE,
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                      }
-                    : {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                      };
             return Object.assign({}, leave, {
-                dateFrom: DateTime.fromSQL(leave.date_from, { zone: "utc" })
-                    .toLocal()
-                    .toLocaleString(dateFormat),
-                dateTo: DateTime.fromSQL(leave.date_to, { zone: "utc" })
-                    .toLocal()
-                    .toLocaleString(dateFormat),
+                dateFrom: formatDate(DateTime.fromSQL(leave.date_from, { zone: "utc" }).toLocal()),
+                dateTo: formatDate(DateTime.fromSQL(leave.date_to, { zone: "utc" }).toLocal()),
                 sameEmployee: leave.employee_id[0] === employee[0],
             });
         });
@@ -129,7 +94,6 @@ export class LeaveStatsComponent extends Component {
 
         const dateFrom = date.startOf("year");
         const dateTo = date.endOf("year");
-
         this.state.leaves = await this.orm.readGroup(
             "hr.leave",
             [
@@ -138,16 +102,13 @@ export class LeaveStatsComponent extends Component {
                 ["date_from", "<=", dateTo],
                 ["date_to", ">=", dateFrom],
             ],
-            [
-                "holiday_status_id",
-                "number_of_days",
-                "number_of_hours",
-                "leave_type_request_unit:array_agg",
-            ],
+            ["holiday_status_id", "number_of_days:sum"],
             ["holiday_status_id"]
         );
     }
 }
+
+LeaveStatsComponent.template = "hr_holidays.LeaveStatsComponent";
 
 export const leaveStatsComponent = {
     component: LeaveStatsComponent,

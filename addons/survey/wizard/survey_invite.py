@@ -5,9 +5,8 @@ import logging
 import re
 import werkzeug
 
-from odoo import api, fields, models, _
+from odoo import api, fields, models, tools, _
 from odoo.exceptions import UserError
-from odoo.tools.mail import email_split_and_format, email_normalize
 
 _logger = logging.getLogger(__name__)
 
@@ -119,7 +118,7 @@ class SurveyInvite(models.TransientModel):
         valid, error = [], []
         emails = list(set(emails_split.split(self.emails or "")))
         for email in emails:
-            email_check = email_split_and_format(email)
+            email_check = tools.email_split_and_format(email)
             if not email_check:
                 error.append(email)
             else:
@@ -281,14 +280,14 @@ class SurveyInvite(models.TransientModel):
         valid_emails = []
         for email in emails_split.split(self.emails or ''):
             partner = False
-            email_normalized = email_normalize(email)
+            email_normalized = tools.email_normalize(email)
             if email_normalized:
                 limit = None if self.survey_users_login_required else 1
                 partner = Partner.search([('email_normalized', '=', email_normalized)], limit=limit)
             if partner:
                 valid_partners |= partner
             else:
-                email_formatted = email_split_and_format(email)
+                email_formatted = tools.email_split_and_format(email)
                 if email_formatted:
                     valid_emails.extend(email_formatted)
 

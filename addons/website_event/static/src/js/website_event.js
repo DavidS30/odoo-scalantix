@@ -1,7 +1,7 @@
 /** @odoo-module **/
 
 import publicWidget from "@web/legacy/js/public/public_widget";
-import { rpc } from "@web/core/network/rpc";
+import { jsonrpc } from "@web/core/network/rpc_service";
 
 // Catch registration form event, because of JS for attendee details
 var EventRegistrationForm = publicWidget.Widget.extend({
@@ -14,24 +14,20 @@ var EventRegistrationForm = publicWidget.Widget.extend({
         const post = this._getPost();
         const noTicketsOrdered = Object.values(post).map((value) => parseInt(value)).every(value => value === 0);
         var res = this._super.apply(this.arguments).then(function () {
-            self.__onClick = self._onClick.bind(self);
-            self.submitButtonEl = document.querySelector("#registration_form .a-submit");
-            self.submitButtonEl.addEventListener("click", self.__onClick);
-            self.submitButtonEl.disabled = noTicketsOrdered;
+            $('#registration_form .a-submit')
+                .off('click')
+                .click(function (ev) {
+                    self.on_click(ev);
+                })
+                .prop('disabled', noTicketsOrdered);
         });
         return res;
     },
 
-    destroy() {
-        this.submitButtonEl.removeEventListener("click", this.__onClick);
-        this._super(...arguments);
-    },
-
     _getPost: function () {
         var post = {};
-        const selectEls = document.querySelectorAll("#registration_form select");
-        selectEls.forEach(function (selectEl) {
-            post[selectEl.name] = selectEl.value;
+        $('#registration_form select').each(function () {
+            post[$(this).attr('name')] = $(this).val();
         });
         return post;
     },
@@ -44,28 +40,27 @@ var EventRegistrationForm = publicWidget.Widget.extend({
      * @private
      * @param {Event} ev
      */
-    _onClick(ev) {
+    on_click: function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        const formEl = ev.currentTarget.closest("form");
-        const buttonEl = ev.currentTarget.closest("[type='submit']");
+        var $form = $(ev.currentTarget).closest('form');
+        var $button = $(ev.currentTarget).closest('[type="submit"]');
         const post = this._getPost();
-        buttonEl.disabled = true;
-        return rpc(formEl.action, post).then((modal) => {
-            const modalEl = new DOMParser().parseFromString(modal, "text/html").body.firstChild;
-            const _onClick = () => {
-                buttonEl.disabled = false;
-                modalEl.querySelector(".js_goto_event").removeEventListener("click", _onClick);
-                modalEl.querySelector(".btn-close").removeEventListener("click", _onClick);
-                modalEl.remove();
-            };
-            modalEl.querySelector(".js_goto_event").addEventListener("click", _onClick);
-            modalEl.querySelector(".btn-close").addEventListener("click", _onClick);
-            const formModal = Modal.getOrCreateInstance(modalEl, {
-                backdrop: "static",
-                keyboard: false,
+        $button.attr('disabled', true);
+        return jsonrpc($form.attr('action'), post).then(function (modal) {
+            var $modal = $(modal);
+            $modal.find('.modal-body > div').removeClass('container'); // retrocompatibility - REMOVE ME in master / saas-19
+            $modal.appendTo(document.body);
+            const modalBS = new Modal($modal[0], {backdrop: 'static', keyboard: false});
+            modalBS.show();
+            $modal.appendTo('body').modal('show');
+            $modal.on('click', '.js_goto_event', function () {
+                $modal.modal('hide');
+                $button.prop('disabled', false);
             });
-            formModal.show();
+            $modal.on('click', '.btn-close', function () {
+                $button.prop('disabled', false);
+            });
         });
     },
 });
@@ -79,7 +74,7 @@ publicWidget.registry.EventRegistrationFormInstance = publicWidget.Widget.extend
     start: function () {
         var def = this._super.apply(this, arguments);
         this.instance = new EventRegistrationForm(this);
-        return Promise.all([def, this.instance.attachTo(this.el)]);
+        return Promise.all([def, this.instance.attachTo(this.$el)]);
     },
     /**
      * @override
@@ -87,7 +82,7 @@ publicWidget.registry.EventRegistrationFormInstance = publicWidget.Widget.extend
     destroy: function () {
         this.instance.setElement(null);
         this._super.apply(this, arguments);
-        this.instance.setElement(this.el);
+        this.instance.setElement(this.$el);
     },
 });
 

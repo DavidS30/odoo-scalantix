@@ -8,17 +8,14 @@ import { stepUtils } from "@web_tour/tour_service/tour_utils";
 export const accessSurveysteps = [
     stepUtils.showAppsMenuItem(),
     {
-        isActive: ["community"],
         trigger: '.o_app[data-menu-xmlid="survey.menu_surveys"]',
-        run: "click",
+        edition: "community",
     },
     {
-        isActive: ["enterprise"],
         trigger: '.o_app[data-menu-xmlid="survey.menu_surveys"]',
-        run: "click",
+        edition: "enterprise",
     },
     {
-        trigger: '.o_kanban_record:contains("User Session Survey")',
-        run: "click",
+        trigger: '.oe_kanban_card:contains("User Session Survey")',
     },
 ];

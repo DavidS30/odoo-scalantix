@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 import { Component } from "@odoo/owl";
 import { useSelfOrder } from "@pos_self_order/app/self_order_service";
 import { useService } from "@web/core/utils/hooks";
@@ -29,7 +31,7 @@ export class OrderWidget extends Component {
 
     get cancelAvailable() {
         return (
-            Object.keys(this.currentOrder.changes).length > 0 ||
+            !this.selfOrder.currentOrder.isSavedOnServer ||
             this.selfOrder.config.self_ordering_mode === "kiosk"
         );
     }
@@ -37,10 +39,10 @@ export class OrderWidget extends Component {
     get buttonToShow() {
         const currentPage = this.router.activeSlot;
         const payAfter = this.selfOrder.config.self_ordering_pay_after;
-        const kioskPayment = this.selfOrder.models["pos.payment.method"].getAll();
+        const kioskPayment = this.selfOrder.pos_payment_methods;
         const isNoLine = this.selfOrder.currentOrder.lines.length === 0;
-        const hasNotAllLinesSent = this.selfOrder.currentOrder.unsentLines;
-        const isMobilePayment = kioskPayment.find((p) => p.is_mobile_payment);
+        const hasNotAllLinesSent = this.selfOrder.currentOrder.hasNotAllLinesSent();
+        const isMobilePayment = this.selfOrder.pos_payment_methods.find((p) => p.is_mobile_payment);
 
         let label = "";
         let disabled = false;
@@ -48,10 +50,7 @@ export class OrderWidget extends Component {
         if (currentPage === "product_list") {
             label = _t("Order");
             disabled = isNoLine || hasNotAllLinesSent.length == 0;
-        } else if (
-            payAfter === "meal" &&
-            Object.keys(this.selfOrder.currentOrder.changes).length > 0
-        ) {
+        } else if (payAfter === "meal" && !this.selfOrder.currentOrder.isSavedOnServer) {
             label = _t("Order");
             disabled = isNoLine;
         } else {
@@ -63,14 +62,21 @@ export class OrderWidget extends Component {
     }
 
     get lineNotSend() {
-        const changes = this.selfOrder.currentOrder.changes;
-        return Object.entries(changes).reduce(
-            (acc, [key, value]) => {
-                if (value.qty && value.qty > 0) {
-                    const line = this.selfOrder.models["pos.order.line"].getBy("uuid", key);
-                    acc.count += value.qty;
-                    acc.price += line.get_display_price();
-                }
+        const order = this.selfOrder.currentOrder;
+        const lineNotSend = order.hasNotAllLinesSent();
+
+        return lineNotSend.reduce(
+            (acc, line) => {
+                const currentQty = line.qty;
+                const lastChange = order.lastChangesSent[line.uuid];
+                const qty = !lastChange ? currentQty : currentQty - lastChange.qty;
+
+                acc.count += qty;
+                const subtotal = this.selfOrder.config.iface_tax_included
+                    ? line.price_subtotal_incl
+                    : line.price_subtotal;
+                acc.price += (subtotal / currentQty) * qty;
+
                 return acc;
             },
             {
@@ -83,9 +89,7 @@ export class OrderWidget extends Component {
     get leftButton() {
         const order = this.selfOrder.currentOrder;
         const back =
-            Object.keys(order.changes).length === 0 ||
-            this.router.activeSlot === "cart" ||
-            order.lines.length === 0;
+            order.isSavedOnServer || this.router.activeSlot === "cart" || order.lines.length === 0;
 
         return {
             name: back ? _t("Back") : _t("Cancel"),
@@ -98,7 +102,7 @@ export class OrderWidget extends Component {
 
         if (
             order.lines.length === 0 ||
-            Object.keys(order.changes).length === 0 ||
+            order.isSavedOnServer ||
             this.router.activeSlot === "cart"
         ) {
             this.router.back();

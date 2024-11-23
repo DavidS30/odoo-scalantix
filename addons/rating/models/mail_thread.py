@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import datetime
@@ -22,8 +23,15 @@ class MailThread(models.AbstractModel):
         self.env['rating.rating'].sudo().search([('res_model', '=', self._name), ('res_id', 'in', record_ids)]).unlink()
         return result
 
-    def _get_message_create_ignore_field_names(self):
-        return super()._get_message_create_ignore_field_names() | {"rating_id"}
+    def _message_create(self, values_list):
+        """ Force usage of rating-specific methods and API allowing to delegate
+        computation to records. Keep methods optimized and skip rating_ids
+        support to simplify MailThrad main API. """
+        if not isinstance(values_list, list):
+            values_list = [values_list]
+        if any(values.get('rating_ids') for values in values_list):
+            raise ValueError(_("Posting a rating should be done using message post API."))
+        return super()._message_create(values_list)
 
     # RATING CONFIGURATION
     # --------------------------------------------------
@@ -57,7 +65,8 @@ class MailThread(models.AbstractModel):
         that will create the asked token. An explicit call to access rights is
         performed as sudo is used afterwards as this method could be used from
         different sources, notably templates. """
-        self.check_access('read')
+        self.check_access_rights('read')
+        self.check_access_rule('read')
         if not partner:
             partner = self._rating_get_partner()
         rated_partner = self._rating_get_operator()
@@ -165,28 +174,22 @@ class MailThread(models.AbstractModel):
     def message_post(self, **kwargs):
         rating_id = kwargs.pop('rating_id', False)
         rating_value = kwargs.pop('rating_value', False)
+        rating_feedback = kwargs.pop('rating_feedback', False)
+        message = super(MailThread, self).message_post(**kwargs)
+
         # create rating.rating record linked to given rating_value. Using sudo as portal users may have
         # rights to create messages and therefore ratings (security should be checked beforehand)
         if rating_value:
-            rating_vals = {
+            self.env['rating.rating'].sudo().create({
                 'rating': float(rating_value) if rating_value is not None else False,
-                'feedback': tools.html2plaintext(kwargs.get('body', '')),
+                'feedback': rating_feedback,
                 'res_model_id': self.env['ir.model']._get_id(self._name),
                 'res_id': self.id,
+                'message_id': message.id,
                 'consumed': True,
                 'partner_id': self.env.user.partner_id.id,
-            }
-            rating_id = self.env["rating.rating"].sudo().create(rating_vals).id
-        if rating_id:
-            kwargs["rating_id"] = rating_id
-        return super().message_post(**kwargs)
+            })
+        elif rating_id:
+            self.env['rating.rating'].browse(rating_id).write({'message_id': message.id})
 
-    def _message_post_after_hook(self, message, msg_values):
-        """Override to link rating to message as sudo. This is done in
-        _message_post_after_hook to be before _notify_thread."""
-        # sudo: rating.rating - can link rating to message from same author and thread
-        rating = self.env["rating.rating"].browse(msg_values.get("rating_id")).sudo()
-        same_author = rating.partner_id and rating.partner_id == message.author_id
-        if same_author and rating.res_model == message.model and rating.res_id == message.res_id:
-            rating.message_id = message.id
-        super()._message_post_after_hook(message, msg_values)
+        return message

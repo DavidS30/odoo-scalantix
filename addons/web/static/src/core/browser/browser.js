@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 /**
  * Browser
  *
@@ -92,7 +94,7 @@ export function makeRAMLocalStorage() {
             window.dispatchEvent(new StorageEvent("storage", { key, newValue }));
         },
         getItem(key) {
-            return store[key] ?? null;
+            return store[key];
         },
         clear() {
             store = {};

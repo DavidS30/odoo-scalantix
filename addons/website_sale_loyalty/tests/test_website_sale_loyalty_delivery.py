@@ -1,7 +1,8 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import Command
-from odoo.tests import HttpCase, tagged
+from odoo.tests.common import HttpCase
+from odoo.tests import tagged
 
 
 @tagged('post_install', '-at_install')
@@ -10,11 +11,7 @@ class TestWebsiteSaleDelivery(HttpCase):
     def setUp(self):
         super().setUp()
 
-        self.env['product.pricelist'].with_context(active_test=False).search([]).unlink()
-
-        self.partner_admin = self.env.ref('base.partner_admin')
-        self.user_admin = self.partner_admin.user_id
-        self.user_admin.write({
+        self.env.ref('base.user_admin').write({
             'name': 'Mitchell Admin',
             'street': '215 Vine St',
             'phone': '+1 555-555-5555',
@@ -24,6 +21,8 @@ class TestWebsiteSaleDelivery(HttpCase):
             'state_id': self.env.ref('base.state_us_39').id,
         })
 
+        # Remove taxes completely during the following tests.
+        self.env.companies.account_sale_tax_id = False
         self.env['product.product'].create({
             'name': "Plumbus",
             'list_price': 100.0,
@@ -36,7 +35,6 @@ class TestWebsiteSaleDelivery(HttpCase):
             'type': 'service',
             'is_published': True,
             'sale_ok': True,
-            'taxes_id': False,
         })
 
         # Disable any other program
@@ -83,11 +81,10 @@ class TestWebsiteSaleDelivery(HttpCase):
             })],
         })
 
-        self.env['loyalty.card'].create({
+        self.ewallet = self.env['loyalty.card'].create({
             'program_id': self.ewallet_program.id,
-            'partner_id': self.partner_admin.id,
-            'points': 1000000,
-            'code': 'one-million-points',
+            'points': 6e66,
+            'code': 'infinite-money-glitch',
         })
 
         self.product_delivery_normal1 = self.env['product.product'].create({
@@ -121,7 +118,8 @@ class TestWebsiteSaleDelivery(HttpCase):
     def test_shop_sale_gift_card_keep_delivery(self):
         # Get admin user and set his preferred shipping method to normal delivery
         # This test also tests that we can indeed pay delivery fees with gift cards/ewallet
-        self.partner_admin.property_delivery_carrier_id = self.normal_delivery
+        admin_user = self.env.ref('base.user_admin')
+        admin_user.partner_id.write({'property_delivery_carrier_id': self.normal_delivery.id})
 
         self.start_tour("/", 'shop_sale_loyalty_delivery', login='admin')
 
@@ -131,16 +129,17 @@ class TestWebsiteSaleDelivery(HttpCase):
         combined with another reward (eWallet).
         """
         self.env['loyalty.program'].create({
-            'name': "Buy 3, get up to $6 discount on shipping!",
+            'name': "Buy 3, get up to $75 discount on shipping",
             'program_type': 'promotion',
             'applies_on': 'current',
             'trigger': 'auto',
-            'rule_ids': [Command.create({
+            'rule_ids': [(0, 0, {
                 'minimum_qty': 3.0,
             })],
-            'reward_ids': [Command.create({
+            'reward_ids': [(0, 0, {
                 'reward_type': 'shipping',
-                'discount_max_amount': 6.0,
+                'discount_max_amount': 75.0,
             })],
         })
+        self.normal_delivery.fixed_price = 100
         self.start_tour("/", 'check_shipping_discount', login="admin")

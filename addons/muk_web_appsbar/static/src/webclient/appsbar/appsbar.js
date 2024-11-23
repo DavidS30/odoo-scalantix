@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { url } from '@web/core/utils/urls';
 import { useService } from '@web/core/utils/hooks';
 

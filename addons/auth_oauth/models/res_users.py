@@ -130,21 +130,15 @@ class ResUsers(models.Model):
         # return user credentials
         return (self.env.cr.dbname, login, access_token)
 
-    def _check_credentials(self, credential, env):
+    def _check_credentials(self, password, env):
         try:
-            return super()._check_credentials(credential, env)
+            return super(ResUsers, self)._check_credentials(password, env)
         except AccessDenied:
-            if not (credential['type'] == 'oauth_token' and credential['token']):
-                raise
             passwd_allowed = env['interactive'] or not self.env.user._rpc_api_keys_only()
             if passwd_allowed and self.env.user.active:
-                res = self.sudo().search([('id', '=', self.env.uid), ('oauth_access_token', '=', credential['token'])])
+                res = self.sudo().search([('id', '=', self.env.uid), ('oauth_access_token', '=', password)])
                 if res:
-                    return {
-                        'uid': self.env.user.id,
-                        'auth_method': 'oauth',
-                        'mfa': 'default',
-                    }
+                    return
             raise
 
     def _get_session_token_fields(self):

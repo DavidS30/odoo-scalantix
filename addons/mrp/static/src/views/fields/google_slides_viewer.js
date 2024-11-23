@@ -17,7 +17,6 @@ export function getGoogleSlideUrl(value, page) {
 }
 
 export class SlidesViewer extends CharField {
-    static template = "mrp.SlidesViewer";
     setup() {
         super.setup();
         this.notification = useService("notification");
@@ -64,6 +63,8 @@ export class SlidesViewer extends CharField {
         });
     }
 }
+
+SlidesViewer.template = "mrp.SlidesViewer";
 
 export const slidesViewer = {
     ...charField,

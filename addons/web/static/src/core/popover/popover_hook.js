@@ -1,10 +1,9 @@
-import { onWillUnmount, status, useComponent } from "@odoo/owl";
+/** @odoo-module **/
+
 import { useService } from "@web/core/utils/hooks";
 
-/**
- * @typedef {import("@web/core/popover/popover_service").PopoverServiceAddFunction} PopoverServiceAddFunction
- * @typedef {import("@web/core/popover/popover_service").PopoverServiceAddOptions} PopoverServiceAddOptions
- */
+import { onWillUnmount, status, useComponent, useEnv } from "@odoo/owl";
+import { POPOVER_SYMBOL } from "./popover_controller";
 
 /**
  * @typedef PopoverHookReturnType
@@ -17,13 +16,7 @@ import { useService } from "@web/core/utils/hooks";
  *  - Whether the popover is currently open.
  */
 
-/**
- * @param {PopoverServiceAddFunction} addFn
- * @param {typeof import("@odoo/owl").Component} component
- * @param {PopoverServiceAddOptions} options
- * @returns {PopoverHookReturnType}
- */
-export function makePopover(addFn, component, options) {
+export function makePopover(popoverService, component, options) {
     let removeFn = null;
     function close() {
         removeFn?.();
@@ -36,7 +29,7 @@ export function makePopover(addFn, component, options) {
                 removeFn = null;
                 options.onClose?.();
             };
-            removeFn = addFn(target, component, props, newOptions);
+            removeFn = popoverService.add(target, component, props, newOptions);
         },
         close,
         get isOpen() {
@@ -49,19 +42,21 @@ export function makePopover(addFn, component, options) {
  * Manages a component to be used as a popover.
  *
  * @param {typeof import("@odoo/owl").Component} component
- * @param {PopoverServiceAddOptions} [options]
+ * @param {import("@web/core/popover/popover_service").PopoverServiceAddOptions} [options]
  * @returns {PopoverHookReturnType}
  */
 export function usePopover(component, options = {}) {
+    const env = useEnv();
     const popoverService = useService("popover");
     const owner = useComponent();
     const newOptions = Object.create(options);
+    newOptions[POPOVER_SYMBOL] = env[POPOVER_SYMBOL];
     newOptions.onClose = () => {
         if (status(owner) !== "destroyed") {
             options.onClose?.();
         }
     };
-    const popover = makePopover(popoverService.add, component, newOptions);
+    const popover = makePopover(popoverService, component, newOptions);
     onWillUnmount(popover.close);
     return popover;
 }

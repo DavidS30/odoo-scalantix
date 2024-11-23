@@ -1,3 +1,5 @@
+/** @odoo-module */
+
 import {
     deserializeDate,
     deserializeDateTime,
@@ -8,11 +10,6 @@ import PublicWidget from "@web/legacy/js/public/public_widget";
 
 export const DateTimePickerWidget = PublicWidget.Widget.extend({
     selector: "[data-widget='datetime-picker']",
-    disabledInEditableMode: true,
-
-    /**
-     * @override
-     */
     start() {
         this._super(...arguments);
         const { widgetType, minDate, maxDate } = this.el.dataset;
@@ -20,7 +17,7 @@ export const DateTimePickerWidget = PublicWidget.Widget.extend({
         const { value } = this.el;
         const [parse, deserialize] =
             type === "date" ? [parseDate, deserializeDate] : [parseDateTime, deserializeDateTime];
-        this.disableDateTimePicker = this.call("datetime_picker", "create", {
+        this.disable = this.call("datetime_picker", "create", {
             target: this.el,
             pickerProps: {
                 type,
@@ -30,11 +27,8 @@ export const DateTimePickerWidget = PublicWidget.Widget.extend({
             },
         }).enable();
     },
-    /**
-     * @override
-     */
     destroy() {
-        this.disableDateTimePicker();
+        this.disable();
         return this._super(...arguments);
     },
 });

@@ -369,7 +369,7 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
      * @private
      */
     _processQuestionStatistics: function (rawStatistics) {
-        if (["multiple_choice", "scale"].includes(this.questionType)) {
+        if (this.questionType === 'multiple_choice') {
             return rawStatistics[0].values;
         }
 

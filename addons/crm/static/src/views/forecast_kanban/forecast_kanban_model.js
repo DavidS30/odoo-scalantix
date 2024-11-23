@@ -12,7 +12,7 @@ export class ForecastKanbanModel extends CrmKanbanModel {
         this.fillTemporalDomain = null;
     }
 
-    async _webReadGroup(config, orderBy) {
+    async _webReadGroup(config, firstGroupByName, orderBy) {
         if (this.isForecastGroupBy(config)) {
             config.context = this.fillTemporalPeriod(config).getContext({
                 context: config.context,

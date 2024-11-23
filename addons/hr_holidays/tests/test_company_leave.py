@@ -40,7 +40,7 @@ class TestCompanyLeave(TransactionCase):
             'tz': "Europe/Brussels",
         })
 
-    def test_01_leave_whole_company(self):
+    def test_leave_whole_company_01(self):
         # TEST CASE 1: Leaves taken in days. Take a 3 days leave
         # Add a company leave on the second day.
         # Check that leave is split into 2.
@@ -53,15 +53,17 @@ class TestCompanyLeave(TransactionCase):
             'request_date_to': date(2020, 1, 9),
         })
 
-        company_leave = self.env['hr.leave.generate.multi.wizard'].create({
+        company_leave = self.env['hr.leave'].create({
             'name': 'Bank Holiday',
-            'allocation_mode': 'company',
-            'company_id': self.company.id,
+            'holiday_type': 'company',
+            'mode_company_id': self.company.id,
             'holiday_status_id': self.bank_holiday.id,
-            'date_from': date(2020, 1, 8),
-            'date_to': date(2020, 1, 8),
+            'request_date_from': date(2020, 1, 8),
+            'request_date_to': date(2020, 1, 8),
         })
-        company_leave.action_generate_time_off()
+        company_leave._compute_date_from_to()
+
+        company_leave.action_validate()
 
         all_leaves = self.env['hr.leave'].search([('employee_id', '=', self.employee.id)], order='id')
         self.assertEqual(len(all_leaves), 4)
@@ -83,7 +85,7 @@ class TestCompanyLeave(TransactionCase):
         self.assertEqual(all_leaves[3].number_of_days, 1)
         self.assertEqual(all_leaves[3].state, 'validate')
 
-    def test_02_leave_whole_company(self):
+    def test_leave_whole_company_02(self):
         # TEST CASE 2: Leaves taken in half-days. Take a 3 days leave
         # Add a company leave on the second day
         # Check that leave is split into 2
@@ -98,16 +100,17 @@ class TestCompanyLeave(TransactionCase):
         })
         leave._compute_date_from_to()
 
-        company_leave = self.env['hr.leave.generate.multi.wizard'].create({
+        company_leave = self.env['hr.leave'].create({
             'name': 'Bank Holiday',
-            'allocation_mode': 'company',
-            'company_id': self.company.id,
+            'holiday_type': 'company',
+            'mode_company_id': self.company.id,
             'holiday_status_id': self.bank_holiday.id,
-            'date_from': date(2020, 1, 8),
-            'date_to': date(2020, 1, 8),
+            'request_date_from': date(2020, 1, 8),
+            'request_date_to': date(2020, 1, 8),
         })
+        company_leave._compute_date_from_to()
 
-        company_leave.action_generate_time_off()
+        company_leave.action_validate()
 
         all_leaves = self.env['hr.leave'].search([('employee_id', '=', self.employee.id)], order='id')
         self.assertEqual(len(all_leaves), 4)
@@ -129,7 +132,7 @@ class TestCompanyLeave(TransactionCase):
         self.assertEqual(all_leaves[3].number_of_days, 1)
         self.assertEqual(all_leaves[3].state, 'validate')
 
-    def test_03_leave_whole_company(self):
+    def test_leave_whole_company_03(self):
         # TEST CASE 3: Time Off taken in half-days. Take a 0.5 days leave
         # Add a company leave on the same day
         # Check that leave refused
@@ -147,15 +150,17 @@ class TestCompanyLeave(TransactionCase):
         })
         leave._compute_date_from_to()
 
-        company_leave = self.env['hr.leave.generate.multi.wizard'].create({
+        company_leave = self.env['hr.leave'].create({
             'name': 'Bank Holiday',
-            'allocation_mode': 'company',
-            'company_id': self.company.id,
+            'holiday_type': 'company',
+            'mode_company_id': self.company.id,
             'holiday_status_id': self.bank_holiday.id,
-            'date_from': date(2020, 1, 7),
-            'date_to': date(2020, 1, 7),
+            'request_date_from': date(2020, 1, 7),
+            'request_date_to': date(2020, 1, 7),
         })
-        company_leave.action_generate_time_off()
+        company_leave._compute_date_from_to()
+
+        company_leave.action_validate()
 
         all_leaves = self.env['hr.leave'].search([('employee_id', '=', self.employee.id)], order='id')
         self.assertEqual(len(all_leaves), 2)
@@ -167,7 +172,7 @@ class TestCompanyLeave(TransactionCase):
         self.assertEqual(all_leaves[1].number_of_days, 1)
         self.assertEqual(all_leaves[1].state, 'validate')
 
-    def test_04_leave_whole_company(self):
+    def test_leave_whole_company_04(self):
         # TEST CASE 4: Leaves taken in days. Take a 1 days leave
         # Add a company leave on the same day
         # Check that leave is refused
@@ -183,16 +188,17 @@ class TestCompanyLeave(TransactionCase):
         })
         leave._compute_date_from_to()
 
-        company_leave = self.env['hr.leave.generate.multi.wizard'].create({
+        company_leave = self.env['hr.leave'].create({
             'name': 'Bank Holiday',
-            'allocation_mode': 'company',
-            'company_id': self.company.id,
+            'holiday_type': 'company',
+            'mode_company_id': self.company.id,
             'holiday_status_id': self.bank_holiday.id,
-            'date_from': date(2020, 1, 9),
-            'date_to': date(2020, 1, 9),
+            'request_date_from': date(2020, 1, 9),
+            'request_date_to': date(2020, 1, 9),
         })
+        company_leave._compute_date_from_to()
 
-        company_leave.action_generate_time_off()
+        company_leave.action_validate()
 
         all_leaves = self.env['hr.leave'].search([('employee_id', '=', self.employee.id)], order='id')
         self.assertEqual(len(all_leaves), 2)
@@ -204,7 +210,7 @@ class TestCompanyLeave(TransactionCase):
         self.assertEqual(all_leaves[1].number_of_days, 1)
         self.assertEqual(all_leaves[1].state, 'validate')
 
-    def test_06_leave_whole_company(self):
+    def test_leave_whole_company_06(self):
         # Test case 6: Leaves taken in days. But the employee
         # only works on Monday, Wednesday and Friday
         # Takes a time off for all the week (3 days), should be split
@@ -231,15 +237,16 @@ class TestCompanyLeave(TransactionCase):
         })
         leave._compute_date_from_to()
 
-        company_leave = self.env['hr.leave.generate.multi.wizard'].create({
+        company_leave = self.env['hr.leave'].create({
             'name': 'Bank Holiday',
-            'allocation_mode': 'company',
-            'company_id': self.company.id,
+            'holiday_type': 'company',
+            'mode_company_id': self.company.id,
             'holiday_status_id': self.bank_holiday.id,
-            'date_from': date(2020, 1, 10),
-            'date_to': date(2020, 1, 10),
+            'request_date_from': date(2020, 1, 10),
+            'request_date_to': date(2020, 1, 10),
         })
-        company_leave.action_generate_time_off()
+        company_leave._compute_date_from_to()
+        company_leave.action_validate()
 
         all_leaves = self.env['hr.leave'].search([('employee_id', '=', self.employee.id)], order='id')
         self.assertEqual(len(all_leaves), 3)
@@ -257,7 +264,7 @@ class TestCompanyLeave(TransactionCase):
         self.assertEqual(all_leaves[2].state, 'validate')
 
     @warmup
-    def test_07_leave_whole_company(self):
+    def test_leave_whole_company_07(self):
         # Test Case 7: Try to create a bank holidays for a lot of
         # employees, and check the performances
         # 100 employees - 15 already on holidays that day
@@ -276,19 +283,20 @@ class TestCompanyLeave(TransactionCase):
         } for employee in employees[0:15]])
         leaves._compute_date_from_to()
 
-        company_leave = self.env['hr.leave.generate.multi.wizard'].create({
+        company_leave = self.env['hr.leave'].create({
             'name': 'Bank Holiday',
-            'allocation_mode': 'company',
-            'company_id': self.company.id,
+            'holiday_type': 'company',
+            'mode_company_id': self.company.id,
             'holiday_status_id': self.bank_holiday.id,
-            'date_from': date(2020, 4, 2),
-            'date_to': date(2020, 4, 2),
+            'request_date_from': date(2020, 4, 2),
+            'request_date_to': date(2020, 4, 2),
         })
+        company_leave._compute_date_from_to()
 
-        with self.assertQueryCount(__system__=1856):  # 770 community
+        with self.assertQueryCount(__system__=1855):  # 770 community
             # Original query count: 1987
             # Without tracking/activity context keys: 5154
-            company_leave.action_generate_time_off()
+            company_leave.action_validate()
 
         leaves = self.env['hr.leave'].search([('holiday_status_id', '=', self.bank_holiday.id)])
-        self.assertEqual(len(leaves), 101)
+        self.assertEqual(len(leaves), 102)

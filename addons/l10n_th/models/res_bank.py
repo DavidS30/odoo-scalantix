@@ -28,7 +28,7 @@ class ResPartnerBank(models.Model):
     @api.depends('country_code')
     def _compute_display_qr_setting(self):
         bank_th = self.filtered(lambda b: b.country_code == 'TH')
-        bank_th.display_qr_setting = True
+        bank_th.display_qr_setting = self.env.company.qr_code
         super(ResPartnerBank, self - bank_th)._compute_display_qr_setting()
 
     def _get_merchant_account_info(self):

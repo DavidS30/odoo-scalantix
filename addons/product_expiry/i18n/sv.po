@@ -3,21 +3,22 @@
 # 	* product_expiry
 # 
 # Translators:
-# Lasse L, 2024
-# Robin Calvin, 2024
-# Chrille Hedberg <hedberg.chrille@gmail.com>, 2024
-# Anders Wallenquist <anders.wallenquist@vertel.se>, 2024
-# Martin Trigaux, 2024
-# Simon S, 2024
+# Robin Calvin, 2023
+# Anders Wallenquist <anders.wallenquist@vertel.se>, 2023
+# Chrille Hedberg <hedberg.chrille@gmail.com>, 2023
+# Martin Trigaux, 2023
+# Simon S, 2023
+# Lasse L, 2023
 # Jakob Krabbe <jakob.krabbe@vertel.se>, 2024
+# Claes-Johan Dahlin, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:55+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
-"Last-Translator: Jakob Krabbe <jakob.krabbe@vertel.se>, 2024\n"
+"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"Last-Translator: Claes-Johan Dahlin, 2024\n"
 "Language-Team: Swedish (https://app.transifex.com/odoo/teams/41243/sv/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -42,8 +43,8 @@ msgid ""
 "expiration_date\"/>"
 msgstr ""
 "<span title=\"Varning\" class=\"fa fa-exclamation-triangle text-danger "
-"ms-2\" invisible=\"product_qty &lt;= 0 eller inte product_expiry_alert or "
-"not expiration_date\"/>"
+"ms-2\" invisible=\"product_qty <= 0 or not product_expiry_alert or not "
+"expiration_date\"/>"
 
 #. module: product_expiry
 #: model_terms:ir.ui.view,arch_db:product_expiry.view_product_form_expiry
@@ -102,6 +103,7 @@ msgstr "Bekräfta utgång"
 #. odoo-python
 #: code:addons/product_expiry/models/stock_picking.py:0
 #: model_terms:ir.ui.view,arch_db:product_expiry.confirm_expiry_view
+#, python-format
 msgid "Confirmation"
 msgstr "Bekräftelse"
 
@@ -170,7 +172,7 @@ msgstr "Utgångsvarningar"
 #: model_terms:ir.ui.view,arch_db:product_expiry.stock_report_delivery_document_inherit_product_expiry
 #: model_terms:ir.ui.view,arch_db:product_expiry.view_product_form_expiry
 msgid "Expiration Date"
-msgstr "Utgångsdatum"
+msgstr "Slutdatum"
 
 #. module: product_expiry
 #: model_terms:ir.ui.view,arch_db:product_expiry.res_config_settings_view_form_stock
@@ -220,7 +222,7 @@ msgstr "Senast uppdaterad den"
 #. module: product_expiry
 #: model:ir.model.fields,field_description:product_expiry.field_expiry_picking_confirmation__lot_ids
 msgid "Lot"
-msgstr "Lot"
+msgstr "Parti"
 
 #. module: product_expiry
 #: model:ir.model,name:product_expiry.model_stock_lot
@@ -345,6 +347,7 @@ msgstr "Slutdatumet har nåtts."
 #. module: product_expiry
 #. odoo-python
 #: code:addons/product_expiry/models/production_lot.py:0
+#, python-format
 msgid "The alert date has been reached for this lot/serial number"
 msgstr "Varningsdatumet har nåtts för det här partiet/serienumret"
 
@@ -379,9 +382,21 @@ msgstr ""
 "att ännu vara farliga."
 
 #. module: product_expiry
+#: model_terms:ir.ui.view,arch_db:product_expiry.view_stock_move_line_detailed_operation_tree_expiry
+#: model_terms:ir.ui.view,arch_db:product_expiry.view_stock_move_line_operation_tree_expiry
+msgid "This lot is expired"
+msgstr "Detta parti är utgått"
+
+#. module: product_expiry
+#: model_terms:ir.ui.view,arch_db:product_expiry.view_stock_move_line_detailed_operation_tree_expiry
+#: model_terms:ir.ui.view,arch_db:product_expiry.view_stock_move_line_operation_tree_expiry
+msgid "This lot is expired."
+msgstr "Detta parti är utgått."
+
+#. module: product_expiry
 #: model:ir.model,name:product_expiry.model_stock_picking
 msgid "Transfer"
-msgstr "Överföring"
+msgstr "Flytt"
 
 #. module: product_expiry
 #: model:ir.model.fields,field_description:product_expiry.field_product_product__use_expiration_date
@@ -412,6 +427,7 @@ msgstr ""
 #. module: product_expiry
 #. odoo-python
 #: code:addons/product_expiry/wizard/confirm_expiry.py:0
+#, python-format
 msgid ""
 "You are going to deliver some product expired lots.\n"
 "Do you confirm you want to proceed?"
@@ -422,6 +438,7 @@ msgstr ""
 #. module: product_expiry
 #. odoo-python
 #: code:addons/product_expiry/wizard/confirm_expiry.py:0
+#, python-format
 msgid ""
 "You are going to deliver the product %(product_name)s, %(lot_name)s which is expired.\n"
 "Do you confirm you want to proceed?"

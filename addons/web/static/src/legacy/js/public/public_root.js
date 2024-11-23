@@ -1,16 +1,19 @@
+/** @odoo-module */
+
+import dom from '@web/legacy/js/core/dom';
 import { cookie } from "@web/core/browser/cookie";
 import publicWidget from '@web/legacy/js/public/public_widget';
+import { registry } from '@web/core/registry';
 
 import lazyloader from "@web/legacy/js/public/lazyloader";
 
 import { makeEnv, startServices } from "@web/env";
-import { getTemplate } from '@web/core/templates';
+import { templates } from '@web/core/assets';
 import { MainComponentsContainer } from "@web/core/main_components_container";
 import { browser } from '@web/core/browser/browser';
 import { _t } from "@web/core/l10n/translation";
-import { jsToPyLocale, pyToJsLocale } from "@web/core/l10n/utils";
 import { App, Component, whenReady } from "@odoo/owl";
-import { RPCError } from '@web/core/network/rpc';
+import { RPCError } from '@web/core/network/rpc_service';
 
 const { Settings } = luxon;
 
@@ -18,7 +21,7 @@ const { Settings } = luxon;
 // wait for them in PublicRoot)
 function getLang() {
     var html = document.documentElement;
-    return jsToPyLocale(html.getAttribute('lang')) || 'en_US';
+    return (html.getAttribute('lang') || 'en_US').replace('-', '_');
 }
 const lang = cookie.get('frontend_lang') || getLang(); // FIXME the cookie value should maybe be in the ctx?
 
@@ -29,18 +32,18 @@ const lang = cookie.get('frontend_lang') || getLang(); // FIXME the cookie value
  * this Class instance. Its main role will be to retrieve RPC demands from its
  * children and handle them.
  */
-export const PublicRoot = publicWidget.Widget.extend({
-    events: {
+export const PublicRoot = publicWidget.RootWidget.extend({
+    events: Object.assign({}, publicWidget.RootWidget.prototype.events || {}, {
         'submit .js_website_submit_form': '_onWebsiteFormSubmit',
         'click .js_disable_on_click': '_onDisableOnClick',
-    },
-    custom_events: {
+    }),
+    custom_events: Object.assign({}, publicWidget.RootWidget.prototype.custom_events || {}, {
         call_service: '_onCallService',
         context_get: '_onContextGet',
         main_object_request: '_onMainObjectRequest',
         widgets_start_request: '_onWidgetsStartRequest',
         widgets_stop_request: '_onWidgetsStopRequest',
-    },
+    }),
 
     /**
      * @constructor
@@ -113,6 +116,17 @@ export const PublicRoot = publicWidget.Widget.extend({
         return publicWidget.registry;
     },
     /**
+     * As the root instance is designed to be unique, the associated
+     * registry has been instantiated outside of the class and is simply
+     * returned here.
+     *
+     * @private
+     * @override
+     */
+    _getRegistry: function () {
+        return registry.category("public_root_widgets");
+    },
+    /**
      * Creates an PublicWidget instance for each DOM element which matches the
      * `selector` key of one of the registered widgets
      * (@see PublicWidget.selector).
@@ -143,35 +157,14 @@ export const PublicRoot = publicWidget.Widget.extend({
         this._stopWidgets($from);
 
         var defs = Object.values(this._getPublicWidgetsRegistry(options)).map((PublicWidget) => {
-            const selector = PublicWidget.prototype.selector;
-            if (!selector) {
-                return;
-            }
-            const selectorHas = PublicWidget.prototype.selectorHas;
-            const selectorFunc = typeof selector === 'function'
-                ? selector
-                : fromEl => {
-                    const els = [...fromEl.querySelectorAll(selector)];
-                    if (fromEl.matches(selector)) {
-                        els.push(fromEl);
-                    }
-                    return els;
-                };
-
-            let targetEls = [];
-            for (const fromEl of $from) {
-                targetEls.push(...selectorFunc(fromEl));
-            }
-            if (selectorHas) {
-                targetEls = targetEls.filter(el => !!el.querySelector(selectorHas));
-            }
-
-            const proms = targetEls.map(el => {
+            var selector = PublicWidget.prototype.selector || '';
+            var $target = dom.cssFind($from, selector, true);
+            var defs = Array.from($target).map((el) => {
                 var widget = new PublicWidget(self, options);
                 self.publicWidgets.push(widget);
-                return widget.attachTo(el);
+                return widget.attachTo($(el));
             });
-            return Promise.all(proms);
+            return Promise.all(defs);
         });
         return Promise.all(defs);
     },
@@ -319,13 +312,14 @@ export async function createPublicRoot(RootWidget) {
     await env.services.public_component.mountComponents();
     const publicRoot = new RootWidget(null, env);
     const app = new App(MainComponentsContainer, {
-        getTemplate,
+        templates,
         env,
         dev: env.debug,
         translateFn: _t,
         translatableAttributes: ["data-tooltip"],
     });
-    const locale = pyToJsLocale(lang) || browser.navigator.language;
+    const language = lang || browser.navigator.language;
+    const locale = language === "sr@latin" ? "sr-Latn-RS" : language.replace(/_/g, "-");
     Settings.defaultLocale = locale;
     const [root] = await Promise.all([
         app.mount(document.body),

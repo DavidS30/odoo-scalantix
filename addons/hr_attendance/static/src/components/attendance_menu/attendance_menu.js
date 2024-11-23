@@ -5,10 +5,8 @@ import { Component, useState } from "@odoo/owl";
 import { Dropdown } from "@web/core/dropdown/dropdown";
 import { DropdownItem } from "@web/core/dropdown/dropdown_item";
 import { deserializeDateTime } from "@web/core/l10n/dates";
-import { rpc } from "@web/core/network/rpc";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { useDebounced } from "@web/core/utils/timing";
 import { isIosApp } from "@web/core/browser/feature_detection";
 const { DateTime } = luxon;
 
@@ -18,21 +16,22 @@ export class ActivityMenu extends Component {
     static template = "hr_attendance.attendance_menu";
 
     setup() {
+        this.rpc = useService("rpc");
         this.ui = useState(useService("ui"));
+        this.userService = useService("user");
         this.employee = false;
         this.state = useState({
             checkedIn: false,
             isDisplayed: false
         });
         this.date_formatter = registry.category("formatters").get("float_time")
-        this.onClickSignInOut = useDebounced(this.signInOut, 200, true);
         // load data but do not wait for it to render to prevent from delaying
         // the whole webclient
         this.searchReadEmployee();
     }
 
     async searchReadEmployee(){
-        const result = await rpc("/hr_attendance/attendance_user_data");
+        const result = await this.rpc("/hr_attendance/attendance_user_data");
         this.employee = result;
         if (this.employee.id) {
             this.hoursToday = this.date_formatter(
@@ -54,17 +53,20 @@ export class ActivityMenu extends Component {
     }
 
     async signInOut() {
-        if (!isIosApp()) { // iOS app lacks permissions to call `getCurrentPosition`
+        // to close the dropdown
+        document.body.click()
+        // iOS app lacks permissions to call `getCurrentPosition`
+        if (!isIosApp()) {
             navigator.geolocation.getCurrentPosition(
                 async ({coords: {latitude, longitude}}) => {
-                    await rpc("/hr_attendance/systray_check_in_out", {
+                    await this.rpc("/hr_attendance/systray_check_in_out", {
                         latitude,
                         longitude
                     })
                     await this.searchReadEmployee()
                 },
                 async err => {
-                    await rpc("/hr_attendance/systray_check_in_out")
+                    await this.rpc("/hr_attendance/systray_check_in_out")
                     await this.searchReadEmployee()
                 },
                 {
@@ -72,7 +74,7 @@ export class ActivityMenu extends Component {
                 }
             )
         } else {
-            await rpc("/hr_attendance/systray_check_in_out")
+            await this.rpc("/hr_attendance/systray_check_in_out")
             await this.searchReadEmployee()
         }
     }

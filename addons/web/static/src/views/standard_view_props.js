@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 // TODO: add this in info props description
 
 // breadcrumbs: { type: Array, optional: true },
@@ -36,5 +38,4 @@ export const standardViewProps = {
     selectRecord: { type: Function, optional: true },
     state: { type: Object, optional: true },
     useSampleModel: { type: Boolean },
-    updateActionState: { type: Function, optional: true },
 };

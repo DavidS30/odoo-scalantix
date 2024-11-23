@@ -3,8 +3,9 @@
 import ast
 from dateutil.relativedelta import relativedelta
 from odoo.exceptions import ValidationError
-from odoo import api, fields, models, _
+from odoo import api, fields, models, SUPERUSER_ID, _
 from odoo.exceptions import UserError
+from odoo.osv import expression
 
 
 class MaintenanceStage(models.Model):
@@ -47,7 +48,6 @@ class MaintenanceEquipmentCategory(models.Model):
     alias_id = fields.Many2one(help="Email alias for this equipment category. New emails will automatically "
         "create a new equipment under this category.")
     fold = fields.Boolean(string='Folded in Maintenance Pipe', compute='_compute_fold', store=True)
-    equipment_properties_definition = fields.PropertiesDefinition('Equipment Properties')
 
     def _compute_equipment_count(self):
         equipment_data = self.env['maintenance.equipment']._read_group([('category_id', 'in', self.ids)], ['category_id'], ['__count'])
@@ -134,9 +134,17 @@ class MaintenanceEquipment(models.Model):
     def _compute_display_name(self):
         for record in self:
             if record.serial_no:
-                record.display_name = (record.name or '') + '/' + record.serial_no
+                record.display_name = record.name + '/' + record.serial_no
             else:
                 record.display_name = record.name
+
+    @api.model
+    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
+        domain = domain or []
+        query = None
+        if name and operator not in expression.NEGATIVE_TERM_OPERATORS and operator != '=':
+            query = self._search([('name', '=', name)] + domain, limit=limit, order=order)
+        return query or super()._name_search(name, domain, operator, limit, order)
 
     name = fields.Char('Equipment Name', required=True, translate=True)
     active = fields.Boolean(default=True)
@@ -155,22 +163,6 @@ class MaintenanceEquipment(models.Model):
     color = fields.Integer('Color Index')
     scrap_date = fields.Date('Scrap Date')
     maintenance_ids = fields.One2many('maintenance.request', 'equipment_id')
-    equipment_properties = fields.Properties('Properties', definition='category_id.equipment_properties_definition', copy=True)
-    match_serial = fields.Boolean(compute='_compute_match_serial')
-
-    @api.depends('serial_no')
-    def _compute_match_serial(self):
-        if 'stock.lot' not in self.env:
-            self.match_serial = False
-            return
-        matched_serial_data = self.env['stock.lot']._read_group(
-            [('name', 'in', self.mapped('serial_no'))],
-            ['name'],
-            ['__count'],
-        )
-        matched_serial_count = dict(matched_serial_data)
-        for equipment in self:
-            equipment.match_serial = matched_serial_count.get(equipment.serial_no, 0)
 
     @api.onchange('category_id')
     def _onchange_category_id(self):
@@ -194,23 +186,12 @@ class MaintenanceEquipment(models.Model):
         return super(MaintenanceEquipment, self).write(vals)
 
     @api.model
-    def _read_group_category_ids(self, categories, domain):
+    def _read_group_category_ids(self, categories, domain, order):
         """ Read group customization in order to display all the categories in
             the kanban view, even if they are empty.
         """
-        # bypass ir.model.access checks, but search with ir.rules
-        search_domain = self.env['ir.rule']._compute_domain(categories._name)
-        category_ids = categories.sudo()._search(search_domain, order=categories._order)
+        category_ids = categories._search([], order=order, access_rights_uid=SUPERUSER_ID)
         return categories.browse(category_ids)
-
-    def action_open_matched_serial(self):
-        self.ensure_one()
-        action = self.env.ref('stock.action_production_lot_form', raise_if_not_found=False)
-        if not action:
-            return True
-        action_dict = action._get_action_dict()
-        action_dict['context'] = {'search_default_name': self.serial_no}
-        return action_dict
 
 
 class MaintenanceRequest(models.Model):
@@ -402,11 +383,11 @@ class MaintenanceRequest(models.Model):
             request.message_subscribe(partner_ids=partner_ids)
 
     @api.model
-    def _read_group_stage_ids(self, stages, domain):
+    def _read_group_stage_ids(self, stages, domain, order):
         """ Read group customization in order to display all the stages in the
             kanban view, even if they are empty
         """
-        stage_ids = stages.sudo()._search([], order=stages._order)
+        stage_ids = stages._search([], order=order, access_rights_uid=SUPERUSER_ID)
         return stages.browse(stage_ids)
 
 

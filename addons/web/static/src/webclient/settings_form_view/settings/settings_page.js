@@ -1,17 +1,9 @@
+/** @odoo-module **/
 import { ActionSwiper } from "@web/core/action_swiper/action_swiper";
 
 import { Component, useState, useRef, useEffect } from "@odoo/owl";
-import { browser } from "@web/core/browser/browser";
 
 export class SettingsPage extends Component {
-    static template = "web.SettingsPage";
-    static components = { ActionSwiper };
-    static props = {
-        modules: Array,
-        anchors: Array,
-        initialTab: { type: String, optional: 1 },
-        slots: Object,
-    };
     setup() {
         this.state = useState({
             selectedTab: "",
@@ -19,21 +11,7 @@ export class SettingsPage extends Component {
         });
 
         if (this.props.modules) {
-            let selectedTab = this.props.initialTab || this.props.modules[0].key;
-
-            if (browser.location.hash) {
-                const hash = browser.location.hash.substring(1);
-                if (this.props.modules.map((m) => m.key).includes(hash)) {
-                    selectedTab = hash;
-                } else {
-                    const plop = this.props.anchors.find((a) => a.settingId === hash);
-                    if (plop) {
-                        selectedTab = plop.app;
-                    }
-                }
-            }
-
-            this.state.selectedTab = selectedTab;
+            this.state.selectedTab = this.props.initialTab || this.props.modules[0].key;
         }
 
         this.settingsRef = useRef("settings");
@@ -97,3 +75,10 @@ export class SettingsPage extends Component {
         this.env.searchState.value = "";
     }
 }
+SettingsPage.template = "web.SettingsPage";
+SettingsPage.components = { ActionSwiper };
+SettingsPage.props = {
+    modules: Array,
+    initialTab: { type: String, optional: 1 },
+    slots: Object,
+};

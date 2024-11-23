@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { assets } from "@web/core/assets";
 
 /**

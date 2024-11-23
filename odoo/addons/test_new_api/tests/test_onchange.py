@@ -4,9 +4,9 @@
 from unittest.mock import patch
 
 from odoo.addons.base.tests.common import SavepointCaseWithUserDemo
-from odoo.tests import TransactionCase, Form
+from odoo.tests import common, Form
 from odoo import Command
-from odoo.tools.misc import submap
+from odoo.tools import submap
 
 
 def strip_prefix(prefix, names):
@@ -428,7 +428,7 @@ class TestOnchange(SavepointCaseWithUserDemo):
             'name': 'X',
             'country_id': self.env.ref('base.be').id,
         })
-        with Form(self.env['test_new_api.multi']) as form:
+        with common.Form(self.env['test_new_api.multi']) as form:
             form.partner = partner
             self.assertEqual(form.partner, partner)
             self.assertEqual(form.name, partner.name)
@@ -721,7 +721,7 @@ class TestOnchange(SavepointCaseWithUserDemo):
             """,
         })
 
-        form = Form(self.env['test_new_api.multi.tag'])
+        form = common.Form(self.env['test_new_api.multi.tag'])
         self.assertEqual(form.name, False)
         self.assertEqual(form.display_name, "")
 
@@ -921,7 +921,7 @@ class TestOnchange(SavepointCaseWithUserDemo):
         })
 
 
-class TestComputeOnchange2(TransactionCase):
+class TestComputeOnchange2(common.TransactionCase):
 
     def test_create(self):
         model = self.env['test_new_api.compute.onchange']
@@ -985,20 +985,6 @@ class TestComputeOnchange2(TransactionCase):
         self.assertEqual(copied.baz, "baz1")          # copied
         self.assertEqual(record.line_ids.mapped('foo'), ['foo1', 'bar'])  # copied
         self.assertEqual(record.tag_ids, tag_foo + tag_bar)  # copied
-
-    def test_copy_batch(self):
-        partners = self.env['test_new_api.partner'].create([
-            {'name': f'Partner {index}'} for index in range(5)
-        ])
-
-        # warmup
-        partners.copy()
-
-        with self.assertQueryCount(1):
-            new_partners = partners.copy()
-
-        for old_partner, new_partner in zip(partners, new_partners):
-            self.assertEqual(new_partner.name, old_partner.name)
 
     def test_write(self):
         model = self.env['test_new_api.compute.onchange']
@@ -1090,7 +1076,7 @@ class TestComputeOnchange2(TransactionCase):
 
     def test_onchange(self):
         # check computations of 'bar' (readonly) and 'baz' (editable)
-        form = Form(self.env['test_new_api.compute.onchange'])
+        form = common.Form(self.env['test_new_api.compute.onchange'])
         self.assertEqual(form.bar, "r")
         self.assertEqual(form.baz, False)
         form.active = True
@@ -1124,7 +1110,7 @@ class TestComputeOnchange2(TransactionCase):
         self.assertEqual(record.bar, "foo3r")
         self.assertEqual(record.baz, "foo3z")
 
-        form = Form(record)
+        form = common.Form(record)
         self.assertEqual(form.bar, "foo3r")
         self.assertEqual(form.baz, "foo3z")
         form.foo = "foo4"
@@ -1141,7 +1127,7 @@ class TestComputeOnchange2(TransactionCase):
         self.assertEqual(form.baz, "baz5")
 
     def test_onchange_default(self):
-        form = Form(self.env['test_new_api.compute.onchange'].with_context(
+        form = common.Form(self.env['test_new_api.compute.onchange'].with_context(
             default_active=True, default_foo="foo", default_baz="baz",
         ))
         # 'baz' is computed editable, so when given a default value it should
@@ -1173,7 +1159,7 @@ class TestComputeOnchange2(TransactionCase):
         self.assertEqual(record.cost, 22)
 
         # modifying a line should not recompute the cost on other lines
-        with Form(record) as form:
+        with common.Form(record) as form:
             with form.child_ids.edit(1) as line:
                 line.name = 'XXX'
             self.assertEqual(form.cost, 15)
@@ -1309,22 +1295,6 @@ class TestComputeOnchange2(TransactionCase):
                 self.assertEqual(message_form.has_important_sibling, True)
                 message_form.body = 'Required Body'
             self.assertEqual(len(discussion_form.messages), 1)
-
-    def test_protection_shared_compute(self):
-        model = self.env['test_new_api.shared.compute']
-        START = 5
-
-        with Form(model) as form:
-            self.assertEqual(form.start, 0)
-            self.assertEqual(form.end, 10)
-
-            form.start = START
-            self.assertEqual(form.start, START, "updating 'start' should not recompute it")
-            self.assertEqual(form.end, 10, "updating 'start' should not recompute 'end'")
-
-            form.name = f"{START}->{START + 20}"
-            self.assertEqual(form.start, START, "updating 'name' should recompute 'start'")
-            self.assertEqual(form.end, START + 20, "updating 'name' should recompute 'end'")
 
     def test_new_one2many_traversing_many2one_second_onchange(self):
         discussion = self.env['test_new_api.discussion'].create({

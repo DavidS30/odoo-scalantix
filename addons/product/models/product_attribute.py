@@ -20,22 +20,18 @@ class ProductAttribute(models.Model):
     ]
 
     name = fields.Char(string="Attribute", required=True, translate=True)
-    active = fields.Boolean(
-        default=True,
-        help="If unchecked, it will allow you to hide the attribute without removing it.",
-    )
     create_variant = fields.Selection(
         selection=[
             ('always', 'Instantly'),
             ('dynamic', 'Dynamically'),
-            ('no_variant', 'Never'),
+            ('no_variant', 'Never (option)'),
         ],
         default='always',
-        string="Variant Creation",
+        string="Variants Creation Mode",
         help="""- Instantly: All possible variants are created as soon as the attribute and its values are added to a product.
         - Dynamically: Each variant is created only when its corresponding attributes and values are added to a sales order.
         - Never: Variants are never created for the attribute.
-        Note: this cannot be changed once the attribute is used on a product.""",
+        Note: the variants creation mode cannot be changed once the attribute is used on at least one product.""",
         required=True)
     display_type = fields.Selection(
         selection=[
@@ -43,7 +39,7 @@ class ProductAttribute(models.Model):
             ('pills', 'Pills'),
             ('select', 'Select'),
             ('color', 'Color'),
-            ('multi', 'Multi-checkbox'),
+            ('multi', 'Multi-checkbox (option)'),
         ],
         default='radio',
         required=True,
@@ -54,10 +50,7 @@ class ProductAttribute(models.Model):
         comodel_name='product.attribute.value',
         inverse_name='attribute_id',
         string="Values", copy=True)
-    template_value_ids = fields.One2many(
-        comodel_name='product.template.attribute.value',
-        inverse_name='attribute_id',
-        string="Template Values")
+
     attribute_line_ids = fields.One2many(
         comodel_name='product.template.attribute.line',
         inverse_name='attribute_id',
@@ -69,16 +62,14 @@ class ProductAttribute(models.Model):
         store=True)
     number_related_products = fields.Integer(compute='_compute_number_related_products')
 
-    # === COMPUTE METHODS === #
-
     @api.depends('product_tmpl_ids')
     def _compute_number_related_products(self):
         res = {
             attribute.id: count
             for attribute, count in self.env['product.template.attribute.line']._read_group(
-                domain=[('attribute_id', 'in', self.ids), ('product_tmpl_id.active', '=', 'True')],
+                domain=[('attribute_id', 'in', self.ids)],
                 groupby=['attribute_id'],
-                aggregates=['__count'],
+                aggregates=['product_tmpl_id:count_distinct'],
             )
         }
         for pa in self:
@@ -89,14 +80,8 @@ class ProductAttribute(models.Model):
         for pa in self:
             pa.with_context(active_test=False).product_tmpl_ids = pa.attribute_line_ids.product_tmpl_id
 
-    # === ONCHANGE METHODS === #
-
-    @api.onchange('display_type')
-    def _onchange_display_type(self):
-        if self.display_type == 'multi' and self.number_related_products == 0:
-            self.create_variant = 'no_variant'
-
-    # === CRUD METHODS === #
+    def _without_no_variant_attributes(self):
+        return self.filtered(lambda pa: pa.create_variant != 'no_variant')
 
     def write(self, vals):
         """Override to make sure attribute type can't be changed if it's used on
@@ -135,27 +120,11 @@ class ProductAttribute(models.Model):
                     products=", ".join(pa.product_tmpl_ids.mapped('display_name')),
                 ))
 
-    # === ACTION METHODS === #
-
-    def action_archive(self):
-        for attribute in self:
-            if attribute.number_related_products:
-                raise UserError(_(
-                    "You cannot archive this attribute as there are still products linked to it",
-                ))
-        return super().action_archive()
-
-    def action_open_product_template_attribute_lines(self):
-        self.ensure_one()
+    def action_open_related_products(self):
         return {
             'type': 'ir.actions.act_window',
-            'name': _("Products"),
-            'res_model': 'product.template.attribute.line',
-            'view_mode': 'list,form',
-            'domain': [('attribute_id', '=', self.id), ('product_tmpl_id.active', '=', 'True')],
+            'name': _("Related Products"),
+            'res_model': 'product.template',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', self.product_tmpl_ids.ids)],
         }
-
-    # === TOOLING === #
-
-    def _without_no_variant_attributes(self):
-        return self.filtered(lambda pa: pa.create_variant != 'no_variant')

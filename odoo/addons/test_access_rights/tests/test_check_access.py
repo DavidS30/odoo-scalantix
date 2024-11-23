@@ -37,7 +37,8 @@ class TestAccess(odoo.tests.HttpCase):
         # while this is bad, this is not the object of this test
         self.internal_user_partner.invalidate_model(['active'])
         # from portal's _document_check_access:
-        document.check_access('read')
+        document.check_access_rights('read')
+        document.check_access_rule('read')
         # no raise, because we are supposed to be able to read our ticket
 
     def test_name_search_with_sudo(self):

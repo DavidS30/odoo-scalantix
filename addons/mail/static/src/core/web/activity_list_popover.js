@@ -1,5 +1,6 @@
+/* @odoo-module */
+
 import { ActivityListPopoverItem } from "@mail/core/web/activity_list_popover_item";
-import { compareDatetime } from "@mail/utils/common/misc";
 
 import { Component, onWillUpdateProps, useState } from "@odoo/owl";
 
@@ -30,8 +31,8 @@ export class ActivityListPopover extends Component {
     static template = "mail.ActivityListPopover";
 
     setup() {
-        super.setup();
         this.orm = useService("orm");
+        this.user = useService("user");
         this.store = useState(useService("mail.store"));
         this.updateFromProps(this.props);
         onWillUpdateProps((props) => this.updateFromProps(props));
@@ -42,12 +43,17 @@ export class ActivityListPopover extends Component {
         const allActivities = Object.values(this.store.Activity.records);
         return allActivities
             .filter((activity) => this.props.activityIds.includes(activity.id))
-            .sort((a, b) => compareDatetime(a.date_deadline, b.date_deadline) || a.id - b.id);
+            .sort(function (a, b) {
+                if (a.date_deadline === b.date_deadline) {
+                    return a.id - b.id;
+                }
+                return a.date_deadline < b.date_deadline ? -1 : 1;
+            });
     }
 
     onClickAddActivityButton() {
-        this.store
-            .scheduleActivity(
+        this.env.services["mail.activity"]
+            .schedule(
                 this.props.resModel,
                 this.props.resIds ? this.props.resIds : [this.props.resId],
                 this.props.defaultActivityTypeId
@@ -73,9 +79,14 @@ export class ActivityListPopover extends Component {
     }
 
     async updateFromProps(props) {
-        const data = await this.orm.silent.call("mail.activity", "activity_format", [
-            props.activityIds,
-        ]);
-        this.store.insert(data, { html: true });
+        const activitiesData = await this.orm.silent.call(
+            "mail.activity",
+            "activity_format",
+            [props.activityIds],
+            {
+                context: this.user.user_context,
+            }
+        );
+        this.store.Activity.insert(activitiesData, { html: true });
     }
 }

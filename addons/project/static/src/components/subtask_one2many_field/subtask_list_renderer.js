@@ -1,10 +1,29 @@
 /** @odoo-module **/
 
 import { _t } from "@web/core/l10n/translation";
+import { useService } from "@web/core/utils/hooks";
 import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
-import { NotebookTaskListRenderer } from '../notebook_task_one2many_field/notebook_task_list_renderer';
+import { ListRenderer } from '@web/views/list/list_renderer';
 
-export class SubtaskListRenderer extends NotebookTaskListRenderer {
+import { useEffect } from "@odoo/owl";
+
+export class SubtaskListRenderer extends ListRenderer {
+    setup() {
+        super.setup();
+        this.dialog = useService("dialog");
+        useEffect(
+            () => this.focusName(this.props.list.editedRecord),
+            () => [this.props.list.editedRecord]
+        );
+    }
+
+    focusName(editedRecord) {
+        if (editedRecord?.isNew && !editedRecord.dirty) {
+            const col = this.state.columns.find((c) => c.name === "name");
+            this.focusCell(col);
+        }
+    }
+
     async onDeleteRecord(record) {
         this.dialog.add(ConfirmationDialog, {
             body: _t("Are you sure you want to delete this record?"),

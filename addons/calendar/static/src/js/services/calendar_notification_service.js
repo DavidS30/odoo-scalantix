@@ -2,13 +2,13 @@
 
 import { _t } from "@web/core/l10n/translation";
 import { browser } from "@web/core/browser/browser";
-import { ConnectionLostError, rpc } from "@web/core/network/rpc";
+import { ConnectionLostError } from "@web/core/network/rpc_service";
 import { registry } from "@web/core/registry";
 
 export const calendarNotificationService = {
-    dependencies: ["action", "bus_service", "notification"],
+    dependencies: ["action", "bus_service", "notification", "rpc"],
 
-    start(env, { action, bus_service, notification }) {
+    start(env, { action, bus_service, notification, rpc }) {
         let calendarNotifTimeouts = {};
         let nextCalendarNotifTimeout = null;
         const displayedNotifications = new Set();
@@ -56,11 +56,12 @@ export const calendarNotificationService = {
                                 name: _t("Details"),
                                 onClick: async () => {
                                     await action.doAction({
-                                        type: "ir.actions.act_window",
-                                        res_model: "calendar.event",
+                                        type: 'ir.actions.act_window',
+                                        res_model: 'calendar.event',
                                         res_id: notif.event_id,
-                                        views: [[false, "form"]],
-                                    });
+                                        views: [[false, 'form']],
+                                    }
+                                    );
                                     notificationRemove();
                                 },
                             },

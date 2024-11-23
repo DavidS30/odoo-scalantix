@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from contextlib import contextmanager
-from freezegun import freeze_time
 from unittest.mock import patch
 
 from odoo import exceptions, tools
@@ -11,28 +10,11 @@ from odoo.addons.sms.models.sms_sms import SmsApi, SmsSms
 from odoo.tests import common
 
 
-class MockSMS(common.TransactionCase):
+class MockSMS(common.BaseCase):
 
     def tearDown(self):
         super(MockSMS, self).tearDown()
         self._clear_sms_sent()
-
-    # ------------------------------------------------------------
-    # UTILITY MOCKS
-    # ------------------------------------------------------------
-
-    @contextmanager
-    def mock_datetime_and_now(self, mock_dt):
-        """ Used when synchronization date (using env.cr.now()) is important
-        in addition to standard datetime mocks. Used mainly to detect sync
-        issues. """
-        with freeze_time(mock_dt), \
-             patch.object(self.env.cr, 'now', lambda: mock_dt):
-            yield
-
-    # ------------------------------------------------------------
-    # GATEWAY MOCK
-    # ------------------------------------------------------------
 
     @contextmanager
     def mockSMSGateway(self, sms_allow_unlink=False, sim_error=None, nbr_t_error=None, moderated=False, force_delivered=False):
@@ -131,12 +113,6 @@ class SMSCase(MockSMS):
     """ Main test class to use when testing SMS integrations. Contains helpers and tools related
     to notification sent by SMS. """
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # This is called to make sure that an iap_account for sms already exists or if not is created.
-        cls.env['iap.account'].get('sms')
-
     def _find_sms_sent(self, partner, number):
         if number is None and partner:
             number = partner._phone_format()
@@ -145,7 +121,7 @@ class SMSCase(MockSMS):
             raise AssertionError('sent sms not found for %s (number: %s)' % (partner, number))
         return sent_sms
 
-    def _find_sms_sms(self, partner, number, status, content=None):
+    def _find_sms_sms(self, partner, number, status):
         if number is None and partner:
             number = partner._phone_format()
         domain = [('id', 'in', self._new_sms.ids),
@@ -155,14 +131,10 @@ class SMSCase(MockSMS):
             domain += [('state', '=', status)]
 
         sms = self.env['sms.sms'].sudo().search(domain)
-        if len(sms) > 1 and content:
-            sms = sms.filtered(lambda s: content in (s.body or ""))
         if not sms:
             raise AssertionError('sms.sms not found for %s (number: %s / status %s)' % (partner, number, status))
         if len(sms) > 1:
-            raise NotImplementedError(
-                f'Found {len(sms)} sms.sms for {partner} (number: {number} / status {status})'
-            )
+            raise NotImplementedError()
         return sms
 
     def assertSMSIapSent(self, numbers, content=None):
@@ -191,11 +163,11 @@ class SMSCase(MockSMS):
         :param fields_values: optional values allowing to check directly some
           values on ``sms.sms`` record;
         """
-        sms_sms = self._find_sms_sms(partner, number, status, content=content)
+        sms_sms = self._find_sms_sms(partner, number, status)
         if failure_type:
             self.assertEqual(sms_sms.failure_type, failure_type)
         if content is not None:
-            self.assertIn(content, (sms_sms.body or ""))
+            self.assertIn(content, sms_sms.body)
         for fname, fvalue in (fields_values or {}).items():
             self.assertEqual(
                 sms_sms[fname], fvalue,

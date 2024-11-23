@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import fields, models, api
+from odoo import fields, models, api, SUPERUSER_ID
 
 
 class UtmCampaign(models.Model):
@@ -52,9 +52,9 @@ class UtmCampaign(models.Model):
         return super().create(vals_list)
 
     @api.model
-    def _group_expand_stage_ids(self, stages, domain):
+    def _group_expand_stage_ids(self, stages, domain, order):
         """Read group customization in order to display all the stages in the
         Kanban view, even if they are empty.
         """
-        stage_ids = stages.sudo()._search([], order=stages._order)
+        stage_ids = stages._search([], order=order, access_rights_uid=SUPERUSER_ID)
         return stages.browse(stage_ids)

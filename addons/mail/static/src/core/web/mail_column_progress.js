@@ -1,4 +1,7 @@
+/** @odoo-module */
+
 import { ColumnProgress } from "@web/views/view_components/column_progress";
+
 
 export class MailColumnProgress extends ColumnProgress {
     static props = {

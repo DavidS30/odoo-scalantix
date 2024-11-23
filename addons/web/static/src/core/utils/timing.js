@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { browser } from "@web/core/browser/browser";
 import { onWillUnmount, useComponent } from "@odoo/owl";
 

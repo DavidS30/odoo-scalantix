@@ -5,10 +5,9 @@
         <field name="model">hr.expense.refuse.wizard</field>
         <field name="arch" type="xml">
             <form string="Expense refuse reason">
+                <separator string="Reason to refuse Expense"/>
                 <field name="sheet_ids" invisible="1"/>
-                <group>
-                    <field string="Reason" name="reason" class="w-100"/>
-                </group>
+                <field name="reason" class="w-100"/>
                 <footer>
                     <button string='Refuse' name="action_refuse" type="object" class="oe_highlight" data-hotkey="q"/>
                     <button string="Cancel" class="oe_link" special="cancel" data-hotkey="x"/>
@@ -23,6 +22,5 @@
         <field name="view_mode">form</field>
         <field name="view_id" ref="hr_expense_refuse_wizard_view_form"/>
         <field name="target">new</field>
-        <field name="context">{'dialog_size': 'medium'}</field>
     </record>
 </odoo>

@@ -4,7 +4,6 @@ import { sprintf } from '@web/core/utils/strings';
 import { renderToElement } from "@web/core/utils/render";
 import publicWidget from '@web/legacy/js/public/public_widget';
 import { _t } from "@web/core/l10n/translation";
-import { rpc } from "@web/core/network/rpc";
 
 var CourseJoinWidget = publicWidget.Widget.extend({
     template: 'slide.course.join',
@@ -49,6 +48,7 @@ var CourseJoinWidget = publicWidget.Widget.extend({
         this.joinMessage = options.joinMessage || _t('Join this Course');
         this.beforeJoin = options.beforeJoin || function () {return Promise.resolve();};
         this.afterJoin = options.afterJoin || function () {document.location.reload();};
+        this.rpc = this.bindService("rpc");
     },
 
     //--------------------------------------------------------------------------
@@ -126,7 +126,7 @@ var CourseJoinWidget = publicWidget.Widget.extend({
      */
     joinChannel: function (channelId) {
         var self = this;
-        rpc('/slides/channel/join', {
+        this.rpc('/slides/channel/join', {
             channel_id: channelId,
         }).then(function (data) {
             if (!data.error) {

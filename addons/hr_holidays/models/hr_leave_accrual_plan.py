@@ -132,14 +132,16 @@ class AccrualPlan(models.Model):
         return {
             'name': _("Accrual Plan's Employees"),
             'type': 'ir.actions.act_window',
-            'view_mode': 'kanban,list,form',
+            'view_mode': 'kanban,tree,form',
             'res_model': 'hr.employee',
             'domain': [('id', 'in', self.allocation_ids.employee_id.ids)],
         }
 
-    def copy_data(self, default=None):
-        vals_list = super().copy_data(default=default)
-        return [dict(vals, name=self.env._("%s (copy)", plan.name)) for plan, vals in zip(self, vals_list)]
+    @api.returns('self', lambda value: value.id)
+    def copy(self, default=None):
+        default = dict(default or {},
+                       name=_("%s (copy)", self.name))
+        return super().copy(default=default)
 
     @api.ondelete(at_uninstall=False)
     def _prevent_used_plan_unlink(self):

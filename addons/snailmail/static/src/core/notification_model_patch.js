@@ -36,7 +36,7 @@ patch(Notification.prototype, {
                 case "ready":
                     return _t("Awaiting Dispatch");
                 case "canceled":
-                    return _t("Cancelled");
+                    return _t("Canceled");
                 default:
                     return _t("Error");
             }

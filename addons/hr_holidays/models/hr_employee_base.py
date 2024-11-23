@@ -1,6 +1,6 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from datetime import datetime, date, timezone, timedelta
+from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models, _
@@ -20,11 +20,12 @@ class HrEmployeeBase(models.AbstractModel):
         help='Select the user responsible for approving "Time Off" of this employee.\n'
              'If empty, the approval is done by an Administrator or Approver (determined in settings/users).')
     remaining_leaves = fields.Float(
-        compute='_compute_remaining_leaves', string='Available Time Off Days',
+        compute='_compute_remaining_leaves', string='Remaining Paid Time Off',
         help='Total number of paid time off allocated to this employee, change this value to create allocation/time off request. '
              'Total based on all the time off types without overriding limit.')
     current_leave_state = fields.Selection(compute='_compute_leave_status', string="Current Time Off Status",
         selection=[
+            ('draft', 'New'),
             ('confirm', 'Waiting Approval'),
             ('refuse', 'Refused'),
             ('validate1', 'Waiting Second Approval'),
@@ -128,30 +129,10 @@ class HrEmployeeBase(models.AbstractModel):
         super()._compute_presence_icon()
         employees_absent = self.filtered(
             lambda employee: employee.hr_presence_state != 'present' and employee.is_absent)
-        employees_absent.update({'hr_icon_display': 'presence_holiday_absent', 'show_hr_icon_display': True})
+        employees_absent.update({'hr_icon_display': 'presence_holiday_absent'})
         employees_present = self.filtered(
             lambda employee: employee.hr_presence_state == 'present' and employee.is_absent)
-        employees_present.update({'hr_icon_display': 'presence_holiday_present', 'show_hr_icon_display': True})
-
-    def _get_first_working_interval(self, dt):
-        # find the first working interval after a given date
-        dt = dt.replace(tzinfo=timezone.utc)
-        lookahead_days = [7, 30, 90, 180, 365, 730]
-        work_intervals = None
-        for lookahead_day in lookahead_days:
-            periods = self._get_calendar_periods(dt, dt + timedelta(days=lookahead_day))
-            if not periods:
-                calendar = self.resource_calendar_id or self.company_id.resource_calendar_id
-                work_intervals = calendar._work_intervals_batch(
-                    dt, dt + timedelta(days=lookahead_day), resources=self.resource_id)
-            else:
-                for period in periods[self]:
-                    start, end, calendar = period
-                    work_intervals = calendar._work_intervals_batch(
-                        start, end, resources=self.resource_id)
-            if work_intervals.get(self.resource_id.id) and work_intervals[self.resource_id.id]._items:
-                # return start time of the earliest interval
-                return work_intervals[self.resource_id.id]._items[0][0]
+        employees_present.update({'hr_icon_display': 'presence_holiday_present'})
 
     def _compute_leave_status(self):
         # Used SUPERUSER_ID to forcefully get status of other user's leave, to bypass record rule
@@ -165,8 +146,7 @@ class HrEmployeeBase(models.AbstractModel):
         for holiday in holidays:
             leave_data[holiday.employee_id.id] = {}
             leave_data[holiday.employee_id.id]['leave_date_from'] = holiday.date_from.date()
-            back_on = holiday.employee_id._get_first_working_interval(holiday.date_to)
-            leave_data[holiday.employee_id.id]['leave_date_to'] = back_on.date() if back_on else None
+            leave_data[holiday.employee_id.id]['leave_date_to'] = holiday.date_to.date()
             leave_data[holiday.employee_id.id]['current_leave_state'] = holiday.state
 
         for employee in self:
@@ -186,7 +166,7 @@ class HrEmployeeBase(models.AbstractModel):
                 employee.leave_manager_id = False
 
     def _compute_show_leaves(self):
-        show_leaves = self.env.user.has_group('hr_holidays.group_hr_holidays_user')
+        show_leaves = self.env['res.users'].has_group('hr_holidays.group_hr_holidays_user')
         for employee in self:
             if show_leaves or employee.user_id == self.env.user:
                 employee.show_leaves = True
@@ -198,7 +178,7 @@ class HrEmployeeBase(models.AbstractModel):
             raise UserError(_('Operation not supported'))
         # This search is only used for the 'Absent Today' filter however
         # this only returns employees that are absent right now.
-        today_date = datetime.now(timezone.utc).date()
+        today_date = datetime.utcnow().date()
         today_start = fields.Datetime.to_string(today_date)
         today_end = fields.Datetime.to_string(today_date + relativedelta(hours=23, minutes=59, seconds=59))
         holidays = self.env['hr.leave'].sudo().search([
@@ -268,16 +248,8 @@ class HrEmployeeBase(models.AbstractModel):
                 hr_vals['manager_id'] = values['parent_id']
             if values.get('department_id') is not None:
                 hr_vals['department_id'] = values['department_id']
-            holidays = self.env['hr.leave'].sudo().search([
-                '|',
-                ('state', '=', 'confirm'),
-                ('date_from', '>', today_date),
-                ('employee_id', 'in', self.ids),
-            ])
+            holidays = self.env['hr.leave'].sudo().search(['|', ('state', 'in', ['draft', 'confirm']), ('date_from', '>', today_date), ('employee_id', 'in', self.ids)])
             holidays.write(hr_vals)
-            allocations = self.env['hr.leave.allocation'].sudo().search([
-                ('state', 'in', ['draft', 'confirm']),
-                ('employee_id', 'in', self.ids),
-            ])
+            allocations = self.env['hr.leave.allocation'].sudo().search([('state', 'in', ['draft', 'confirm']), ('employee_id', 'in', self.ids)])
             allocations.write(hr_vals)
         return res

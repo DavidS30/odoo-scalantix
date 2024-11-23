@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { sortBy, groupBy } from "@web/core/utils/arrays";
 import { KeepLast, Race } from "@web/core/utils/concurrency";
@@ -440,16 +442,16 @@ export class GraphModel extends Model {
         const sequential_spec = sequential_field && groupBy[0].spec;
         const measures = ["__count"];
         if (measure !== "__count") {
-            let { aggregator, type } = fields[measure];
+            let { group_operator, type } = fields[measure];
             if (type === "many2one") {
-                aggregator = "count_distinct";
+                group_operator = "count_distinct";
             }
-            if (aggregator === undefined) {
+            if (group_operator === undefined) {
                 throw new Error(
                     `No aggregate function has been provided for the measure '${measure}'`
                 );
             }
-            measures.push(`${measure}:${aggregator}`);
+            measures.push(`${measure}:${group_operator}`);
         }
 
         const numbering = {}; // used to avoid ambiguity with many2one with values with same labels:
@@ -586,10 +588,10 @@ export class GraphModel extends Model {
         const processedGroupBy = [];
         for (const gb of groupBy) {
             const { fieldName, interval } = gb;
-            const { groupable, type } = fields[fieldName];
+            const { sortable, type, store } = fields[fieldName];
             if (
-                // cf. _description_groupable in odoo/fields.py
-                !groupable ||
+                // many2many is groupable precisely when it is stored (cf. groupable in odoo/fields.py)
+                (type === "many2many" ? !store : !sortable) ||
                 ["id", "__count"].includes(fieldName) ||
                 !GROUPABLE_TYPES.includes(type)
             ) {

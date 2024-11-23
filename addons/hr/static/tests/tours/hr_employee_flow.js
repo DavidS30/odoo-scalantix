@@ -4,7 +4,8 @@ import { registry } from "@web/core/registry";
 import { stepUtils } from "@web_tour/tour_service/tour_utils";
 
 registry.category("web_tour.tours").add('hr_employee_tour', {
-    url: '/odoo',
+    test: true,
+    url: '/web',
     steps: () => [
     stepUtils.showAppsMenuItem(),
     {
@@ -14,7 +15,7 @@ registry.category("web_tour.tours").add('hr_employee_tour', {
     },
     {
         content: "Open an Employee Profile",
-        trigger: ".o_kanban_record:contains('Johnny H.')",
+        trigger: ".o_kanban_record_title:contains('Johnny H.')",
         run: 'click',
     },
     {

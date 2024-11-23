@@ -1,6 +1,7 @@
-/** @ts-check */
+/** @odoo-module */
 
 import { Component } from "@odoo/owl";
+import { _t } from "@web/core/l10n/translation";
 import { DateTimeInput } from "@web/core/datetime/datetime_input";
 import { serializeDate, deserializeDate } from "@web/core/l10n/dates";
 
@@ -12,6 +13,8 @@ export class DateFromToValue extends Component {
         from: { type: String, optional: true },
         to: { type: String, optional: true },
     };
+    fromPlaceholder = _t("Date from...");
+    toPlaceholder = _t("Date to...");
 
     onDateFromChanged(dateFrom) {
         this.props.onFromToChanged({

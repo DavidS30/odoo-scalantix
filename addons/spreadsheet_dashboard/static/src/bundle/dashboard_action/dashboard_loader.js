@@ -1,8 +1,9 @@
 /** @odoo-module */
 
+import { DataSources } from "@spreadsheet/data_sources/data_sources";
+import { migrate } from "@spreadsheet/o_spreadsheet/migration";
 import { Model } from "@odoo/o-spreadsheet";
-import { OdooDataProvider } from "@spreadsheet/data_sources/odoo_data_provider";
-import { createDefaultCurrency } from "@spreadsheet/currency/helpers";
+import { createDefaultCurrencyFormat } from "@spreadsheet/currency/helpers";
 
 /**
  * @type {{
@@ -80,11 +81,11 @@ export class DashboardLoader {
     async load() {
         const groups = await this._fetchGroups();
         this.groups = groups
-            .filter((group) => group.published_dashboard_ids.length)
+            .filter((group) => group.dashboard_ids.length)
             .map((group) => ({
                 id: group.id,
                 name: group.name,
-                dashboards: group.published_dashboard_ids,
+                dashboards: group.dashboard_ids,
             }));
         const dashboards = this.groups.map((group) => group.dashboards).flat();
         for (const dashboard of dashboards) {
@@ -125,16 +126,16 @@ export class DashboardLoader {
 
     /**
      * @private
-     * @returns {Promise<{id: number, name: string, published_dashboard_ids: number[]}[]>}
+     * @returns {Promise<{id: number, name: string, dashboard_ids: number[]}[]>}
      */
     async _fetchGroups() {
         const groups = await this.orm.webSearchRead(
             "spreadsheet.dashboard.group",
-            [["published_dashboard_ids", "!=", false]],
+            [["dashboard_ids", "!=", false]],
             {
                 specification: {
                     name: {},
-                    published_dashboard_ids: { fields: { name: {} } },
+                    dashboard_ids: { fields: { name: {} } },
                 },
             }
         );
@@ -161,14 +162,13 @@ export class DashboardLoader {
         const dashboard = this._getDashboard(dashboardId);
         dashboard.status = Status.Loading;
         try {
-            const { snapshot, revisions, default_currency, is_sample } = await this.orm.call(
+            const { snapshot, revisions, default_currency } = await this.orm.call(
                 "spreadsheet.dashboard",
                 "get_readonly_dashboard",
                 [dashboardId]
             );
             dashboard.model = this._createSpreadsheetModel(snapshot, revisions, default_currency);
             dashboard.status = Status.Loaded;
-            dashboard.isSample = is_sample;
         } catch (error) {
             dashboard.error = error;
             dashboard.status = Status.Error;
@@ -199,21 +199,22 @@ export class DashboardLoader {
      * @param {object} [defaultCurrency]
      * @returns {Model}
      */
-    _createSpreadsheetModel(snapshot, revisions = [], currency) {
-        const odooDataProvider = new OdooDataProvider(this.env);
+    _createSpreadsheetModel(snapshot, revisions = [], defaultCurrency) {
+        const dataSources = new DataSources(this.env);
+        const defaultCurrencyFormat = defaultCurrency
+            ? createDefaultCurrencyFormat(defaultCurrency)
+            : undefined;
         const model = new Model(
-            snapshot,
+            migrate(snapshot),
             {
-                custom: { env: this.env, orm: this.orm, odooDataProvider },
+                custom: { env: this.env, orm: this.orm, dataSources },
                 mode: "dashboard",
-                defaultCurrency: createDefaultCurrency(currency),
+                defaultCurrencyFormat,
             },
             revisions
         );
         this._activateFirstSheet(model);
-        odooDataProvider.addEventListener("data-source-updated", () =>
-            model.dispatch("EVALUATE_CELLS")
-        );
+        dataSources.addEventListener("data-source-updated", () => model.dispatch("EVALUATE_CELLS"));
         return model;
     }
 }

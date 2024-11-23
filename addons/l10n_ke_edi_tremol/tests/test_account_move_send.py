@@ -10,9 +10,8 @@ from odoo.addons.account.tests.test_account_move_send import TestAccountMoveSend
 class TestKEAccountMoveSend(TestAccountMoveSendCommon):
 
     @classmethod
-    @TestAccountMoveSendCommon.setup_country('ke')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref='ke'):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
     def test_sent_to_fiscal_device(self):
         invoice = self.init_invoice("out_invoice", amounts=[1000], post=True, partner=self.partner_a)
@@ -25,7 +24,7 @@ class TestKEAccountMoveSend(TestAccountMoveSendCommon):
         })
 
         wizard = self.create_send_and_print(invoice)
-        self.assertFalse(wizard.alerts)
+        self.assertFalse(wizard.l10n_ke_edi_warning_message)
         wizard.action_send_and_print()
 
         self.assertTrue(invoice.invoice_pdf_report_id)
@@ -33,7 +32,7 @@ class TestKEAccountMoveSend(TestAccountMoveSendCommon):
     def test_not_sent_to_fiscal_device_but_allow_fallback(self):
         invoice = self.init_invoice("out_invoice", amounts=[1000], post=True, partner=self.partner_a)
         wizard = self.create_send_and_print(invoice)
-        self.assertTrue('l10n_ke_edi_tremol_warning_moves' in wizard.alerts)
+        self.assertTrue(wizard.l10n_ke_edi_warning_message)
         wizard.action_send_and_print(allow_fallback_pdf=True)
 
         # The PDF is not generated but a proforma.
@@ -45,6 +44,6 @@ class TestKEAccountMoveSend(TestAccountMoveSendCommon):
     def test_not_sent_to_fiscal_device_raises(self):
         invoice = self.init_invoice("out_invoice", amounts=[1000], post=True, partner=self.partner_a)
         wizard = self.create_send_and_print(invoice)
-        self.assertTrue('l10n_ke_edi_tremol_warning_moves' in wizard.alerts)
-        with self.assertRaisesRegex(UserError, wizard._get_l10n_ke_edi_tremol_warning_message(invoice)):
+        self.assertTrue(wizard.l10n_ke_edi_warning_message)
+        with self.assertRaisesRegex(UserError, wizard.l10n_ke_edi_warning_message):
             wizard.action_send_and_print()

@@ -14,9 +14,8 @@ from odoo.tests import tagged
 class TestVNEDI(AccountTestInvoicingCommon):
 
     @classmethod
-    @AccountTestInvoicingCommon.setup_country('vn')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref='vn'):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         # Setup the default symbol and template.
         cls.template = cls.env['l10n_vn_edi_viettel.sinvoice.template'].create({
@@ -27,11 +26,11 @@ class TestVNEDI(AccountTestInvoicingCommon):
             'name': 'K24TUT',
             'invoice_template_id': cls.template.id,
         })
-        cls.env['ir.default'].set(
-            'res.partner',
+        cls.env['ir.property']._set_default(
             'l10n_vn_edi_symbol',
-            cls.symbol.id,
-            company_id=cls.env.company.id
+            'res.partner',
+            cls.symbol,
+            cls.env.company.id
         )
 
         # Setup a vietnamese address on the partner and company.
@@ -58,7 +57,6 @@ class TestVNEDI(AccountTestInvoicingCommon):
         })
 
         cls.product_a.default_code = 'BN/1035'
-        cls.other_currency = cls.setup_other_currency('EUR')
 
     @freeze_time('2024-01-01')
     def test_invoice_creation(self):
@@ -266,7 +264,7 @@ class TestVNEDI(AccountTestInvoicingCommon):
             products=self.product_a,
             taxes=self.tax_sale_a,
             post=True,
-            currency=self.other_currency,
+            currency=self.currency_data['currency'],
         )
         json_data = invoice._l10n_vn_edi_generate_invoice_json()
         self.assertEqual(json_data['generalInvoiceInfo']['exchangeRate'], 0.5)
@@ -282,14 +280,14 @@ class TestVNEDI(AccountTestInvoicingCommon):
             products=self.product_a,
             taxes=self.tax_sale_a,
             post=True,
-            currency=self.other_currency,
+            currency=self.currency_data['currency'],
         )
         self.assertEqual(invoice.l10n_vn_edi_invoice_state, 'ready_to_send')
         self._send_invoice(invoice)
 
         # Check a few things that should be set by the send & print: invoice number, attachments, state, reservation code.
         self.assertRecordValues(
-            invoice,
+            [invoice],
             [{
                 'l10n_vn_edi_invoice_number': 'K24TUT01',
                 'l10n_vn_edi_reservation_code': '123456',
@@ -308,7 +306,7 @@ class TestVNEDI(AccountTestInvoicingCommon):
             products=self.product_a,
             taxes=self.tax_sale_a,
             post=True,
-            currency=self.other_currency,
+            currency=self.currency_data['currency'],
         )
         self._send_invoice(invoice)
         # Trying to cancel a sent invoice should result in an action to open the cancellation wizard.
@@ -333,7 +331,7 @@ class TestVNEDI(AccountTestInvoicingCommon):
             products=self.product_a,
             taxes=self.tax_sale_a,
             post=True,
-            currency=self.other_currency,
+            currency=self.currency_data['currency'],
         )
         request_response = {
             'access_token': '123',  # In reality, it wouldn't be set here, but for convenience in the tests we'll "cheat"
@@ -383,4 +381,4 @@ class TestVNEDI(AccountTestInvoicingCommon):
         with patch('odoo.addons.l10n_vn_edi_viettel.models.account_move.AccountMove._l10n_vn_edi_fetch_invoice_pdf_file_data', return_value=pdf_response), \
              patch('odoo.addons.l10n_vn_edi_viettel.models.account_move.AccountMove._l10n_vn_edi_fetch_invoice_xml_file_data', return_value=xml_response), \
              patch('odoo.addons.l10n_vn_edi_viettel.models.account_move._l10n_vn_edi_send_request', return_value=(request_response, None)):
-            self.env['account.move.send.wizard'].with_context(active_model=invoice._name, active_ids=invoice.ids).create({}).action_send_and_print()
+            self.env['account.move.send'].with_context(active_model=invoice._name, active_ids=invoice.ids).create({}).action_send_and_print()

@@ -19,7 +19,8 @@ class WebsiteMail(http.Controller):
         if not record:
             return False
 
-        record.check_access('read')
+        record.check_access_rights('read')
+        record.check_access_rule('read')
 
         # search partner_id
         if request.env.user != request.website.user_id:

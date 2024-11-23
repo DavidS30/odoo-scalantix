@@ -5,9 +5,8 @@ import { pick } from "@web/core/utils/objects";
 import { clamp } from "@web/core/utils/numbers";
 import publicWidget from "@web/legacy/js/public/public_widget";
 import { debounce } from "@web/core/utils/timing";
-import { ObservingCookieWidgetMixin } from "@website/snippets/observing_cookie_mixin";
 
-const FacebookPageWidget = publicWidget.Widget.extend(ObservingCookieWidgetMixin, {
+const FacebookPageWidget = publicWidget.Widget.extend({
     selector: '.o_facebook_page',
     disabledInEditableMode: false,
 
@@ -65,6 +64,7 @@ const FacebookPageWidget = publicWidget.Widget.extend(ObservingCookieWidgetMixin
             const searchParams = new URLSearchParams(params);
             const src = "https://www.facebook.com/plugins/page.php?" + searchParams;
             this.iframeEl = Object.assign(document.createElement("iframe"), {
+                src: src,
                 scrolling: "no",
             });
             // TODO: remove, the "scrolling", "frameborder" and
@@ -75,7 +75,6 @@ const FacebookPageWidget = publicWidget.Widget.extend(ObservingCookieWidgetMixin
             this.iframeEl.setAttribute("style", `width: ${params.width}px; height: ${params.height}px; border: none; overflow: hidden;`);
             this.iframeEl.setAttribute("aria-label", _t("Facebook"));
             this.el.replaceChildren(this.iframeEl);
-            this._manageIframeSrc(this.el, src);
         }
 
         this._activateEditorObserver();

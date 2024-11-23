@@ -27,10 +27,9 @@ class SaleOrder(models.Model):
         if carrier.invoice_policy == 'real':
             sol.update({
                 'price_unit': 0,
-                'name': _(
-                    "%(name)s (Estimated Cost: %(cost)s)",
-                    name=sol["name"],
-                    cost=self._format_currency_amount(price_unit),
+                'name': sol['name']+ _(
+                    ' (Estimated Cost: %s )',
+                    self._format_currency_amount(price_unit)
                 ),
             })
         del context

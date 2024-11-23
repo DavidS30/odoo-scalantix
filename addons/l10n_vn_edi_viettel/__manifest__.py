@@ -22,6 +22,7 @@ Using SInvoice by Viettel
         "views/res_partner_views.xml",
         "views/sinvoice_views.xml",
         "wizard/account_move_reversal_view.xml",
+        "wizard/account_move_send_views.xml",
         "wizard/l10n_vn_edi_cancellation_request_views.xml",
     ],
     "installable": True,

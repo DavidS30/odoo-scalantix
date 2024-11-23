@@ -23,7 +23,7 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
 
         self.finished2, self.comp3 = self.env['product.product'].create([{
             'name': 'SuperProduct',
-            'is_storable': True,
+            'type': 'product',
         }, {
             'name': 'Component',
             'type': 'consu',
@@ -147,7 +147,9 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         return_wizard = return_form.save()
         return_wizard.product_return_moves.quantity = 3
         return_wizard.product_return_moves.to_refund = True
-        return_picking = return_wizard._create_return()
+        return_id, _ = return_wizard._create_returns()
+
+        return_picking = self.env['stock.picking'].browse(return_id)
         return_picking.move_ids.quantity = 3
         return_picking.move_ids.picked = True
         return_picking.button_validate()
@@ -186,10 +188,13 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         receipt.button_validate()
 
         return_form = Form(self.env['stock.return.picking'].with_context(active_id=receipt.id, active_model='stock.picking'))
+        return_form.location_id = self.env.company.subcontracting_location_id
         return_wizard = return_form.save()
         return_wizard.product_return_moves.quantity = 3
         return_wizard.product_return_moves.to_refund = False
-        return_picking = return_wizard._create_return()
+        return_id, _ = return_wizard._create_returns()
+
+        return_picking = self.env['stock.picking'].browse(return_id)
         return_picking.move_ids.quantity = 3
         return_picking.move_ids.picked = True
         return_picking.button_validate()
@@ -210,11 +215,11 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
 
         product = self.env['product.product'].create({
             'name': 'Product',
-            'is_storable': True,
+            'detailed_type': 'product',
         })
         component = self.env['product.product'].create({
             'name': 'Component',
-            'is_storable': True,
+            'detailed_type': 'product',
         })
         subcontractor = self.env['res.partner'].create({
             'name': 'Subcontractor',
@@ -292,7 +297,9 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         return_wizard = return_form.save()
         return_wizard.product_return_moves.quantity = 3
         return_wizard.product_return_moves.to_refund = True
-        return_picking = return_wizard._create_return()
+        return_id, _ = return_wizard._create_returns()
+
+        return_picking = self.env['stock.picking'].browse(return_id)
         return_picking.move_ids.quantity = 3
         return_picking.move_ids.picked = True
         return_picking.button_validate()
@@ -303,20 +310,20 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         """Test that the price difference is correctly computed when a subcontracted
         product is resupplied.
         """
-        if not loaded_demo_data(self.env):
-            _logger.warning("This test relies on demo data. To be rewritten independently of demo data for accurate and reliable results.")
-            return
+        self.env.company.anglo_saxon_accounting = True
         resupply_sub_on_order_route = self.env['stock.route'].search([('name', '=', 'Resupply Subcontractor on Order')])
         (self.comp1 + self.comp2).write({'route_ids': [(6, None, [resupply_sub_on_order_route.id])]})
         product_category_all = self.env.ref('product.product_category_all')
         product_category_all.property_cost_method = 'standard'
         product_category_all.property_valuation = 'real_time'
+        self._setup_category_stock_journals()
 
         stock_price_diff_acc_id = self.env['account.account'].create({
             'name': 'default_account_stock_price_diff',
             'code': 'STOCKDIFF',
             'reconcile': True,
             'account_type': 'asset_current',
+            'company_id': self.env.company.id,
         })
         product_category_all.property_account_creditor_price_difference_categ = stock_price_diff_acc_id
 
@@ -390,69 +397,37 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         product_category_all.property_stock_account_production_cost_id = production_cost_account
         product_category_all.property_stock_valuation_account_id = valu_account
         stock_in_acc_id = product_category_all.property_stock_account_input_categ_id.id
-
-        resupply_sub_on_order_route = self.env['stock.route'].search([('name', '=', 'Resupply Subcontractor on Order')])
-        (self.comp1 + self.comp2).write({'route_ids': [Command.link(resupply_sub_on_order_route.id)]})
-        purchase_comps = self.env['purchase.order'].create({
-            'partner_id': self.subcontractor_partner1.id,  # can be any partner
-            'order_line': [
-                Command.create({
-                    'name': self.comp1.name,
-                    'product_id': self.comp1.id,
-                    'product_uom_qty': 1,
-                    'product_uom': self.finished.uom_id.id,
-                    'price_unit': 10,
-                }),
-                Command.create({
-                    'name': self.comp2.name,
-                    'product_id': self.comp2.id,
-                    'product_uom_qty': 1,
-                    'product_uom': self.finished.uom_id.id,
-                    'price_unit': 10,
-                })
-            ],
-        })
-        # recieving comp products will set their invetory valuation (creates SVLs)
-        purchase_comps.button_confirm()
-        purchase_comps.picking_ids.move_ids.picked = True
-        purchase_comps.picking_ids.button_validate()
-
+        self.comp1.standard_price = 8
         purchase = self.env['purchase.order'].create({
             'partner_id': self.subcontractor_partner1.id,
             'order_line': [Command.create({
                 'name': self.finished.name,
                 'product_id': self.finished.id,
-                'product_uom_qty': 1,
+                'product_qty': 10,
                 'product_uom': self.finished.uom_id.id,
-                'price_unit': 100,
+                'price_unit': 1,
             })],
         })
-        # validate subcontractor resupply
         purchase.button_confirm()
-        resupply_picks = purchase._get_subcontracting_resupplies()
-        resupply_picks.move_ids.picked = True
-        resupply_picks.button_validate()
-        # receive subcontracted product (MO will be done)
+        # receive product
         receipt = purchase.picking_ids
         receipt.move_ids.picked = True
         receipt.button_validate()
         # create bill
         purchase.action_create_invoice()
         aml = self.env['account.move.line'].search([('purchase_line_id', '=', purchase.order_line.id)])
-        # add 50 per unit ( 50 x 1 ) = 50 extra valuation
-        aml.price_unit = 150
+        # add 0.5 per unit ( 0.5 x 10 ) = 5 extra valuation
+        aml.price_unit = 1.5
         aml.move_id.invoice_date = Date.today()
         aml.move_id.action_post()
         svl = aml.stock_valuation_layer_ids
         self.assertEqual(len(svl), 1)
-        self.assertEqual(svl.value, 50)
+        self.assertEqual(svl.value, 5)
+        self.assertEqual(self.finished.standard_price, 1.5 + 8, 'product cost should match vendor subcontracting cost + component cost')
         # check for the automated inventory valuation
         account_move_credit_line = svl.account_move_id.line_ids.filtered(lambda l: l.credit > 0)
         self.assertEqual(account_move_credit_line.account_id.id, stock_in_acc_id)
-        self.assertEqual(account_move_credit_line.credit, 50)
-        # Total value of subcontracted product = 150 new price + components (10 + 10)
-        self.assertEqual(self.finished.total_value, 170)
-        self.assertEqual(self.finished.standard_price, 170)
+        self.assertEqual(account_move_credit_line.credit, 5)
 
     def test_return_and_decrease_pol_qty(self):
         """
@@ -478,7 +453,9 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         return_form = Form(self.env['stock.return.picking'].with_context(active_id=receipt.id, active_model='stock.picking'))
         wizard = return_form.save()
         wizard.product_return_moves.quantity = 1.0
-        return_picking = wizard._create_return()
+        return_picking_id, _pick_type_id = wizard._create_returns()
+
+        return_picking = self.env['stock.picking'].browse(return_picking_id)
         return_picking.move_ids.quantity = 1.0
         return_picking.button_validate()
 
@@ -532,8 +509,8 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         self.env.company.po_lead = 5
         self.env.company.days_to_purchase = 5
 
-        buy_route_id = self.ref('purchase_stock.route_warehouse0_buy')
-        (self.finished | self.comp1 | self.comp2).route_ids = [(6, None, [buy_route_id])]
+        rule = self.env['stock.rule'].search([('action', '=', 'buy')], limit=1)
+        (self.finished | self.comp1 | self.comp2).route_ids = [(6, None, [rule.route_id.id])]
         self.comp2_bom.active = False
         self.env['product.supplierinfo'].create({
             'product_tmpl_id': self.finished.product_tmpl_id.id,
@@ -691,7 +668,9 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         picking = po.picking_ids
         picking.move_ids.quantity = 2.0
         # When we validate the picking manually, we create a backorder.
-        Form.from_action(self.env, picking.button_validate()).save().process()
+        backorder_wizard_dict = picking.button_validate()
+        backorder_wizard = Form(self.env[backorder_wizard_dict['res_model']].with_context(backorder_wizard_dict['context'])).save()
+        backorder_wizard.process()
         self.assertEqual(len(po.picking_ids), 2)
         picking.backorder_ids.action_cancel()
         self.assertEqual(picking.backorder_ids.state, 'cancel')
@@ -712,17 +691,18 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         """
         search_qty_less_than_or_equal_moved = 10
         moved_quantity_to_subcontractor = 20
+        search_qty_less_than_or_equal_total = 90
         total_component_quantity = 100
         search_qty_more_than_total = 110
 
         resupply_route = self.env['stock.route'].search([('name', '=', 'Resupply Subcontractor on Order')])
         finished, component = self.env['product.product'].create([{
             'name': 'Finished Product',
-            'is_storable': True,
+            'type': 'product',
             'seller_ids': [(0, 0, {'partner_id': self.subcontractor_partner1.id})]
         }, {
             'name': 'Component',
-            'is_storable': True,
+            'type': 'product',
             'route_ids': [(4, resupply_route.id)],
         }])
 
@@ -760,8 +740,8 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         self.assertEqual(quantity_after_move, quantity_before_move + moved_quantity_to_subcontractor)
 
         report_values = self.env['report.mrp.report_bom_structure']._get_report_data(bom.id, searchQty=search_qty_less_than_or_equal_moved, searchVariant=False)
-        self.assertEqual(report_values['lines']['components'][0]['quantity_available'], moved_quantity_to_subcontractor)
-        self.assertEqual(report_values['lines']['components'][0]['quantity_on_hand'], moved_quantity_to_subcontractor)
+        self.assertEqual(report_values['lines']['components'][0]['quantity_available'], total_component_quantity)
+        self.assertEqual(report_values['lines']['components'][0]['quantity_on_hand'], total_component_quantity)
         self.assertEqual(report_values['lines']['quantity_available'], 0)
         self.assertEqual(report_values['lines']['quantity_on_hand'], 0)
         self.assertEqual(report_values['lines']['producible_qty'], moved_quantity_to_subcontractor)
@@ -769,7 +749,7 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
 
         self.assertEqual(report_values['lines']['components'][0]['stock_avail_state'], 'available')
 
-        report_values = self.env['report.mrp.report_bom_structure']._get_report_data(bom.id, searchQty=search_qty_less_than_or_equal_moved, searchVariant=False)
+        report_values = self.env['report.mrp.report_bom_structure']._get_report_data(bom.id, searchQty=search_qty_less_than_or_equal_total, searchVariant=False)
         self.assertEqual(report_values['lines']['components'][0]['stock_avail_state'], 'available')
 
         report_values = self.env['report.mrp.report_bom_structure']._get_report_data(bom.id, searchQty=search_qty_more_than_total, searchVariant=False)
@@ -870,7 +850,9 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         # change the destination location on the move line too
         receipt.move_line_ids.location_dest_id = final_loc
         # create the backorder
-        Form.from_action(self.env, receipt.button_validate()).save().process()
+        backorder_wizard_dict = receipt.button_validate()
+        backorder_wizard = Form(self.env[backorder_wizard_dict['res_model']].with_context(backorder_wizard_dict['context'])).save()
+        backorder_wizard.process()
         backorder = receipt.backorder_ids
         # test the stock quantities after receiving 1 product
         stock_quants = self.env['stock.quant'].search([('product_id', '=', self.finished.id)])
@@ -913,7 +895,9 @@ class MrpSubcontractingPurchaseTest(TestMrpSubcontractingCommon):
         return_form = Form(self.env['stock.return.picking'].with_context(active_id=picking.id, active_model='stock.picking'))
         wizard = return_form.save()
         wizard.product_return_moves.quantity = 2.0
-        return_picking = wizard._create_return()
-        return_picking.location_dest_id = supplier_location
+        wizard.location_id = supplier_location
+        return_picking_id, _pick_type_id = wizard._create_returns()
+
+        return_picking = self.env['stock.picking'].browse(return_picking_id)
         return_picking.button_validate()
         self.assertEqual(return_picking.state, 'done')

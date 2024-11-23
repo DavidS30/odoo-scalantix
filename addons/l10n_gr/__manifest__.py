@@ -18,7 +18,6 @@ Greek accounting chart and localization.
         'base_iban',
         'base_vat',
     ],
-    'auto_install': ['account'],
     'data': [
         'data/account_tax_report_data.xml',
     ],

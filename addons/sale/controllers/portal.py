@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import binascii
@@ -9,6 +10,7 @@ from odoo.http import request
 
 from odoo.addons.payment import utils as payment_utils
 from odoo.addons.payment.controllers import portal as payment_portal
+from odoo.addons.portal.controllers.mail import _message_post_helper
 from odoo.addons.portal.controllers.portal import pager as portal_pager
 
 
@@ -21,10 +23,10 @@ class CustomerPortal(payment_portal.PaymentPortal):
         SaleOrder = request.env['sale.order']
         if 'quotation_count' in counters:
             values['quotation_count'] = SaleOrder.search_count(self._prepare_quotations_domain(partner)) \
-                if SaleOrder.has_access('read') else 0
+                if SaleOrder.check_access_rights('read', raise_exception=False) else 0
         if 'order_count' in counters:
             values['order_count'] = SaleOrder.search_count(self._prepare_orders_domain(partner), limit=1) \
-                if SaleOrder.has_access('read') else 0
+                if SaleOrder.check_access_rights('read', raise_exception=False) else 0
 
         return values
 
@@ -43,6 +45,8 @@ class CustomerPortal(payment_portal.PaymentPortal):
     def _get_sale_searchbar_sortings(self):
         return {
             'date': {'label': _('Order Date'), 'order': 'date_order desc'},
+            'name': {'label': _('Reference'), 'order': 'name'},
+            'stage': {'label': _('Stage'), 'order': 'state'},
         }
 
     def _prepare_sale_portal_rendering_values(
@@ -70,17 +74,12 @@ class CustomerPortal(payment_portal.PaymentPortal):
         if date_begin and date_end:
             domain += [('create_date', '>', date_begin), ('create_date', '<=', date_end)]
 
-        url_args = {'date_begin': date_begin, 'date_end': date_end}
-
-        if len(searchbar_sortings) > 1:
-            url_args['sortby'] = sortby
-
         pager_values = portal_pager(
             url=url,
             total=SaleOrder.search_count(domain),
             page=page,
             step=self._items_per_page,
-            url_args=url_args,
+            url_args={'date_begin': date_begin, 'date_end': date_end, 'sortby': sortby},
         )
         orders = SaleOrder.search(domain, order=sort_order, limit=self._items_per_page, offset=pager_values['offset'])
 
@@ -91,13 +90,9 @@ class CustomerPortal(payment_portal.PaymentPortal):
             'page_name': 'quote' if quotation_page else 'order',
             'pager': pager_values,
             'default_url': url,
+            'searchbar_sortings': searchbar_sortings,
+            'sortby': sortby,
         })
-
-        if len(searchbar_sortings) > 1:
-            values.update({
-                'sortby': sortby,
-                'searchbar_sortings': searchbar_sortings,
-            })
 
         return values
 
@@ -148,17 +143,22 @@ class CustomerPortal(payment_portal.PaymentPortal):
                 # The "Quotation viewed by customer" log note is an information
                 # dedicated to the salesman and shouldn't be translated in the customer/website lgg
                 context = {'lang': order_sudo.user_id.partner_id.lang or order_sudo.company_id.partner_id.lang}
-                author = order_sudo.partner_id if request.env.user._is_public() else request.env.user.partner_id
-                msg = _('Quotation viewed by customer %s', author.name)
+                msg = _('Quotation viewed by customer %s', order_sudo.partner_id.name if request.env.user._is_public() else request.env.user.partner_id.name)
                 del context
-                order_sudo.message_post(
-                    author_id=author.id,
-                    body=msg,
+                _message_post_helper(
+                    "sale.order",
+                    order_sudo.id,
+                    message=msg,
+                    token=order_sudo.access_token,
                     message_type="notification",
-                    subtype_xmlid="sale.mt_order_viewed",
+                    subtype_xmlid="mail.mt_note",
+                    partner_ids=order_sudo.user_id.sudo().partner_id.ids,
                 )
 
-        backend_url = f'/odoo/action-{order_sudo._get_portal_return_action().id}/{order_sudo.id}'
+        backend_url = f'/web#model={order_sudo._name}'\
+                      f'&id={order_sudo.id}'\
+                      f'&action={order_sudo._get_portal_return_action().id}'\
+                      f'&view_type=form'
         values = {
             'sale_order': order_sudo,
             'product_documents': order_sudo._get_product_documents(),
@@ -206,7 +206,6 @@ class CustomerPortal(payment_portal.PaymentPortal):
             amount = order_sudo.amount_total - order_sudo.amount_paid
         currency = order_sudo.currency_id
 
-        availability_report = {}
         # Select all the payment methods and tokens that match the payment context.
         providers_sudo = request.env['payment.provider'].sudo()._get_compatible_providers(
             company.id,
@@ -214,7 +213,6 @@ class CustomerPortal(payment_portal.PaymentPortal):
             amount,
             currency_id=currency.id,
             sale_order_id=order_sudo.id,
-            report=availability_report,
             **kwargs,
         )  # In sudo mode to read the fields of providers and partner (if logged out).
         payment_methods_sudo = request.env['payment.method'].sudo()._get_compatible_payment_methods(
@@ -222,7 +220,6 @@ class CustomerPortal(payment_portal.PaymentPortal):
             partner_sudo.id,
             currency_id=currency.id,
             sale_order_id=order_sudo.id,
-            report=availability_report,
             **kwargs,
         )  # In sudo mode to read the fields of providers.
         tokens_sudo = request.env['payment.token'].sudo()._get_available_tokens(
@@ -250,7 +247,6 @@ class CustomerPortal(payment_portal.PaymentPortal):
             'providers_sudo': providers_sudo,
             'payment_methods_sudo': payment_methods_sudo,
             'tokens_sudo': tokens_sudo,
-            'availability_report': availability_report,
             'transaction_route': order_sudo.get_portal_url(suffix='/transaction'),
             'landing_route': order_sudo.get_portal_url(),
             'access_token': order_sudo._portal_ensure_token(),
@@ -287,25 +283,21 @@ class CustomerPortal(payment_portal.PaymentPortal):
             return {'error': _('Invalid signature data.')}
 
         if not order_sudo._has_to_be_paid():
-            order_sudo._validate_order()
+            order_sudo.with_context(send_email=True).action_confirm()
 
         pdf = request.env['ir.actions.report'].sudo()._render_qweb_pdf('sale.action_report_saleorder', [order_sudo.id])[0]
 
-        order_sudo.message_post(
+        _message_post_helper(
+            'sale.order',
+            order_sudo.id,
+            _('Order signed by %s', name),
             attachments=[('%s.pdf' % order_sudo.name, pdf)],
-            author_id=(
-                order_sudo.partner_id.id
-                if request.env.user._is_public()
-                else request.env.user.partner_id.id
-            ),
-            body=_('Order signed by %s', name),
-            message_type='comment',
-            subtype_xmlid='mail.mt_comment',
+            token=access_token,
         )
 
         query_string = '&message=sign_ok'
         if order_sudo._has_to_be_paid():
-            query_string += '&allow_payment=yes'
+            query_string += '#allow_payment=yes'
         return {
             'force_refresh': True,
             'redirect_url': order_sudo.get_portal_url(query_string=query_string),
@@ -327,15 +319,11 @@ class CustomerPortal(payment_portal.PaymentPortal):
             # read directly during the flush due to access rights, necessitating manual caching.
             order_sudo.order_line.currency_id
 
-            order_sudo.message_post(
-                author_id=(
-                    order_sudo.partner_id.id
-                    if request.env.user._is_public()
-                    else request.env.user.partner_id.id
-                ),
-                body=decline_message,
-                message_type='comment',
-                subtype_xmlid='mail.mt_comment',
+            _message_post_helper(
+                'sale.order',
+                order_sudo.id,
+                decline_message,
+                token=access_token,
             )
             redirect_url = order_sudo.get_portal_url()
         else:

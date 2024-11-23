@@ -7,11 +7,10 @@ from dateutil.relativedelta import relativedelta
 from freezegun import freeze_time
 
 from odoo.addons.event.tests.common import EventCase
-from odoo.tests.common import tagged, users
+from odoo.tests.common import users
 from odoo.tools import mute_logger
 
 
-@tagged("event_mail")
 class TestEventFlow(EventCase):
 
     @users('user_eventmanager')

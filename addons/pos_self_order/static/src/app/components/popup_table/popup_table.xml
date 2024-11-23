@@ -11,29 +11,20 @@
                 <button class="btn btn-close" t-on-click="close"/>
             </div>
             <select class="form-select form-select-lg mb-5" t-model="state.selectedTable">
-                <option value="0">
-                    Select a table
-                </option>
-                <t t-foreach="selfOrder.models['restaurant.floor'].getAll()" t-as="floor" t-key="floor.id">
+                <t t-foreach="availableFloor" t-as="floor" t-key="floor.id">
                     <option value="floor" disabled="true">
                         <t t-esc="floor.name" />
                     </option>
-                    <option t-foreach="floor.table_ids" t-as="table" t-key="table.id" t-att-value="table.id">
-                        <t t-esc="table.table_number" />
+                    <option t-foreach="floor.tables" t-as="table" t-key="table.id" t-att-value="table.id">
+                        <t t-esc="table.name" />
                     </option>
                 </t>
             </select>
             <a
                 type="button"
                 t-on-click="() => this.setTable()"
-                t-att-class="{'disabled': !this.validSelection}"
                 class="btn btn-primary py-3 my-2">
-                    <t t-if="this.validSelection">
-                        Continue with table <t t-esc="this.selectedTable.table_number" />
-                    </t>
-                    <t t-else="">
-                        Select a table
-                    </t>
+                Confirm
             </a>
         </div>
     </t>

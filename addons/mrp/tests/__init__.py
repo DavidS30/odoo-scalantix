@@ -18,4 +18,3 @@ from . import test_smp
 from . import test_performance
 from . import test_consume_component
 from . import test_manual_consumption
-from . import test_workcenter

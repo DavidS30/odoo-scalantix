@@ -6,7 +6,6 @@ import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Component } from "@odoo/owl";
 
 class OpenMoveWidget extends Component {
-    static template = "account.OpenMoveWidget";
     static props = { ...standardFieldProps };
 
     setup() {
@@ -24,6 +23,7 @@ class OpenMoveWidget extends Component {
     }
 }
 
+OpenMoveWidget.template = "account.OpenMoveWidget";
 registry.category("fields").add("open_move_widget", {
     component: OpenMoveWidget,
 });

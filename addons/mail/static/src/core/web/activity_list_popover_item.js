@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { useAttachmentUploader } from "@mail/core/common/attachment_uploader_hook";
 import { ActivityMailTemplate } from "@mail/core/web/activity_mail_template";
 import { ActivityMarkAsDone } from "@mail/core/web/activity_markasdone_popover";
@@ -6,13 +8,14 @@ import { computeDelay } from "@mail/utils/common/dates";
 import { Component, useState } from "@odoo/owl";
 
 import { _t } from "@web/core/l10n/translation";
+import { useService } from "@web/core/utils/hooks";
 import { url } from "@web/core/utils/urls";
 import { FileUploader } from "@web/views/fields/file_handler";
 
 /**
  * @typedef {Object} Props
  * @property {import("models").Activity} activity
- * @property {function} [onActivityChanged]
+ * @property {function} onActivityChanged
  * @property {function} [onClickDoneAndScheduleNext]
  * @property {function} onClickEditActivityButton
  * @extends {Component<Props, Env>}
@@ -28,14 +31,14 @@ export class ActivityListPopoverItem extends Component {
     static template = "mail.ActivityListPopoverItem";
 
     setup() {
-        super.setup();
+        this.user = useService("user");
         this.state = useState({ hasMarkDoneView: false });
         if (this.props.activity.activity_category === "upload_file") {
             this.attachmentUploader = useAttachmentUploader(
-                this.env.services["mail.store"].Thread.insert({
-                    model: this.props.activity.res_model,
-                    id: this.props.activity.res_id,
-                })
+                this.env.services["mail.thread"].getThread(
+                    this.props.activity.res_model,
+                    this.props.activity.res_id
+                )
             );
         }
         this.closeMarkAsDone = this.closeMarkAsDone.bind(this);
@@ -60,14 +63,11 @@ export class ActivityListPopoverItem extends Component {
         }
     }
 
-    get hasCancelButton() {
-        const activity = this.props.activity;
-        return activity.state !== "done" && activity.can_write;
-    }
-
     get hasEditButton() {
         const activity = this.props.activity;
-        return activity.state !== "done" && activity.can_write;
+        return (
+            activity.state !== "done" && activity.chaining_type === "suggest" && activity.can_write
+        );
     }
 
     get hasFileUploader() {
@@ -81,7 +81,9 @@ export class ActivityListPopoverItem extends Component {
 
     onClickEditActivityButton() {
         this.props.onClickEditActivityButton();
-        this.props.activity.edit().then(() => this.props.onActivityChanged?.());
+        this.env.services["mail.activity"]
+            .edit(this.props.activity.id)
+            .then(() => this.props.onActivityChanged());
     }
 
     onClickMarkAsDone() {
@@ -92,15 +94,8 @@ export class ActivityListPopoverItem extends Component {
         const { id: attachmentId } = await this.attachmentUploader.uploadData(data, {
             activity: this.props.activity,
         });
-        await this.props.activity.markAsDone([attachmentId]);
-        this.props.onActivityChanged?.();
-    }
-
-    unlink() {
-        this.props.activity.remove();
-        this.env.services.orm
-            .unlink("mail.activity", [this.props.activity.id])
-            .then(() => this.props.onActivityChanged?.());
+        await this.env.services["mail.activity"].markAsDone(this.props.activity, [attachmentId]);
+        this.props.onActivityChanged();
     }
 
     get activityAssigneeAvatar() {
@@ -109,5 +104,17 @@ export class ActivityListPopoverItem extends Component {
             id: this.props.activity.user_id[0],
             model: "res.users",
         });
+    }
+
+    get dateDeadlineFormatted() {
+        return luxon.DateTime.fromISO(this.props.activity.date_deadline).toLocaleString(
+            luxon.DateTime.DATE_SHORT
+        );
+    }
+
+    get dateDoneFormatted() {
+        return luxon.DateTime.fromISO(this.props.activity.date_done).toLocaleString(
+            luxon.DateTime.DATE_SHORT
+        );
     }
 }

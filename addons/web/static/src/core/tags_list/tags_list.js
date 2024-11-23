@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { Component } from "@odoo/owl";
 
 export class TagsList extends Component {
@@ -7,23 +9,20 @@ export class TagsList extends Component {
     };
     static props = {
         displayText: { type: Boolean, optional: true },
-        visibleItemsLimit: { type: Number, optional: true },
+        itemsVisible: { type: Number, optional: true },
         tags: { type: Object },
     };
     get visibleTagsCount() {
-        return this.props.visibleItemsLimit - 1;
+        return this.props.itemsVisible - 1;
     }
     get visibleTags() {
-        if (this.props.visibleItemsLimit && this.props.tags.length > this.props.visibleItemsLimit) {
+        if (this.props.itemsVisible && this.props.tags.length > this.props.itemsVisible) {
             return this.props.tags.slice(0, this.visibleTagsCount);
         }
         return this.props.tags;
     }
     get otherTags() {
-        if (
-            !this.props.visibleItemsLimit ||
-            this.props.tags.length <= this.props.visibleItemsLimit
-        ) {
+        if (!this.props.itemsVisible || this.props.tags.length <= this.props.itemsVisible) {
             return [];
         }
         return this.props.tags.slice(this.visibleTagsCount);

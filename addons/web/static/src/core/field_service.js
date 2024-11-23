@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { Cache } from "@web/core/utils/cache";
 import { Domain } from "@web/core/domain";
 import { registry } from "@web/core/registry";

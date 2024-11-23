@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { registry } from "@web/core/registry";
 import { useX2ManyCrud, useOpenX2ManyRecord } from "@web/views/fields/relational_utils";
 import { X2ManyField, x2ManyField } from "@web/views/fields/x2many/x2many_field";
@@ -20,10 +22,6 @@ export class ChatbotStepsOne2manyRenderer extends ListRenderer {
 }
 
 export class ChatbotStepsOne2many extends X2ManyField {
-    static components = {
-        ...X2ManyField.components,
-        ListRenderer: ChatbotStepsOne2manyRenderer,
-    };
     /**
      * Overrides the "openRecord" method to overload the save.
      *
@@ -70,3 +68,8 @@ export const chatbotStepsOne2many = {
 };
 
 fieldRegistry.add("chatbot_steps_one2many", chatbotStepsOne2many);
+
+ChatbotStepsOne2many.components = {
+    ...X2ManyField.components,
+    ListRenderer: ChatbotStepsOne2manyRenderer,
+};

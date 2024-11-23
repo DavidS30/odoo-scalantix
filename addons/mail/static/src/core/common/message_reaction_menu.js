@@ -1,10 +1,11 @@
-import { loadEmoji, loader } from "@web/core/emoji_picker/emoji_picker";
+/* @odoo-module */
+
+import { loadEmoji } from "@web/core/emoji_picker/emoji_picker";
 import { onExternalClick } from "@mail/utils/common/hooks";
 
 import {
     Component,
-    onMounted,
-    onPatched,
+    onWillStart,
     useEffect,
     useExternalListener,
     useRef,
@@ -15,20 +16,18 @@ import { Dialog } from "@web/core/dialog/dialog";
 import { useService } from "@web/core/utils/hooks";
 
 export class MessageReactionMenu extends Component {
-    static props = ["close", "message", "initialReaction?"];
+    static props = ["close", "message"];
     static components = { Dialog };
     static template = "mail.MessageReactionMenu";
 
     setup() {
-        super.setup();
+        this.threadService = useService("mail.thread");
         this.root = useRef("root");
         this.store = useState(useService("mail.store"));
         this.ui = useState(useService("ui"));
+        this.messageService = useService("mail.message");
         this.state = useState({
-            emojiLoaded: Boolean(loader.loaded),
-            reaction: this.props.initialReaction
-                ? this.props.initialReaction
-                : this.props.message.reactions[0],
+            reaction: this.props.message.reactions[0],
         });
         useExternalListener(document, "keydown", this.onKeydown);
         onExternalClick("root", () => this.props.close());
@@ -45,16 +44,10 @@ export class MessageReactionMenu extends Component {
             },
             () => [this.props.message.reactions.length]
         );
-        onMounted(async () => {
-            if (!loader.loaded) {
-                loadEmoji();
-            }
+        onWillStart(async () => {
+            const { emojis } = await loadEmoji();
+            this.emojis = emojis;
         });
-        if (!loader.loaded) {
-            loader.onEmojiLoaded(() => (this.state.emojiLoaded = true));
-        }
-        onMounted(() => void this.state.emojiLoaded);
-        onPatched(() => void this.state.emojiLoaded);
     }
 
     onKeydown(ev) {
@@ -71,6 +64,6 @@ export class MessageReactionMenu extends Component {
     }
 
     getEmojiShortcode(reaction) {
-        return loader.loaded?.emojiValueToShortcode?.[reaction.content] ?? "?";
+        return this.emojis.find((emoji) => emoji.codepoints === reaction.content).shortcodes[0];
     }
 }

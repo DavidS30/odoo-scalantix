@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { useSubEnv, useComponent, useState } from "@odoo/owl";
 
 import { _t } from "@web/core/l10n/translation";
@@ -9,11 +11,7 @@ export const threadActionsRegistry = registry.category("mail.thread/actions");
 threadActionsRegistry
     .add("fold-chat-window", {
         condition(component) {
-            return (
-                !component.ui.isSmall &&
-                component.props.chatWindow &&
-                component.props.chatWindow.thread
-            );
+            return !component.ui.isSmall && component.props.chatWindow;
         },
         icon: "fa fa-fw fa-minus",
         name(component) {
@@ -26,35 +24,32 @@ threadActionsRegistry
             return !component.props.chatWindow?.isOpen;
         },
         sequence: 99,
-        sequenceQuick: 20,
     })
     .add("rename-thread", {
         condition(component) {
             return (
                 component.thread &&
                 component.props.chatWindow?.isOpen &&
-                (component.thread.is_editable || component.thread.channel_type === "chat")
+                (component.thread.is_editable || component.thread.type === "chat")
             );
         },
         icon: "fa fa-fw fa-pencil",
-        name: _t("Rename Thread"),
+        name: _t("Rename"),
         open(component) {
             component.state.editingName = true;
         },
-        sequence: 30,
-        sequenceGroup: 20,
+        sequence: 17,
     })
     .add("close", {
         condition(component) {
             return component.props.chatWindow;
         },
-        icon: "oi fa-fw oi-close",
-        name: _t("Close Chat Window (ESC)"),
+        icon: "fa fa-fw fa-close",
+        name: _t("Close Chat Window"),
         open(component) {
             component.close();
         },
         sequence: 100,
-        sequenceQuick: 10,
     })
     .add("search-messages", {
         component: SearchMessagesPanel,
@@ -64,13 +59,15 @@ threadActionsRegistry
                 (!component.props.chatWindow || component.props.chatWindow.isOpen)
             );
         },
-        panelOuterClass: "o-mail-SearchMessagesPanel bg-inherit",
+        panelOuterClass: "o-mail-SearchMessagesPanel",
         icon: "oi oi-fw oi-search",
-        iconLarge: "oi oi-fw fa-lg oi-search",
+        iconLarge: "oi oi-fw oi-search",
         name: _t("Search Messages"),
         nameActive: _t("Close Search"),
-        sequence: 20,
-        sequenceGroup: 20,
+        sequence: (component) => {
+            const res = component.env.inDiscussApp ? 8 : 16;
+            return res;
+        },
         setup(action) {
             useSubEnv({
                 searchMenu: {
@@ -166,11 +163,7 @@ function transformAction(component, id, action) {
             }
             action.open?.(component, this);
         },
-        get panelOuterClass() {
-            return typeof action.panelOuterClass === "function"
-                ? action.panelOuterClass(component)
-                : action.panelOuterClass;
-        },
+        panelOuterClass: action.panelOuterClass,
         /** Determines whether this is a popover linked to this action. */
         popover: null,
         /** Determines the order of this action (smaller first). */
@@ -178,16 +171,6 @@ function transformAction(component, id, action) {
             return typeof action.sequence === "function"
                 ? action.sequence(component)
                 : action.sequence;
-        },
-        get sequenceGroup() {
-            return typeof action.sequenceGroup === "function"
-                ? action.sequenceGroup(component)
-                : action.sequenceGroup;
-        },
-        get sequenceQuick() {
-            return typeof action.sequenceQuick === "function"
-                ? action.sequenceQuick(component)
-                : action.sequenceQuick;
         },
         /** Component setup to execute when this action is registered. */
         setup: action.setup,
@@ -213,31 +196,6 @@ export function useThreadActions() {
             return transformedActions
                 .filter((action) => action.condition)
                 .sort((a1, a2) => a1.sequence - a2.sequence);
-        },
-        get partition() {
-            const actions = transformedActions.filter((action) => action.condition);
-            const quick = actions
-                .filter((a) => a.sequenceQuick)
-                .sort((a1, a2) => a1.sequenceQuick - a2.sequenceQuick);
-            const grouped = actions.filter((a) => a.sequenceGroup);
-            const groups = {};
-            for (const a of grouped) {
-                if (!(a.sequenceGroup in groups)) {
-                    groups[a.sequenceGroup] = [];
-                }
-                groups[a.sequenceGroup].push(a);
-            }
-            const sortedGroups = Object.entries(groups).sort(
-                ([groupId1], [groupId2]) => groupId1 - groupId2
-            );
-            for (const [, actions] of sortedGroups) {
-                actions.sort((a1, a2) => a1.sequence - a2.sequence);
-            }
-            const group = sortedGroups.map(([groupId, actions]) => actions);
-            const other = actions
-                .filter((a) => !a.sequenceQuick & !a.sequenceGroup)
-                .sort((a1, a2) => a1.sequence - a2.sequence);
-            return { quick, group, other };
         },
         actionStack: [],
         activeAction: null,

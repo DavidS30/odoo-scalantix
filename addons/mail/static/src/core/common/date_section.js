@@ -1,5 +1,6 @@
+/* @odoo-module */
+
 import { Component } from "@odoo/owl";
-import { isMobileOS } from "@web/core/browser/feature_detection";
 
 /**
  * @typedef {Object} Props
@@ -9,8 +10,4 @@ import { isMobileOS } from "@web/core/browser/feature_detection";
 export class DateSection extends Component {
     static template = "mail.DateSection";
     static props = ["date", "className?"];
-
-    get isMobileOS() {
-        return isMobileOS();
-    }
 }

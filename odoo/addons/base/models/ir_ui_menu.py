@@ -28,7 +28,7 @@ class IrUiMenu(models.Model):
     sequence = fields.Integer(default=10)
     child_id = fields.One2many('ir.ui.menu', 'parent_id', string='Child IDs')
     parent_id = fields.Many2one('ir.ui.menu', string='Parent Menu', index=True, ondelete="restrict")
-    parent_path = fields.Char(index=True)
+    parent_path = fields.Char(index=True, unaccent=False)
     groups_id = fields.Many2many('res.groups', 'ir_ui_menu_group_rel',
                                  'menu_id', 'gid', string='Groups',
                                  help="If you have groups, the visibility of this menu will be based on these groups. "\
@@ -70,7 +70,7 @@ class IrUiMenu(models.Model):
 
     @api.constrains('parent_id')
     def _check_parent_id(self):
-        if self._has_cycle():
+        if not self._check_recursion():
             raise ValidationError(_('Error! You cannot create recursive menus.'))
 
     @api.model
@@ -81,12 +81,12 @@ class IrUiMenu(models.Model):
         context = {'ir.ui.menu.full_list': True}
         menus = self.with_context(context).search_fetch([], ['action', 'parent_id']).sudo()
 
-        # first discard all menus with groups the user does not have
-        group_ids = set(self.env.user._get_group_ids())
+        groups = self.env.user.groups_id
         if not debug:
-            group_ids = group_ids - {self.env['ir.model.data']._xmlid_to_res_id('base.group_no_one', raise_if_not_found=False)}
+            groups = groups - self.env.ref('base.group_no_one')
+        # first discard all menus with groups the user does not have
         menus = menus.filtered(
-            lambda menu: not (menu.groups_id and group_ids.isdisjoint(menu.groups_id._ids)))
+            lambda menu: not menu.groups_id or menu.groups_id & groups)
 
         # take apart menus that have an action
         actions_by_model = defaultdict(set)
@@ -199,15 +199,14 @@ class IrUiMenu(models.Model):
         return super(IrUiMenu, self).unlink()
 
     def copy(self, default=None):
-        new_menus = super().copy(default=default)
-        for new_menu in new_menus:
-            match = NUMBER_PARENS.search(new_menu.name)
-            if match:
-                next_num = int(match.group(1)) + 1
-                new_menu.name = NUMBER_PARENS.sub('(%d)' % next_num, new_menu.name)
-            else:
-                new_menu.name = new_menu.name + '(1)'
-        return new_menus
+        record = super(IrUiMenu, self).copy(default=default)
+        match = NUMBER_PARENS.search(record.name)
+        if match:
+            next_num = int(match.group(1)) + 1
+            record.name = NUMBER_PARENS.sub('(%d)' % next_num, record.name)
+        else:
+            record.name = record.name + '(1)'
+        return record
 
     @api.model
     @api.returns('self')
@@ -300,7 +299,7 @@ class IrUiMenu(models.Model):
                     'children', []).append(menu_item['id'])
             attachment = mi_attachment_by_res_id.get(menu_item['id'])
             if attachment:
-                menu_item['web_icon_data'] = attachment['datas'].decode()
+                menu_item['web_icon_data'] = attachment['datas']
                 menu_item['web_icon_data_mimetype'] = attachment['mimetype']
             else:
                 menu_item['web_icon_data'] = False

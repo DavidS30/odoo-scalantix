@@ -1,5 +1,7 @@
+/** @odoo-module */
+
+import dom from '@web/legacy/js/core/dom';
 import publicWidget from '@web/legacy/js/public/public_widget';
-import { addLoadingEffect } from '@web/core/utils/ui';
 
 publicWidget.registry.login = publicWidget.Widget.extend({
     selector: '.oe_login_form',
@@ -22,9 +24,9 @@ publicWidget.registry.login = publicWidget.Widget.extend({
      * @param {Event} ev
      */
     _onSubmit(ev) {
-        if (!ev.defaultPrevented) {
+        if (!ev.isDefaultPrevented()) {
             const btnEl = ev.currentTarget.querySelector('button[type="submit"]');
-            const removeLoadingEffect = addLoadingEffect(btnEl);
+            const removeLoadingEffect = dom.addButtonLoadingEffect(btnEl);
             const oldPreventDefault = ev.preventDefault.bind(ev);
             ev.preventDefault = () => {
                 removeLoadingEffect();

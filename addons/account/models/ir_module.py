@@ -2,7 +2,7 @@ from importlib import import_module
 from inspect import getmembers, ismodule, isclass, isfunction
 
 from odoo import api, models, fields
-from odoo.tools.misc import get_flag
+from odoo.tools import get_flag
 
 
 def templ(env, code, name=None, country='', **kwargs):
@@ -63,27 +63,17 @@ class IrModule(models.Model):
         was_installed = len(self) == 1 and self.state in ('installed', 'to upgrade', 'to remove')
         res = super().write(vals)
         is_installed = len(self) == 1 and self.state == 'installed'
-        if (
-            not was_installed and is_installed
-            and not self.env.company.chart_template
-            and self.account_templates
-            and (guessed := next((
-                tname
-                for tname, tvals in self.account_templates.items()
-                if tvals['country_id'] == self.env.company.country_id.id
-                or not tvals['country_id']
-            ), None))
-        ):
+        if not was_installed and is_installed and not self.env.company.chart_template and self.account_templates:
             def try_loading(env):
                 env['account.chart.template'].try_loading(
-                    guessed,
+                    next(iter(self.account_templates)),
                     env.company,
                 )
             self.env.registry._auto_install_template = try_loading
         return res
 
-    def _load_module_terms(self, modules, langs, overwrite=False, imported_module=False):
-        super()._load_module_terms(modules, langs, overwrite=overwrite, imported_module=imported_module)
+    def _load_module_terms(self, modules, langs, overwrite=False):
+        super()._load_module_terms(modules, langs, overwrite)
         if 'account' in modules:
             def load_account_translations(env):
                 env['account.chart.template']._load_translations(langs=langs)

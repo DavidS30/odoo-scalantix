@@ -3,26 +3,31 @@
 # 	* portal
 # 
 # Translators:
-# Algo Kärp <algokarp@gmail.com>, 2024
-# Rivo Zängov <eraser@eraser.ee>, 2024
-# Stevin Lilla, 2024
-# Katrin Kampura, 2024
-# Leaanika Randmets, 2024
-# JanaAvalah, 2024
-# Arma Gedonsky <armagedonsky@hot.ee>, 2024
-# Triine Aavik <triine@avalah.ee>, 2024
-# Martin Trigaux, 2024
+# Maidu Targama <m.targama@gmail.com>, 2023
+# Andre Roomet <andreroomet@gmail.com>, 2023
+# Piia Paurson <piia@avalah.ee>, 2023
+# Martin Aavastik <martin@avalah.ee>, 2023
+# Leaanika Randmets, 2023
+# Martin Talts <martin.t@avalah.ee>, 2023
+# Egon Raamat <egon@avalah.ee>, 2023
+# Algo Kärp <algokarp@gmail.com>, 2023
+# Rivo Zängov <eraser@eraser.ee>, 2023
+# Patrick-Jordan Kiudorv, 2023
+# Arma Gedonsky <armagedonsky@hot.ee>, 2023
+# JanaAvalah, 2023
+# Martin Trigaux, 2023
+# Triine Aavik <triine@avalah.ee>, 2023
+# Eneli Õigus <enelioigus@gmail.com>, 2023
+# Katrin Kampura, 2023
 # Siim Raasuke, 2024
-# Piia Paurson <piia@avalah.ee>, 2024
-# Eneli Õigus <enelioigus@gmail.com>, 2024
 # Anna, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-26 08:57+0000\n"
-"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"POT-Creation-Date: 2024-08-13 10:29+0000\n"
+"PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Anna, 2024\n"
 "Language-Team: Estonian (https://app.transifex.com/odoo/teams/41243/et/)\n"
 "MIME-Version: 1.0\n"
@@ -39,6 +44,7 @@ msgstr "\", et kinnitada oma tegevust. "
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_sidebar.js:0
+#, python-format
 msgid "%s days overdue"
 msgstr "%s päeva üle"
 
@@ -79,7 +85,7 @@ msgstr "<i class=\"fa fa-pencil\"/> Muuda informatsiooni"
 #. module: portal
 #: model_terms:ir.ui.view,arch_db:portal.portal_back_in_edit_mode
 msgid "<i class=\"oi oi-arrow-right me-1\"/>Back to edit mode"
-msgstr "<i class=\"oi oi-arrow-right me-1\"/>Tagasi muutmisrešiimi"
+msgstr "Tagasi muutmisrežiimi"
 
 #. module: portal
 #: model_terms:ir.ui.view,arch_db:portal.record_pager
@@ -190,7 +196,7 @@ msgid ""
 "                        An account has been created for you with the following login: <t t-out=\"object.user_id.login\">demo</t><br><br>\n"
 "                        Click on the button below to pick a password and activate your account.\n"
 "                        <div style=\"margin: 16px 0px 16px 0px; text-align: center;\">\n"
-"                            <a t-att-href=\"object.user_id.partner_id._get_signup_url()\" style=\"display: inline-block; padding: 10px; text-decoration: none; font-size: 12px; background-color: #875A7B; color: #fff; border-radius: 5px;\">\n"
+"                            <a t-att-href=\"object.user_id.signup_url\" style=\"display: inline-block; padding: 10px; text-decoration: none; font-size: 12px; background-color: #875A7B; color: #fff; border-radius: 5px;\">\n"
 "                                <strong>Activate Account</strong>\n"
 "                            </a>\n"
 "                        </div>\n"
@@ -236,6 +242,81 @@ msgid ""
 "</table>\n"
 "            "
 msgstr ""
+"<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding-top: 16px; background-color: #F1F1F1; font-family:Verdana, Arial,sans-serif; color: #454748; width: 100%; border-collapse:separate;\"><tr><td align=\"center\">\n"
+"<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"padding: 16px; background-color: white; color: #454748; border-collapse:separate;\">\n"
+"<tbody>\n"
+"    <!-- HEADER -->\n"
+"    <tr>\n"
+"        <td align=\"center\" style=\"min-width: 590px;\">\n"
+"            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;\">\n"
+"                <tr><td valign=\"middle\">\n"
+"                    <span style=\"font-size: 10px;\">Your Account</span><br>\n"
+"                    <span style=\"font-size: 20px; font-weight: bold;\" t-out=\"object.user_id.name or ''\">Marc Demo</span>\n"
+"                </td><td valign=\"middle\" align=\"right\" t-if=\"not object.user_id.company_id.uses_default_logo\">\n"
+"                    <img t-attf-src=\"/logo.png?company={{ object.user_id.company_id.id }}\" style=\"padding: 0px; margin: 0px; height: auto; width: 80px;\" t-att-alt=\"object.user_id.company_id.name\">\n"
+"                </td></tr>\n"
+"                <tr><td colspan=\"2\" style=\"text-align:center;\">\n"
+"                  <hr width=\"100%\" style=\"background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin:16px 0px 16px 0px;\">\n"
+"                </td></tr>\n"
+"            </table>\n"
+"        </td>\n"
+"    </tr>\n"
+"    <!-- CONTENT -->\n"
+"    <tr>\n"
+"        <td align=\"center\" style=\"min-width: 590px;\">\n"
+"            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;\">\n"
+"                <tr><td valign=\"top\" style=\"font-size: 13px;\">\n"
+"                    <div>\n"
+"                        Dear <t t-out=\"object.user_id.name or ''\">Marc Demo</t>,<br> <br>\n"
+"                        Welcome to <t t-out=\"object.user_id.company_id.name\">YourCompany</t>'s Portal!<br><br>\n"
+"                        An account has been created for you with the following login: <t t-out=\"object.user_id.login\">demo</t><br><br>\n"
+"                        Click on the button below to pick a password and activate your account.\n"
+"                        <div style=\"margin: 16px 0px 16px 0px; text-align: center;\">\n"
+"                            <a t-att-href=\"object.user_id.signup_url\" style=\"display: inline-block; padding: 10px; text-decoration: none; font-size: 12px; background-color: #875A7B; color: #fff; border-radius: 5px;\">\n"
+"                                <strong>Activate Account</strong>\n"
+"                            </a>\n"
+"                        </div>\n"
+"                        <t t-out=\"object.wizard_id.welcome_message or ''\">Welcome to our company's portal.</t>\n"
+"                    </div>\n"
+"                </td></tr>\n"
+"                <tr><td style=\"text-align:center;\">\n"
+"                  <hr width=\"100%\" style=\"background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin: 16px 0px 16px 0px;\">\n"
+"                </td></tr>\n"
+"            </table>\n"
+"        </td>\n"
+"    </tr>\n"
+"    <!-- FOOTER -->\n"
+"    <tr>\n"
+"        <td align=\"center\" style=\"min-width: 590px;\">\n"
+"            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"min-width: 590px; background-color: white; font-size: 11px; padding: 0px 8px 0px 8px; border-collapse:separate;\">\n"
+"                <tr><td valign=\"middle\" align=\"left\">\n"
+"                    <t t-out=\"object.user_id.company_id.name or ''\">YourCompany</t>\n"
+"                </td></tr>\n"
+"                <tr><td valign=\"middle\" align=\"left\" style=\"opacity: 0.7;\">\n"
+"                    <t t-out=\"object.user_id.company_id.phone or ''\">+1 650-123-4567</t>\n"
+"                    <t t-if=\"object.user_id.company_id.email\">\n"
+"                        | <a t-attf-href=\"'mailto:%s' % {{ object.user_id.company_id.email }}\" style=\"text-decoration:none; color: #454748;\" t-out=\"object.user_id.company_id.email or ''\">info@yourcompany.com</a>\n"
+"                    </t>\n"
+"                    <t t-if=\"object.user_id.company_id.website\">\n"
+"                        | <a t-attf-href=\"'%s' % {{ object.user_id.company_id.website }}\" style=\"text-decoration:none; color: #454748;\" t-out=\"object.user_id.company_id.website or ''\">http://www.example.com</a>\n"
+"                    </t>\n"
+"                </td></tr>\n"
+"            </table>\n"
+"        </td>\n"
+"    </tr>\n"
+"</tbody>\n"
+"</table>\n"
+"</td></tr>\n"
+"<!-- POWERED BY -->\n"
+"<tr><td align=\"center\" style=\"min-width: 590px;\">\n"
+"    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"min-width: 590px; background-color: #F1F1F1; color: #454748; padding: 8px; border-collapse:separate;\">\n"
+"      <tr><td style=\"text-align: center; font-size: 13px;\">\n"
+"        Powered by <a target=\"_blank\" href=\"https://www.odoo.com?utm_source=db&amp;utm_medium=portalinvite\" style=\"color: #875A7B;\">Odoo</a>\n"
+"      </td></tr>\n"
+"    </table>\n"
+"</td></tr>\n"
+"</table>\n"
+"            "
 
 #. module: portal
 #: model:ir.model,name:portal.model_res_users_apikeys_description
@@ -245,12 +326,14 @@ msgstr "API võtme kirjeldus"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
+#, python-format
 msgid "API Key Ready"
 msgstr "API võti valmis"
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/signature_form/signature_form.js:0
+#, python-format
 msgid "Accept & Sign"
 msgstr "Kinnita & Allkirjasta"
 
@@ -263,6 +346,7 @@ msgstr "Ligipääsuhoiatus"
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "Account deleted!"
 msgstr "Konto on kustutatud!"
 
@@ -274,6 +358,7 @@ msgstr "Lisa märkus"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Add attachment"
 msgstr "Lisa manus"
 
@@ -305,6 +390,7 @@ msgstr "Kas olete kindel, et soovite seda teha?"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Avatar"
 msgstr "Avatar"
 
@@ -323,6 +409,7 @@ msgstr "Muuda parooli"
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
 #: model_terms:ir.ui.view,arch_db:portal.portal_my_details_fields
+#, python-format
 msgid ""
 "Changing VAT number is not allowed once document(s) have been issued for "
 "your account. Please contact us directly for this operation."
@@ -352,6 +439,8 @@ msgstr ""
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
+#: code:addons/portal/static/src/js/portal_security.js:0
+#, python-format
 msgid "Check failed"
 msgstr "Kontroll ebaõnnestus"
 
@@ -363,6 +452,7 @@ msgstr "Linn"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/signature_form/signature_form.xml:0
+#, python-format
 msgid "Click here to see your document."
 msgstr "Vajuta, et näha oma dokumenti."
 
@@ -372,6 +462,7 @@ msgstr "Vajuta, et näha oma dokumenti."
 #: model_terms:ir.ui.view,arch_db:portal.portal_back_in_edit_mode
 #: model_terms:ir.ui.view,arch_db:portal.side_content
 #: model_terms:ir.ui.view,arch_db:portal.wizard_view
+#, python-format
 msgid "Close"
 msgstr "Sulge"
 
@@ -393,12 +484,14 @@ msgstr "Konfigureerige oma ühenduse parameetrid"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
+#, python-format
 msgid "Confirm"
 msgstr "Kinnitage"
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
+#, python-format
 msgid "Confirm Password"
 msgstr "Kinnitage salasõna"
 
@@ -412,7 +505,6 @@ msgstr "Ühendus &amp; turvalisus"
 #: model:ir.model,name:portal.model_res_partner
 #: model:ir.model.fields,field_description:portal.field_portal_wizard_user__partner_id
 #: model_terms:ir.ui.view,arch_db:portal.portal_layout
-#: model_terms:ir.ui.view,arch_db:portal.portal_my_contact
 #: model_terms:ir.ui.view,arch_db:portal.side_content
 msgid "Contact"
 msgstr "Kontakt"
@@ -430,6 +522,7 @@ msgstr "Kontaktid"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_composer.js:0
+#, python-format
 msgid "Could not save file <strong>%s</strong>"
 msgstr "Faili ei saanud salvestada <strong>%s</strong>"
 
@@ -443,7 +536,7 @@ msgstr "Riik"
 #: model:ir.model.fields,field_description:portal.field_portal_wizard__create_uid
 #: model:ir.model.fields,field_description:portal.field_portal_wizard_user__create_uid
 msgid "Created by"
-msgstr "Loonud"
+msgstr "Loodud (kelle poolt?)"
 
 #. module: portal
 #: model:ir.model.fields,field_description:portal.field_portal_share__create_date
@@ -451,6 +544,28 @@ msgstr "Loonud"
 #: model:ir.model.fields,field_description:portal.field_portal_wizard_user__create_date
 msgid "Created on"
 msgstr "Loodud"
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid ""
+"Currently available to everyone viewing this document, click to restrict to "
+"internal employees."
+msgstr ""
+"Praegu saadaval kõigile, kes seda dokumenti vaatavad. Klõpsake, et piirata "
+"õigusi ainult sisemistele töötajatele."
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid ""
+"Currently restricted to internal employees, click to make it available to "
+"everyone viewing this document."
+msgstr ""
+"Praegu on see mõeldud ainult sisetöötajatele. Klõpsake, et muuta see "
+"kättesaadavaks kõigile, kes seda dokumenti vaatavad."
 
 #. module: portal
 #: model:ir.model.fields,field_description:portal.field_res_config_settings__portal_allow_api_keys
@@ -475,6 +590,7 @@ msgstr "Tere"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Delete"
 msgstr "Kustuta"
 
@@ -491,7 +607,7 @@ msgstr "Kirjeldus"
 #. module: portal
 #: model_terms:ir.ui.view,arch_db:portal.portal_breadcrumbs
 msgid "Details"
-msgstr "Detailid"
+msgstr "Üksikasjad"
 
 #. module: portal
 #: model_terms:ir.ui.view,arch_db:portal.portal_my_security
@@ -528,12 +644,14 @@ msgstr "Kuvatav nimi"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_sidebar.js:0
+#, python-format
 msgid "Due in %s days"
 msgstr "Tähtaeg %späeva pärast"
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_sidebar.js:0
+#, python-format
 msgid "Due today"
 msgstr "tänaseni"
 
@@ -556,12 +674,14 @@ msgstr "E-posti kirjavahetus"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Enter a description of and purpose for the key."
 msgstr "Sisestage võtme kirjeldus ja eesmärk."
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Forgot password?"
 msgstr "Unustasid parooli?"
 
@@ -594,6 +714,7 @@ msgstr "HTTP Routing"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid ""
 "Here is your new API key, use it instead of a password for RPC access.\n"
 "                Your login is still necessary for interactive usage."
@@ -604,7 +725,7 @@ msgstr ""
 #. module: portal
 #: model_terms:ir.ui.view,arch_db:portal.portal_breadcrumbs
 msgid "Home"
-msgstr "Kodu"
+msgstr "Avaleht"
 
 #. module: portal
 #: model:ir.model.fields,field_description:portal.field_portal_share__id
@@ -616,13 +737,28 @@ msgstr "ID"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Important:"
 msgstr "Tähtis:"
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "Internal Note"
+msgstr "Sisemised märkused"
 
 #. module: portal
 #: model_terms:ir.ui.view,arch_db:portal.wizard_view
 msgid "Internal User"
 msgstr "Ettevõttesisene kasutaja"
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "Internal notes are only displayed to internal users."
+msgstr "Sisemised märkmed kuvatakse ainult sisekasutajatele."
 
 #. module: portal
 #: model:ir.model.fields.selection,name:portal.selection__portal_wizard_user__email_state__ko
@@ -637,12 +773,14 @@ msgstr "Kehtetu e-posti aadress"
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "Invalid Email! Please enter a valid email address."
 msgstr "E-posti aadress ei ole korrektne! Palun kirjuta korrektne e-post."
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "Invalid report type: %s"
 msgstr "Vigane aruande tüüp: %s"
 
@@ -659,6 +797,8 @@ msgstr "E-maili kutse kontaktidele kasutajakonto loomiseks"
 #. module: portal
 #. odoo-python
 #: code:addons/portal/wizard/portal_share.py:0
+#: code:addons/portal/wizard/portal_share.py:0
+#, python-format
 msgid "Invitation to access %s"
 msgstr "Kutse ligipääsuks %s"
 
@@ -675,6 +815,7 @@ msgstr "on portaal"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid ""
 "It is very important that this description be clear\n"
 "                and complete,"
@@ -685,6 +826,7 @@ msgstr ""
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Key Description"
 msgstr ""
 
@@ -710,6 +852,7 @@ msgstr "Viimane autentimine"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Leave a comment"
 msgstr "Jäta kommentaar"
 
@@ -722,14 +865,16 @@ msgstr "Link"
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
 #: model_terms:ir.ui.view,arch_db:portal.portal_my_security
+#, python-format
 msgid "Log out from all devices"
 msgstr "Logi välja kõikidest seadmetest"
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
+#, python-format
 msgid "Log out from all devices?"
-msgstr "Kas logisid välja kõikidest seadmetest?"
+msgstr "Kas oled loginud välja kõikidest seadmetest?"
 
 #. module: portal
 #: model:ir.model,name:portal.model_mail_message
@@ -739,6 +884,7 @@ msgstr "Sõnum"
 #. module: portal
 #. odoo-python
 #: code:addons/portal/models/mail_thread.py:0
+#, python-format
 msgid ""
 "Model %(model_name)s does not support token signature, as it does not have "
 "%(field_name)s field."
@@ -747,6 +893,7 @@ msgstr ""
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "Multi company reports are not supported."
 msgstr "Mitme ettevõtte aruandeid ei toetata."
 
@@ -763,6 +910,7 @@ msgstr "Nimi"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Name your key"
 msgstr "Nimeta oma võti"
 
@@ -770,6 +918,7 @@ msgstr "Nimeta oma võti"
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
 #: model_terms:ir.ui.view,arch_db:portal.portal_my_security
+#, python-format
 msgid "New API Key"
 msgstr "Uus API võti"
 
@@ -781,6 +930,8 @@ msgstr "Uus salasõna:"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Next"
 msgstr "Järgmine"
 
@@ -797,12 +948,14 @@ msgstr "Odoo logo"
 #. module: portal
 #. odoo-python
 #: code:addons/portal/models/res_users_apikeys_description.py:0
+#, python-format
 msgid "Only internal and portal users can create API keys"
 msgstr "API võtmeid saavad luua ainult sisekasutajad ja portaali kasutajad."
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Oops! Something went wrong. Try to reload the page and log in."
 msgstr ""
 "Ups! Midagi läks valesti. Proovi oma lehte uuendada ja siis uuesti sisse "
@@ -836,6 +989,7 @@ msgstr "Telefon"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Please enter your password to confirm you own this account"
 msgstr "Palun sisestage enda salasõna, et jätkata"
 
@@ -843,6 +997,7 @@ msgstr "Palun sisestage enda salasõna, et jätkata"
 #. odoo-python
 #: code:addons/portal/wizard/portal_wizard.py:0
 #: model_terms:ir.ui.view,arch_db:portal.wizard_view
+#, python-format
 msgid "Portal Access Management"
 msgstr "Portaali ligipääsu haldus"
 
@@ -879,8 +1034,25 @@ msgstr "Tootja"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Previous"
 msgstr "Eelmine"
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "Public"
+msgstr "Avalik"
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "Published on"
+msgstr "Avaldatud "
 
 #. module: portal
 #: model_terms:ir.ui.view,arch_db:portal.portal_my_security
@@ -955,6 +1127,7 @@ msgstr "Turvalisus"
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_security.js:0
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Security Control"
 msgstr "Turvalisuse kontroll"
 
@@ -976,15 +1149,11 @@ msgstr ""
 
 #. module: portal
 #. odoo-javascript
-#: code:addons/portal/static/src/js/portal_composer.js:0
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
 #: model_terms:ir.ui.view,arch_db:portal.portal_share_wizard
+#, python-format
 msgid "Send"
 msgstr "Saada"
-
-#. module: portal
-#: model_terms:ir.ui.view,arch_db:portal.portal_my_contact
-msgid "Send message"
-msgstr "Saada e-kiri"
 
 #. module: portal
 #: model:ir.actions.act_window,name:portal.portal_share_action
@@ -1003,13 +1172,9 @@ msgid "Sign in"
 msgstr "Logi sisse"
 
 #. module: portal
-#: model_terms:ir.ui.view,arch_db:portal.frontend_layout
-msgid "Skip to Content"
-msgstr ""
-
-#. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/js/portal_composer.js:0
+#, python-format
 msgid ""
 "Some fields are required. Please make sure to write a message or attach a "
 "document"
@@ -1020,6 +1185,7 @@ msgstr ""
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "Some required fields are empty."
 msgstr "Mõned nõutud väljad on tühjad."
 
@@ -1039,25 +1205,23 @@ msgid "Street"
 msgstr "Tänav"
 
 #. module: portal
-#: model_terms:ir.ui.view,arch_db:portal.portal_my_details_fields
-msgid "Street 2"
-msgstr "Tänav 2"
-
-#. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/signature_form/signature_form.xml:0
+#, python-format
 msgid "Thank You!"
 msgstr "Aitäh!"
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "The attachment %s cannot be removed because it is linked to a message."
 msgstr "Manust %s ei saa eemaldada, kuna see on seotud sõnumiga."
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid ""
 "The attachment %s cannot be removed because it is not in a pending state."
 msgstr "Manust %s ei saa eemaldada, kuna see ei ole ootel olekus."
@@ -1065,6 +1229,7 @@ msgstr "Manust %s ei saa eemaldada, kuna see ei ole ootel olekus."
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid ""
 "The attachment does not exist or you do not have the rights to access it."
 msgstr "Manust ei eksisteeri või teil ei ole õigusi sellele juurde pääseda."
@@ -1072,30 +1237,44 @@ msgstr "Manust ei eksisteeri või teil ei ole õigusi sellele juurde pääseda."
 #. module: portal
 #. odoo-python
 #: code:addons/portal/wizard/portal_wizard.py:0
+#, python-format
 msgid "The contact \"%s\" does not have a valid email."
 msgstr "Kontaktil \"%s\" ei ole kehtivat e-posti aadressi."
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/wizard/portal_wizard.py:0
+#, python-format
 msgid "The contact \"%s\" has the same email as an existing user"
 msgstr "Kontaktil \"%s\" on sama e-posti aadress nagu olemasoleval kasutajal"
 
 #. module: portal
+#. odoo-python
+#: code:addons/portal/controllers/portal.py:0
+#, python-format
+msgid ""
+"The document does not exist or you do not have the rights to access it."
+msgstr ""
+"Dokumenti ei eksisteeri või teil ei ole õigusi sellele juurde pääseda."
+
+#. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "The key cannot be retrieved later and provides"
 msgstr ""
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "The new password and its confirmation must be identical."
 msgstr "Uus salasõna ja kinnitus peavad olema identsed."
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid ""
 "The old password you provided is incorrect, your password was not changed."
 msgstr "Sisestatud vana parool oli vale. Sinu parooli ei muudetud."
@@ -1103,18 +1282,21 @@ msgstr "Sisestatud vana parool oli vale. Sinu parooli ei muudetud."
 #. module: portal
 #. odoo-python
 #: code:addons/portal/wizard/portal_wizard.py:0
+#, python-format
 msgid "The partner \"%s\" already has the portal access."
 msgstr "Partneril \"%s\" juba on portaali ligipääs."
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/wizard/portal_wizard.py:0
+#, python-format
 msgid "The partner \"%s\" has no portal access or is internal."
 msgstr "Partneril \"%s\" ei ole portaali ligipääsu või on sisemine."
 
 #. module: portal
 #. odoo-python
 #: code:addons/portal/wizard/portal_wizard.py:0
+#, python-format
 msgid ""
 "The template \"Portal: new user\" not found for sending email to the portal "
 "user."
@@ -1123,8 +1305,16 @@ msgstr ""
 "saatmiseks."
 
 #. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "There are no comments for now."
+msgstr "Hetkel sõnumid puuduvad."
+
+#. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "This document does not exist."
 msgstr "Antud dokument ei eksisteeri. "
 
@@ -1162,6 +1352,7 @@ msgstr "Lülita filtrid sisse/välja"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Type in your password to confirm :"
 msgstr "Sisestage oma parool, et kinnitada:"
 
@@ -1209,10 +1400,12 @@ msgstr "Vaade"
 #: model:ir.model.fields,field_description:portal.field_fleet_vehicle__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_fleet_vehicle_log_contract__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_fleet_vehicle_log_services__website_message_ids
-#: model:ir.model.fields,field_description:portal.field_fleet_vehicle_model__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_gamification_badge__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_gamification_challenge__website_message_ids
-#: model:ir.model.fields,field_description:portal.field_iap_account__website_message_ids
+#: model:ir.model.fields,field_description:portal.field_hr_department__website_message_ids
+#: model:ir.model.fields,field_description:portal.field_hr_employee__website_message_ids
+#: model:ir.model.fields,field_description:portal.field_hr_job__website_message_ids
+#: model:ir.model.fields,field_description:portal.field_loyalty_card__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_lunch_supplier__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_mail_blacklist__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_mail_thread__website_message_ids
@@ -1224,7 +1417,6 @@ msgstr "Vaade"
 #: model:ir.model.fields,field_description:portal.field_maintenance_equipment_category__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_maintenance_request__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_phone_blacklist__website_message_ids
-#: model:ir.model.fields,field_description:portal.field_product_category__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_product_pricelist__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_product_product__website_message_ids
 #: model:ir.model.fields,field_description:portal.field_product_template__website_message_ids
@@ -1243,10 +1435,12 @@ msgstr "Veebilehe sõnumid"
 #: model:ir.model.fields,help:portal.field_fleet_vehicle__website_message_ids
 #: model:ir.model.fields,help:portal.field_fleet_vehicle_log_contract__website_message_ids
 #: model:ir.model.fields,help:portal.field_fleet_vehicle_log_services__website_message_ids
-#: model:ir.model.fields,help:portal.field_fleet_vehicle_model__website_message_ids
 #: model:ir.model.fields,help:portal.field_gamification_badge__website_message_ids
 #: model:ir.model.fields,help:portal.field_gamification_challenge__website_message_ids
-#: model:ir.model.fields,help:portal.field_iap_account__website_message_ids
+#: model:ir.model.fields,help:portal.field_hr_department__website_message_ids
+#: model:ir.model.fields,help:portal.field_hr_employee__website_message_ids
+#: model:ir.model.fields,help:portal.field_hr_job__website_message_ids
+#: model:ir.model.fields,help:portal.field_loyalty_card__website_message_ids
 #: model:ir.model.fields,help:portal.field_lunch_supplier__website_message_ids
 #: model:ir.model.fields,help:portal.field_mail_blacklist__website_message_ids
 #: model:ir.model.fields,help:portal.field_mail_thread__website_message_ids
@@ -1258,7 +1452,6 @@ msgstr "Veebilehe sõnumid"
 #: model:ir.model.fields,help:portal.field_maintenance_equipment_category__website_message_ids
 #: model:ir.model.fields,help:portal.field_maintenance_request__website_message_ids
 #: model:ir.model.fields,help:portal.field_phone_blacklist__website_message_ids
-#: model:ir.model.fields,help:portal.field_product_category__website_message_ids
 #: model:ir.model.fields,help:portal.field_product_pricelist__website_message_ids
 #: model:ir.model.fields,help:portal.field_product_product__website_message_ids
 #: model:ir.model.fields,help:portal.field_product_template__website_message_ids
@@ -1271,6 +1464,7 @@ msgstr "Veebilehe suhtluse ajalugu"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "What's this key for?"
 msgstr "Milleks see võti?"
 
@@ -1282,18 +1476,14 @@ msgstr "Nõustaja"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "Write a message..."
 msgstr "Kirjuta sõnum ..."
 
 #. module: portal
 #. odoo-javascript
-#: code:addons/portal/static/src/chatter/core/composer_patch.js:0
-msgid "Write a message…"
-msgstr ""
-
-#. module: portal
-#. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "Write down your key"
 msgstr "Kirjutage oma võti üles"
 
@@ -1305,6 +1495,7 @@ msgstr "Vale salasõna."
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid ""
 "You are about to log out from all devices that currently have access to this"
 " user's account."
@@ -1315,12 +1506,14 @@ msgstr ""
 #. module: portal
 #. odoo-python
 #: code:addons/portal/controllers/portal.py:0
+#, python-format
 msgid "You cannot leave any password empty."
 msgstr "Sa ei saa jätta ühtegi salasõna tühjaks."
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "You must be"
 msgstr "Sa pead olema "
 
@@ -1332,6 +1525,7 @@ msgstr ""
 #. module: portal
 #. odoo-python
 #: code:addons/portal/wizard/portal_wizard.py:0
+#, python-format
 msgid "You should first grant the portal access to the partner \"%s\"."
 msgstr "Peaksite kõigepealt lubama ligipääsu partnerile \"%s\"."
 
@@ -1352,7 +1546,29 @@ msgstr "Postiindeks"
 
 #. module: portal
 #. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "avatar"
+msgstr "avatar"
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "comment"
+msgstr "kommentaar"
+
+#. module: portal
+#. odoo-javascript
+#: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
+msgid "comments"
+msgstr "kommentaarid"
+
+#. module: portal
+#. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "full access"
 msgstr "täielik juurdepääs"
 
@@ -1364,6 +1580,7 @@ msgstr ""
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid ""
 "it will be the only way to\n"
 "                identify the key once created"
@@ -1372,6 +1589,7 @@ msgstr ""
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "logged in"
 msgstr "sisse logitud"
 
@@ -1388,17 +1606,20 @@ msgstr "salasõna"
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "revoke"
 msgstr "tühistada"
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_chatter.xml:0
+#, python-format
 msgid "to post a comment."
 msgstr "kommentaari sisestamiseks."
 
 #. module: portal
 #. odoo-javascript
 #: code:addons/portal/static/src/xml/portal_security.xml:0
+#, python-format
 msgid "to your user account, it is very important to store it securely."
 msgstr ""

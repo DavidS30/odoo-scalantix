@@ -8,13 +8,6 @@ import { Component } from "@odoo/owl";
 
 
 export class KEProxyDialog extends Component {
-    static template = "l10n_ke_edi_tremol.KEProxyDialog";
-    static components = { Dialog };
-    static props = {
-        invoices: Object,
-        close: Function,
-    };
-
     setup() {
         // prevent the escape key from exiting the dialog
         useHotkey("escape", () => {});
@@ -24,3 +17,10 @@ export class KEProxyDialog extends Component {
         this.sender.postInvoices(this.props.invoices);
     };
 }
+
+KEProxyDialog.template = "l10n_ke_edi_tremol.KEProxyDialog";
+KEProxyDialog.components = { Dialog };
+KEProxyDialog.props = {
+    invoices: Object,
+    close: Function,
+};

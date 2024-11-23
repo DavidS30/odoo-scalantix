@@ -8,36 +8,35 @@ from io import BytesIO
 
 import babel
 import babel.dates
-from markupsafe import Markup, escape, escape_silent
+from markupsafe import Markup, escape
 from PIL import Image
 from lxml import etree, html
 
-from odoo import api, fields, models, tools
-from odoo.tools import posix_to_ldml, float_utils, format_date, format_duration
+from odoo import api, fields, models, _, _lt, tools
+from odoo.tools import posix_to_ldml, float_utils, format_date, format_duration, pycompat
 from odoo.tools.mail import safe_attrs
 from odoo.tools.misc import get_lang, babel_locale_parse
 from odoo.tools.mimetypes import guess_mimetype
-from odoo.tools.translate import _, LazyTranslate
 
-_lt = LazyTranslate(__name__)
 _logger = logging.getLogger(__name__)
 
 
-def nl2br(string: str) -> Markup:
-    """ Converts newlines to HTML linebreaks in ``string`` after HTML-escaping
-    it.
+def nl2br(string):
+    """ Converts newlines to HTML linebreaks in ``string``. returns
+    the unicode result
+
+    :param str string:
+    :rtype: unicode
     """
-    return escape_silent(string).replace('\n', Markup('<br>\n'))
+    return pycompat.to_text(string).replace('\n', Markup('<br>\n'))
 
 
-def nl2br_enclose(string: str, enclosure_tag: str = 'div') -> Markup:
+def nl2br_enclose(string, enclosure_tag='div'):
     """ Like nl2br, but returns enclosed Markup allowing to better manipulate
     trusted and untrusted content. New lines added by use are trusted, other
     content is escaped. """
-    return Markup('<{enclosure_tag}>{converted}</{enclosure_tag}>').format(
-        enclosure_tag=enclosure_tag,
-        converted=nl2br(string),
-    )
+    converted = nl2br(escape(string))
+    return Markup(f'<{enclosure_tag}>{converted}</{enclosure_tag}>')
 
 #--------------------------------------------------------------------
 # QWeb Fields converters
@@ -116,10 +115,7 @@ class FieldConverter(models.AbstractModel):
         Converts a single value to its HTML version/output
         :rtype: unicode
         """
-        if value is None or value is False:
-            return ''
-
-        return escape(value.decode() if isinstance(value, bytes) else value)
+        return escape(pycompat.to_text(value))
 
     @api.model
     def record_to_html(self, record, field_name, options):
@@ -143,7 +139,7 @@ class FieldConverter(models.AbstractModel):
 
         :returns: Model[res.lang]
         """
-        return self.env['res.lang'].browse(get_lang(self.env).id)
+        return get_lang(self.env)
 
 
 class IntegerConverter(models.AbstractModel):
@@ -163,8 +159,8 @@ class IntegerConverter(models.AbstractModel):
     @api.model
     def value_to_html(self, value, options):
         if options.get('format_decimalized_number'):
-            return tools.misc.format_decimalized_number(value, options.get('precision_digits', 1))
-        return self.user_lang().format('%d', value, grouping=True).replace(r'-', '-\N{ZERO WIDTH NO-BREAK SPACE}')
+            return tools.format_decimalized_number(value, options.get('precision_digits', 1))
+        return pycompat.to_text(self.user_lang().format('%d', value, grouping=True).replace(r'-', '-\N{ZERO WIDTH NO-BREAK SPACE}'))
 
 
 class FloatConverter(models.AbstractModel):
@@ -202,7 +198,7 @@ class FloatConverter(models.AbstractModel):
         if precision is None:
             formatted = re.sub(r'(?:(0|\d+?)0+)$', r'\1', formatted)
 
-        return formatted
+        return pycompat.to_text(formatted)
 
     @api.model
     def record_to_html(self, record, field_name, options):
@@ -254,6 +250,7 @@ class DateTimeConverter(models.AbstractModel):
 
         lang = self.user_lang()
         locale = babel_locale_parse(lang.code)
+        format_func = babel.dates.format_datetime
         if isinstance(value, str):
             value = fields.Datetime.from_string(value)
 
@@ -269,11 +266,11 @@ class DateTimeConverter(models.AbstractModel):
             pattern = options['format']
         else:
             if options.get('time_only'):
-                strftime_pattern = lang.time_format
+                strftime_pattern = ("%s" % (lang.time_format))
             elif options.get('date_only'):
-                strftime_pattern = lang.date_format
+                strftime_pattern = ("%s" % (lang.date_format))
             else:
-                strftime_pattern = "%s %s" % (lang.date_format, lang.time_format)
+                strftime_pattern = ("%s %s" % (lang.date_format, lang.time_format))
 
             pattern = posix_to_ldml(strftime_pattern, locale=locale)
 
@@ -281,11 +278,13 @@ class DateTimeConverter(models.AbstractModel):
             pattern = pattern.replace(":ss", "").replace(":s", "")
 
         if options.get('time_only'):
-            return babel.dates.format_time(value, format=pattern, tzinfo=tzinfo, locale=locale)
-        elif options.get('date_only'):
-            return babel.dates.format_date(value, format=pattern, locale=locale)
-        else:
-            return babel.dates.format_datetime(value, format=pattern, tzinfo=tzinfo, locale=locale)
+            format_func = babel.dates.format_time
+            return pycompat.to_text(format_func(value, format=pattern, tzinfo=tzinfo, locale=locale))
+        if options.get('date_only'):
+            format_func = babel.dates.format_date
+            return pycompat.to_text(format_func(value, format=pattern, locale=locale))
+
+        return pycompat.to_text(format_func(value, format=pattern, tzinfo=tzinfo, locale=locale))
 
 
 class TextConverter(models.AbstractModel):
@@ -298,7 +297,7 @@ class TextConverter(models.AbstractModel):
         """
         Escapes the value and converts newlines to br. This is bullshit.
         """
-        return nl2br(value) if value else ''
+        return nl2br(escape(value)) if value else ''
 
 
 class SelectionConverter(models.AbstractModel):
@@ -321,7 +320,7 @@ class SelectionConverter(models.AbstractModel):
     def value_to_html(self, value, options):
         if not value:
             return ''
-        return escape(options['selection'][value] or '')
+        return escape(pycompat.to_text(options['selection'][value]) or '')
 
     @api.model
     def record_to_html(self, record, field_name, options):
@@ -342,7 +341,7 @@ class ManyToOneConverter(models.AbstractModel):
         value = value.sudo().display_name
         if not value:
             return False
-        return nl2br(value)
+        return nl2br(escape(value))
 
 
 class ManyToManyConverter(models.AbstractModel):
@@ -355,7 +354,7 @@ class ManyToManyConverter(models.AbstractModel):
         if not value:
             return False
         text = ', '.join(value.sudo().mapped('display_name'))
-        return nl2br(text)
+        return nl2br(escape(text))
 
 
 class HTMLConverter(models.AbstractModel):
@@ -480,8 +479,8 @@ class MonetaryConverter(models.AbstractModel):
             value = options['from_currency']._convert(value, display_currency, company, date)
 
         lang = self.user_lang()
-        formatted_amount = lang.format(fmt, display_currency.round(value), grouping=True)\
-            .replace(r' ', '\N{NO-BREAK SPACE}').replace(r'-', '-\N{ZERO WIDTH NO-BREAK SPACE}')
+        formatted_amount = lang.format(fmt, display_currency.round(value),
+                                grouping=True, monetary=True).replace(r' ', '\N{NO-BREAK SPACE}').replace(r'-', '-\N{ZERO WIDTH NO-BREAK SPACE}')
 
         pre = post = ''
         if display_currency.position == 'before':
@@ -701,7 +700,7 @@ class RelativeDatetimeConverter(models.AbstractModel):
         # value should be a naive datetime in UTC. So is fields.Datetime.now()
         reference = fields.Datetime.from_string(options['now'])
 
-        return babel.dates.format_timedelta(value - reference, add_direction=True, locale=locale)
+        return pycompat.to_text(babel.dates.format_timedelta(value - reference, add_direction=True, locale=locale))
 
     @api.model
     def record_to_html(self, record, field_name, options):
@@ -736,8 +735,6 @@ class BarcodeConverter(models.AbstractModel):
     def value_to_html(self, value, options=None):
         if not value:
             return ''
-        if not bool(re.match(r'^[\x00-\x7F]+$', value)):
-            return nl2br(value)
         barcode_symbology = options.get('symbology', 'Code128')
         barcode = self.env['ir.actions.report'].barcode(
             barcode_symbology,

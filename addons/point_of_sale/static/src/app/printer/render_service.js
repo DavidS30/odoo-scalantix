@@ -10,7 +10,7 @@ export class RenderContainer extends Component {
     // place where to momentarily render some html code
     // we should only intact with that div through the `whenMounted` function
     static template = xml`
-        <div class="render-container-parent" style="left: -1000px; position: fixed;">
+        <div style="left: -1000px; position: fixed;">
             <div t-ref="ref">
                 <t t-if="props.comp.component" t-component="props.comp.component" t-props="props.comp.props"/>
             </div>
@@ -65,7 +65,6 @@ const renderService = {
         };
         const whenMounted = async ({ el, container, callback }) => {
             container ||= document.querySelector(".render-container");
-            container.innerHTML = "";
             return await applyWhenMounted({ el, container, callback });
         };
         return { toHtml, toCanvas, toJpeg, whenMounted };
@@ -95,9 +94,7 @@ const applyWhenMounted = async ({ el, container, callback }) => {
  * This function assumes that the `renderer` service is available.
  */
 export const htmlToCanvas = async (el, options) => {
-    if (options.addClass) {
-        el.classList.add(...options.addClass.split(" "));
-    }
+    el.classList.add(options.addClass || "");
     return await applyWhenMounted({
         el,
         container: document.querySelector(".render-container"),

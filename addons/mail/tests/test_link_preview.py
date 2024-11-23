@@ -125,45 +125,29 @@ class TestLinkPreview(MailCommon):
                 body=Markup(f'<a href={self.source_url}>Nothing link</a>'),
             )
             self._reset_bus()
-
-            def get_bus_params():
-                return (
-                    [(self.cr.dbname, "res.partner", self.env.user.partner_id.id)],
-                    [
-                        {
-                            "type": "mail.record/insert",
-                            "payload": {
-                                "mail.link.preview": [
-                                    {
-                                        "id": message.link_preview_ids.id,
-                                        "image_mimetype": False,
-                                        "message": message.id,
-                                        "og_description": self.og_description,
-                                        "og_image": self.og_image,
-                                        "og_mimetype": False,
-                                        "og_site_name": False,
-                                        "og_title": self.og_title,
-                                        "og_type": False,
-                                        "source_url": self.source_url,
-                                    },
-                                ],
-                                "mail.message": self._filter_messages_fields(
-                                    {
-                                        "id": message.id,
-                                        "linkPreviews": [message.link_preview_ids.id],
-                                    },
-                                ),
-                            },
-                        }
-                    ],
-                )
-
-            with self.assertBus(get_params=get_bus_params):
-                self.env["mail.link.preview"]._create_from_message_and_notify(message)
-            link_preview_count = self.env["mail.link.preview"].search_count(
-                [("source_url", "=", self.source_url)]
-            )
+            self.env['mail.link.preview']._create_from_message_and_notify(message)
+            link_preview_count = self.env['mail.link.preview'].search_count([('source_url', '=', self.source_url)])
             self.assertEqual(link_preview_count, throttle + 1)
+            self.assertBusNotifications(
+                [(self.cr.dbname, 'res.partner', self.env.user.partner_id.id)],
+                message_items=[{
+                    'type': 'mail.record/insert',
+                    'payload': {
+                        'LinkPreview': [{
+                            'id': message.link_preview_ids.id,
+                            'message': {'id': message.id},
+                            'image_mimetype': False,
+                            'og_description': self.og_description,
+                            'og_image': self.og_image,
+                            'og_mimetype': False,
+                            'og_title': self.og_title,
+                            'og_type': False,
+                            'og_site_name': False,
+                            'source_url': self.source_url,
+                        }]
+                    }
+                }]
+            )
 
     def test_link_preview_no_content_type(self):
         with patch.object(requests.Session, 'request', self._patch_with_no_content_type):
@@ -177,25 +161,12 @@ class TestLinkPreview(MailCommon):
             requests.Session, "head", self._patch_head_html
         ):
             urls = [
-                ("http://localhost:8069/", "http://localhost:8069/odoo", 0),
-                ("http://localhost:8069/", "http://localhost:8069/odoo/test", 0),
-                ("http://localhost:8069/", "http://localhost:8069/web/test", 0),
-                ("http://localhost:8069/", "http://localhost:8069/", 1),
-                ("http://localhost:8069/", "http://localhost:8069/odoo-experience", 1),
                 ("http://localhost:8069/", "http://localhost:8069/chat/5/bFtIfYHRco", 0),
-                ("https://www.odoo.com/", "https://www.odoo.com/web", 0),
-                ("https://www.odoo.com/", "https://www.odoo.com/odoo", 0),
-                ("https://www.odoo.com/", "https://www.odoo.com/odoo/", 0),
-                ("https://www.odoo.com/", "https://www.odoo.com/odoo?debug=assets", 0),
-                ("https://www.odoo.com/", "https://www.odoo.com/odoo#anchor", 0),
-                ("https://www.odoo.com/", "https://www.odoo.com/odoo-experience", 1),
-                ("https://www.odoo.com/", "https://www.odoo.com/odoo/1519/tasks/4102866", 0),
-                ("http://www.odoo.com/", "https://www.odoo.com/odoo/1519/tasks/4102866", 1),
-                ("https://www.odoo.com/", "https://wwwaodoo.com/odoo/", 1),
+                ("http://localhost:8069/", "http://localhost:8069/web/test", 0),
                 ("https://www.odoo.com/", "https://www.odoo.com/chat/", 0),
                 ("https://www.odoo.com/", "https://www.odoo.com/chat/5/bFtIfYHRco", 0),
+                ("https://www.odoo.com/", "https://www.odoo.com/web/", 0),
                 ("http://www.odoo.com/", "https://www.odoo.com/chat/5/bFtIfYHRco", 1),
-                ("https://clients.odoo.com/", "https://www.odoo.com/odoo/1519/tasks/4102866", 1),
                 ("https://clients.odoo.com/", "https://www.odoo.com/chat/5/bFtIfYHRco", 1),
             ]
             for request_url, url, counter in urls:

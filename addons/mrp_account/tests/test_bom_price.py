@@ -12,7 +12,7 @@ class TestBomPriceCommon(common.TransactionCase):
     def _create_product(cls, name, price):
         return cls.Product.create({
             'name': name,
-            'is_storable': True,
+            'type': 'product',
             'standard_price': price,
         })
 

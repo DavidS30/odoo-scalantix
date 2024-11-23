@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo.addons.website.tests.test_website_visitor import WebsiteVisitorTestsCommon
+from odoo.addons.website.tests.test_website_visitor import WebsiteVisitorTests
 from odoo.tests import tagged
 
 
 @tagged('website_visitor')
-class WebsiteVisitorTestsLivechat(WebsiteVisitorTestsCommon):
+class WebsiteVisitorTestsLivechat(WebsiteVisitorTests):
 
     def test_link_to_visitor_livechat(self):
         """ Same as parent's 'test_link_to_visitor' except we also test that conversations

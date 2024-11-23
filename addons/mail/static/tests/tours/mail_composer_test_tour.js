@@ -1,5 +1,7 @@
+/* @odoo-module */
+
 import { registry } from "@web/core/registry";
-import { contains, inputFiles } from "@web/../tests/utils";
+import { contains, createFile, inputFiles } from "@web/../tests/utils";
 
 /**
  * This tour depends on data created by python test in charge of launching it.
@@ -8,6 +10,7 @@ import { contains, inputFiles } from "@web/../tests/utils";
  * @see mail/tests/test_mail_composer.py
  */
 registry.category("web_tour.tours").add("mail/static/tests/tours/mail_composer_test_tour.js", {
+    test: true,
     steps: () => [
         {
             content: "Wait for the chatter to be fully loaded",
@@ -19,42 +22,50 @@ registry.category("web_tour.tours").add("mail/static/tests/tours/mail_composer_t
         {
             content: "Click on Send Message",
             trigger: "button:contains(Send message)",
-            run: "click",
         },
         {
             content: "Write something in composer",
             trigger: ".o-mail-Composer-input",
-            run: "edit blahblah @Not && click body",
+            run: "text blahblah @Not",
         },
         {
             content: "Mention a partner",
             trigger: ".o-mail-Composer-suggestion:contains(Not A Demo User)",
-            run: "click",
         },
         {
             content: "Add one file in composer",
             trigger: ".o-mail-Composer button[aria-label='Attach files']",
             async run() {
-                const text = new File(["hello, world"], "text.txt", { type: "text/plain" });
-                await inputFiles(".o-mail-Composer-coreMain .o_input_file", [text]);
+                await inputFiles(".o-mail-Composer-coreMain .o_input_file", [
+                    await createFile({
+                        content: "hello, world",
+                        contentType: "text/plain",
+                        name: "text.txt",
+                    }),
+                ]);
             },
-        },
-        {
-            trigger: ".o-mail-AttachmentCard:not(.o-isUploading)", // waiting the attachment to be uploaded
         },
         {
             content: "Open full composer",
             trigger: "button[aria-label='Full composer']",
-            run: "click",
+            extra_trigger: ".o-mail-AttachmentCard:not(.o-isUploading)", // waiting the attachment to be uploaded
         },
         {
             content: "Check composer keeps open after pushing Escape",
             trigger: ".o_mail_composer_form_view",
-            run: "press Escape",
+            run: () => {
+                window.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                        bubbles: true,
+                        key: "Escape",
+                    })
+                );
+            },
         },
         {
             content: "Check the earlier provided attachment is listed",
-            trigger: ".o_field_mail_composer_attachment_list a:contains(text.txt)",
+            trigger: '.o_attachment[title="text.txt"]',
+            run() {},
         },
         {
             content: "Check subject is autofilled",
@@ -91,64 +102,27 @@ registry.category("web_tour.tours").add("mail/static/tests/tours/mail_composer_t
             },
         },
         {
-            content: "Click on the mail template selector",
-            trigger: ".mail-composer-template-dropdown-btn",
-            run: "click"
+            content: "Open templates",
+            trigger: '.o_field_widget[name="template_id"] input',
         },
         {
             content: "Check a template is listed",
-            trigger: '.mail-composer-template-dropdown.popover .o-dropdown-item:contains("Test template")',
+            in_modal: false,
+            trigger: '.ui-autocomplete .ui-menu-item a:contains("Test template")',
+            run() {},
         },
         {
             content: "Send message",
             trigger: ".o_mail_send",
-            run: "click",
         },
         {
             content: "Check message is shown",
             trigger: '.o-mail-Message-body:contains("blahblah @Not A Demo User")',
-            run: "click",
         },
         {
             content: "Check message contains the attachment",
             trigger: '.o-mail-Message .o-mail-AttachmentCard:contains("text.txt")',
-        },
-        // Test the full composer input text is kept on closing
-        {
-            content: "Click on Send Message",
-            trigger: "button:contains(Send message)",
-            run: "click",
-        },
-        {
-            content: "Open full composer",
-            trigger: "button[aria-label='Full composer']",
-            run: "click",
-        },
-        {
-            content: "Write something in full composer",
-            trigger: ".note-editable",
-            run: "editor keep the content",
-        },
-        {
-            content: "Close full composer",
-            trigger: ".btn-close",
-            run: "click",
-        },
-        {
-            content: "Click on Send Message",
-            trigger: "button:contains(Send message)",
-            run: "click",
-        },
-        {
-            content: "Check full composer text is kept",
-            trigger: ".o-mail-Composer-input",
-            run() {
-                if (this.anchor.value !== "keep the content") {
-                    console.error(
-                        "Composer in chatter should contain full composer text after discarding."
-                    );
-                }
-            },
+            isCheck: true,
         },
     ],
 });

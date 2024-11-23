@@ -3,25 +3,18 @@
 import * as spreadsheet from "@odoo/o-spreadsheet";
 import { _t } from "@web/core/l10n/translation";
 import { OdooChart } from "./odoo_chart";
+import { LINE_FILL_TRANSPARENCY } from "@web/views/graph/graph_renderer";
 
 const { chartRegistry } = spreadsheet.registries;
 
 const {
     getDefaultChartJsRuntime,
-    getChartAxisTitleRuntime,
     chartFontColor,
-    ColorGenerator,
+    ChartColors,
     getFillingMode,
     colorToRGBA,
     rgbaToHex,
-    getTrendDatasetForLineChart,
-    getChartAxisType,
-    formatTickValue,
 } = spreadsheet.helpers;
-
-const { TREND_LINE_XAXIS_ID } = spreadsheet.constants;
-
-const LINE_FILL_TRANSPARENCY = 0.4;
 
 export class OdooLineChart extends OdooChart {
     constructor(definition, sheetId, getters) {
@@ -29,9 +22,6 @@ export class OdooLineChart extends OdooChart {
         this.verticalAxisPosition = definition.verticalAxisPosition;
         this.stacked = definition.stacked;
         this.cumulative = definition.cumulative;
-        this.axesDesign = definition.axesDesign;
-        this.fillArea = definition.fillArea;
-        this.trend = definition.trend;
     }
 
     getDefinition() {
@@ -40,9 +30,6 @@ export class OdooLineChart extends OdooChart {
             verticalAxisPosition: this.verticalAxisPosition,
             stacked: this.stacked,
             cumulative: this.cumulative,
-            axesDesign: this.axesDesign,
-            fillArea: this.fillArea,
-            trend: this.trend,
         };
     }
 }
@@ -63,22 +50,13 @@ function createOdooChartRuntime(chart, getters) {
     const { datasets, labels } = chart.dataSource.getData();
     const locale = getters.getLocale();
     const chartJsConfig = getLineConfiguration(chart, labels, locale);
-    const colors = new ColorGenerator(datasets.length);
-
-    let maxLength = 0;
-    const trendDatasets = [];
-    const axisType = getChartAxisType(chart, getters);
-
-    for (const index in datasets) {
-        let { label, data, cumulatedStart } = datasets[index];
-
+    const colors = new ChartColors();
+    for (let [index, { label, data, cumulatedStart }] of datasets.entries()) {
         const color = colors.next();
-        let backgroundColor = color;
-        if (chart.fillArea) {
-            const backgroundRGBA = colorToRGBA(color);
+        const backgroundRGBA = colorToRGBA(color);
+        if (chart.stacked) {
             // use the transparency of Odoo to keep consistency
             backgroundRGBA.a = LINE_FILL_TRANSPARENCY;
-            backgroundColor = rgbaToHex(backgroundRGBA);
         }
         if (chart.cumulative) {
             let accumulator = cumulatedStart;
@@ -88,6 +66,7 @@ function createOdooChartRuntime(chart, getters) {
             });
         }
 
+        const backgroundColor = rgbaToHex(backgroundRGBA);
         const dataset = {
             label,
             data,
@@ -95,45 +74,9 @@ function createOdooChartRuntime(chart, getters) {
             borderColor: color,
             backgroundColor,
             pointBackgroundColor: color,
-            fill: chart.fillArea ? getFillingMode(parseInt(index), chart.stacked) : false,
+            fill: chart.stacked ? getFillingMode(index) : false,
         };
         chartJsConfig.data.datasets.push(dataset);
-
-        const trend = chart.getDefinition().trend;
-        if (!trend?.display) {
-            continue;
-        }
-
-        const trendDataset = getTrendDatasetForLineChart(trend, dataset, axisType, locale);
-        if (trendDataset) {
-            maxLength = Math.max(maxLength, trendDataset.data.length);
-            trendDatasets.push(trendDataset);
-        }
-    }
-
-    if (trendDatasets.length) {
-        /* We add a second x axis here to draw the trend lines, with the labels length being
-         * set so that the second axis points match the classical x axis
-         */
-        chartJsConfig.options.scales[TREND_LINE_XAXIS_ID] = {
-            ...chartJsConfig.options.scales.x,
-            type: "category",
-            labels: Array(maxLength).fill(""),
-            offset: false,
-            display: false,
-        };
-        /* These datasets must be inserted after the original datasets to ensure the way we
-         * distinguish the originals and trendLine datasets after
-         */
-        trendDatasets.forEach((x) => chartJsConfig.data.datasets.push(x));
-
-        const originalTooltipTitle = chartJsConfig.options.plugins.tooltip.callbacks.title;
-        chartJsConfig.options.plugins.tooltip.callbacks.title = function (tooltipItems) {
-            if (tooltipItems.some((item) => item.dataset.xAxisID !== TREND_LINE_XAXIS_ID)) {
-                return originalTooltipTitle?.(tooltipItems);
-            }
-            return "";
-        };
     }
     return { background, chartJsConfig };
 }
@@ -145,6 +88,17 @@ function getLineConfiguration(chart, labels, locale) {
     const legend = {
         ...config.options.legend,
         display: chart.legendPosition !== "none",
+        labels: {
+            color: fontColor,
+            generateLabels(chart) {
+                const { data } = chart;
+                const labels = window.Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                for (const [index, label] of labels.entries()) {
+                    label.fillStyle = data.datasets[index].borderColor;
+                }
+                return labels;
+            },
+        },
     };
     legend.position = chart.legendPosition;
     config.options.plugins = config.options.plugins || {};
@@ -162,24 +116,18 @@ function getLineConfiguration(chart, labels, locale) {
                 labelOffset: 2,
                 color: fontColor,
             },
-            title: getChartAxisTitleRuntime(chart.axesDesign?.x),
         },
         y: {
             position: chart.verticalAxisPosition,
             ticks: {
                 color: fontColor,
+                // y axis configuration
             },
-            title: getChartAxisTitleRuntime(chart.axesDesign?.y),
+            beginAtZero: true, // the origin of the y axis is always zero
         },
     };
     if (chart.stacked) {
         config.options.scales.y.stacked = true;
     }
-
-    config.options.plugins.chartShowValuesPlugin = {
-        showValues: chart.showValues,
-        background: chart.background,
-        callback: formatTickValue({ locale }),
-    };
     return config;
 }

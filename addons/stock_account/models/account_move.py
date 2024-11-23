@@ -25,15 +25,17 @@ class AccountMove(models.Model):
         return self.line_ids.filtered(lambda l: l.display_type != 'cogs')
 
     def copy_data(self, default=None):
+        # OVERRIDE
         # Don't keep anglo-saxon lines when copying a journal entry.
-        vals_list = super().copy_data(default=default)
+        res = super().copy_data(default=default)
 
         if not self._context.get('move_reverse_cancel'):
-            for vals in vals_list:
-                if 'line_ids' in vals:
-                    vals['line_ids'] = [line_vals for line_vals in vals['line_ids']
+            for copy_vals in res:
+                if 'line_ids' in copy_vals:
+                    copy_vals['line_ids'] = [line_vals for line_vals in copy_vals['line_ids']
                                              if line_vals[0] != 0 or line_vals[2].get('display_type') != 'cogs']
-        return vals_list
+
+        return res
 
     def _post(self, soft=True):
         # OVERRIDE
@@ -161,7 +163,6 @@ class AccountMove(models.Model):
                     'price_unit': -price_unit,
                     'amount_currency': amount_currency,
                     'account_id': credit_expense_account.id,
-                    'analytic_distribution': line.analytic_distribution,
                     'display_type': 'cogs',
                     'tax_ids': [],
                     'cogs_origin_id': line.id,
@@ -239,6 +240,7 @@ class AccountMove(models.Model):
                     else:
                         reconcile_plan += [product_account_moves]
         self.env['account.move.line']._reconcile_plan(reconcile_plan)
+        no_exchange_reconcile_plan = [amls.filtered(lambda aml: not aml.reconciled) for amls in no_exchange_reconcile_plan]
         self.env['account.move.line'].with_context(no_exchange_difference=True)._reconcile_plan(no_exchange_reconcile_plan)
 
     def _get_invoiced_lot_values(self):
@@ -258,7 +260,7 @@ class AccountMoveLine(models.Model):
     def _compute_account_id(self):
         super()._compute_account_id()
         input_lines = self.filtered(lambda line: (
-            line._eligible_for_cogs()
+            line._can_use_stock_accounts()
             and line.move_id.company_id.anglo_saxon_accounting
             and line.move_id.is_purchase_document()
         ))
@@ -271,7 +273,7 @@ class AccountMoveLine(models.Model):
 
     def _eligible_for_cogs(self):
         self.ensure_one()
-        return self.product_id.is_storable and self.product_id.valuation == 'real_time'
+        return self.product_id.type == 'product' and self.product_id.valuation == 'real_time'
 
     def _get_gross_unit_price(self):
         if float_is_zero(self.quantity, precision_rounding=self.product_uom_id.rounding):
@@ -291,6 +293,9 @@ class AccountMoveLine(models.Model):
 
     def _get_valued_in_moves(self):
         return self.env['stock.move']
+
+    def _can_use_stock_accounts(self):
+        return self.product_id.type == 'product' and self.product_id.categ_id.property_valuation == 'real_time'
 
     def _stock_account_get_anglo_saxon_price_unit(self):
         self.ensure_one()

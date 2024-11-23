@@ -9,6 +9,7 @@ from odoo.tests.common import users
 from odoo.tests import tagged
 from odoo.tools import mute_logger
 
+
 @tagged('digest', 'mass_mailing', 'mass_mailing_sms')
 class TestMailingStatistics(TestMassSMSCommon):
 
@@ -23,9 +24,6 @@ class TestMailingStatistics(TestMassSMSCommon):
             name='Marie Marketing',
             signature='--\nMarie'
         )
-        mobile_numbers = [f'045300{x}{x}99' for x in range(6)] + ['0453000099'] * 4
-        cls.records += cls._get_sms_test_records(mobile_numbers=mobile_numbers)
-        cls.records = cls._reset_mail_context(cls.records)
 
     @users('user_marketing')
     @mute_logger('odoo.addons.mass_mailing_sms.models.mailing_mailing', 'odoo.addons.mail.models.mail_mail', 'odoo.addons.mail.models.mail_thread')
@@ -45,23 +43,13 @@ class TestMailingStatistics(TestMassSMSCommon):
         for record_idx in (0, 2, 3):
             self.gateway_sms_click(mailing, target_records[record_idx])
 
-        for record_idx in (7, 8):
-            record = target_records[record_idx]
-            trace = mailing.mailing_trace_ids.filtered(lambda t: t.model == record._name and t.res_id == record.id)
-            trace.set_bounced()
-
+        # check mailing statistics
         self.assertEqual(mailing.clicked, 3)
         self.assertEqual(mailing.delivered, 4)
+        self.assertEqual(mailing.received_ratio, 40)
         self.assertEqual(mailing.opened, 3)
-        self.assertEqual(mailing.sent, 16)
-        self.assertEqual(mailing.scheduled, 0)
-        self.assertEqual(mailing.canceled, 4)
-        self.assertEqual(mailing.process, 0)
-        self.assertEqual(mailing.pending, 10)
-        self.assertEqual(mailing.bounced, 2)
-        self.assertEqual(mailing.received_ratio, 25)
-        self.assertEqual(mailing.opened_ratio, 21.43)
-        self.assertEqual(mailing.bounced_ratio, 12.5)
+        self.assertEqual(mailing.opened_ratio, 30)
+        self.assertEqual(mailing.sent, 10)
 
         with self.mock_mail_gateway(mail_unlink_sent=True):
             mailing._action_send_statistics()
@@ -79,7 +67,7 @@ class TestMailingStatistics(TestMassSMSCommon):
         kpi_values = body_html.xpath('//table[@data-field="sms"]//*[hasclass("kpi_value")]/text()')
         self.assertEqual(
             [t.strip().strip('%') for t in kpi_values],
-            ['25.0', str(float(mailing.clicks_ratio)), str(float(mailing.bounced_ratio))]
+            ['40.0', str(float(mailing.clicks_ratio)), str(float(mailing.bounced_ratio))]
         )
         # test body content: clicks (a bit hackish but hey we are in stable)
         kpi_click_values = body_html.xpath('//table//tr[contains(@style,"color: #888888")]/td[contains(@style,"width: 30%")]/text()')
@@ -98,5 +86,5 @@ class TestMailingStatistics(TestMassSMSCommon):
         with self.mockSMSGateway(force_delivered=True):
             mailing.action_send_sms()
 
-        self.assertEqual(mailing.delivered, 16)
-        self.assertEqual(mailing.sent, 16)
+        self.assertEqual(mailing.delivered, 10)
+        self.assertEqual(mailing.sent, 10)

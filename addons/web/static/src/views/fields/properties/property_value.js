@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { Component } from "@odoo/owl";
 import { AutoComplete } from "@web/core/autocomplete/autocomplete";
 import { CheckBox } from "@web/core/checkbox/checkbox";
@@ -22,7 +24,6 @@ import { m2oTupleFromData } from "@web/views/fields/many2one/many2one_field";
 import { parseFloat, parseInteger } from "@web/views/fields/parsers";
 import { Many2XAutocomplete, useOpenMany2XRecord } from "@web/views/fields/relational_utils";
 import { PropertyTags } from "./property_tags";
-import { imageUrl } from "@web/core/utils/urls";
 
 /**
  * Represent one property value.
@@ -38,35 +39,6 @@ import { imageUrl } from "@web/core/utils/urls";
  * - ...
  */
 export class PropertyValue extends Component {
-    static template = "web.PropertyValue";
-    static components = {
-        Dropdown,
-        DropdownItem,
-        CheckBox,
-        DateTimeInput,
-        Many2XAutocomplete,
-        TagsList,
-        AutoComplete,
-        PropertyTags,
-    };
-
-    static props = {
-        id: { type: String, optional: true },
-        type: { type: String, optional: true },
-        comodel: { type: String, optional: true },
-        domain: { type: String, optional: true },
-        string: { type: String, optional: true },
-        value: { optional: true },
-        context: { type: Object },
-        readonly: { type: Boolean, optional: true },
-        canChangeDefinition: { type: Boolean, optional: true },
-        checkDefinitionWriteAccess: { type: Function, optional: true },
-        selection: { type: Array, optional: true },
-        tags: { type: Array, optional: true },
-        onChange: { type: Function, optional: true },
-        onTagsChange: { type: Function, optional: true },
-    };
-
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
@@ -145,7 +117,7 @@ export class PropertyValue extends Component {
                     colorIndex: 0,
                     img:
                         this.showAvatar && hasAccess
-                            ? imageUrl(this.props.comodel, many2manyValue[0], "avatar_128")
+                            ? `/web/image/${this.props.comodel}/${many2manyValue[0]}/avatar_128`
                             : null,
                 };
             });
@@ -359,3 +331,33 @@ export class PropertyValue extends Component {
         return [result[0].id, result[0].display_name];
     }
 }
+
+PropertyValue.template = "web.PropertyValue";
+
+PropertyValue.components = {
+    Dropdown,
+    DropdownItem,
+    CheckBox,
+    DateTimeInput,
+    Many2XAutocomplete,
+    TagsList,
+    AutoComplete,
+    PropertyTags,
+};
+
+PropertyValue.props = {
+    id: { type: String, optional: true },
+    type: { type: String, optional: true },
+    comodel: { type: String, optional: true },
+    domain: { type: String, optional: true },
+    string: { type: String, optional: true },
+    value: { optional: true },
+    context: { type: Object },
+    readonly: { type: Boolean, optional: true },
+    canChangeDefinition: { type: Boolean, optional: true },
+    checkDefinitionWriteAccess: { type: Function, optional: true },
+    selection: { type: Array, optional: true },
+    tags: { type: Array, optional: true },
+    onChange: { type: Function, optional: true },
+    onTagsChange: { type: Function, optional: true },
+};

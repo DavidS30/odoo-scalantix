@@ -1,22 +1,23 @@
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+/** @odoo-module **/
+
+import { _t } from "@web/core/l10n/translation";
+import { registry } from "@web/core/registry";
+import { standardFieldProps } from "../standard_field_props";
+import { uuid } from "../../utils";
+import { PropertyDefinition } from "./property_definition";
 import { Dropdown } from "@web/core/dropdown/dropdown";
 import { DropdownItem } from "@web/core/dropdown/dropdown_item";
-import { _t } from "@web/core/l10n/translation";
-import { usePopover } from "@web/core/popover/popover_hook";
-import { reposition } from "@web/core/position/utils";
-import { registry } from "@web/core/registry";
-import { user } from "@web/core/user";
+import { PropertyValue } from "./property_value";
 import { useBus, useService } from "@web/core/utils/hooks";
+import { usePopover } from "@web/core/popover/popover_hook";
+import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { reposition } from "@web/core/position_hook";
+import { archParseBoolean } from "@web/views/utils";
 import { pick } from "@web/core/utils/objects";
 import { useSortable } from "@web/core/utils/sortable_owl";
-import { exprToBoolean } from "@web/core/utils/strings";
 import { useRecordObserver } from "@web/model/relational_model/utils";
-import { uuid } from "../../utils";
-import { standardFieldProps } from "../standard_field_props";
-import { PropertyDefinition } from "./property_definition";
-import { PropertyValue } from "./property_value";
 
-import { Component, onWillStart, useEffect, useRef, useState } from "@odoo/owl";
+import { Component, useRef, useState, useEffect, onWillStart } from "@odoo/owl";
 
 export class PropertiesField extends Component {
     static template = "web.PropertiesField";
@@ -36,6 +37,7 @@ export class PropertiesField extends Component {
     setup() {
         this.notification = useService("notification");
         this.orm = useService("orm");
+        this.user = useService("user");
         this.dialogService = useService("dialog");
         this.popover = usePopover(PropertyDefinition, {
             closeOnClickAway: this.checkPopoverClose,
@@ -567,8 +569,9 @@ export class PropertiesField extends Component {
         const dialogProps = {
             title: _t("Delete Property Field"),
             body: _t(
-                'Are you sure you want to delete this property field? It will be removed for everyone using the "%(parentName)s" %(parentFieldLabel)s.',
-                { parentName: this.parentName, parentFieldLabel: this.parentString }
+                'Are you sure you want to delete this property field? It will be removed for everyone using the "%s" %s.',
+                this.parentName,
+                this.parentString
             ),
             confirmLabel: _t("Delete"),
             confirm: () => {
@@ -645,11 +648,17 @@ export class PropertiesField extends Component {
             return false;
         }
 
-        return await user.checkAccessRight(
-            this.definitionRecordModel,
-            "write",
-            this.definitionRecordId
-        );
+        try {
+            await this.orm.call(
+                this.definitionRecordModel,
+                "check_access_rule",
+                [this.definitionRecordId],
+                { operation: "write" }
+            );
+        } catch {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -767,7 +776,7 @@ export class PropertiesField extends Component {
         }
 
         // check if we can write on the definition record
-        this.state.canChangeDefinition = await user.checkAccessRight(
+        this.state.canChangeDefinition = await this.user.checkAccessRight(
             this.definitionRecordModel,
             "write"
         );
@@ -938,7 +947,7 @@ export const propertiesField = {
         return {
             context: dynamicInfo.context,
             columns: parseInt(attrs.columns || "1"),
-            showAddButton: exprToBoolean(attrs.showAddButton),
+            showAddButton: archParseBoolean(attrs.showAddButton),
         };
     },
 };

@@ -19,26 +19,31 @@ function checkLoginColumn(translation) {
         }, {
             content: `Login column should be ${translation}`,
             trigger: `[data-name="login"] span:contains("${translation}")`,
+            isCheck: true,
         }
     ]
 }
 
 registry.category("web_tour.tours").add('ir_model_fields_translation_en_tour', {
-    url: '/odoo',
+    test: true,
+    url: '/web',
     steps: () => checkLoginColumn('Login')
 });
 
 registry.category("web_tour.tours").add('ir_model_fields_translation_en_tour2', {
-    url: '/odoo',
+    test: true,
+    url: '/web',
     steps: () => checkLoginColumn('Login2')
 });
 
 registry.category("web_tour.tours").add('ir_model_fields_translation_fr_tour', {
-    url: '/odoo',
+    test: true,
+    url: '/web',
     steps: () => checkLoginColumn('Identifiant')
 });
 
 registry.category("web_tour.tours").add('ir_model_fields_translation_fr_tour2', {
-    url: '/odoo',
+    test: true,
+    url: '/web',
     steps: () => checkLoginColumn('Identifiant2')
 });

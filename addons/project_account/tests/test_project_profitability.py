@@ -27,22 +27,22 @@ class TestProjectAccountProfitability(TestProjectProfitabilityCommon):
         # Create new AAL with the new company.
         self.env['account.analytic.line'].create([{
             'name': 'extra revenues 1',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': 100,
             'company_id': foreign_company.id,
         }, {
             'name': 'extra costs 1',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': -100,
             'company_id': foreign_company.id,
         }, {
             'name': 'extra revenues 2',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': 50,
             'company_id': foreign_company.id,
         }, {
             'name': 'extra costs 2',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': -50,
             'company_id': foreign_company.id,
         }])
@@ -59,19 +59,19 @@ class TestProjectAccountProfitability(TestProjectProfitabilityCommon):
         )
         self.env['account.analytic.line'].create([{
             'name': 'extra revenues 1',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': 100,
         }, {
             'name': 'extra costs 1',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': -100,
         }, {
             'name': 'extra revenues 2',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': 50,
         }, {
             'name': 'extra costs 2',
-            'account_id': project.account_id.id,
+            'account_id': project.analytic_account_id.id,
             'amount': -50,
         }])
         # Ensures that multiple AAL from different companies are correctly computed for the project profitability
@@ -84,4 +84,30 @@ class TestProjectAccountProfitability(TestProjectProfitabilityCommon):
                     'billed': -180.0, 'to_bill': 0.0}], 'total': {'billed': -180.0, 'to_bill': 0.0}}
             },
             'The profitability data of the project should return the total amount for the revenues and costs from tha AAL of the account of the project.'
+        )
+
+    def test_project_profitability_with_custom_analytic_account_plan(self):
+        plan = self.env['account.analytic.plan'].create({'name': 'Custom Plan'})
+        project = self.env['project.project'].create({'name': 'Project'})
+        project._create_analytic_account()
+        project.analytic_account_id.update({'plan_id': plan.id})
+
+        self.env['account.analytic.line'].create({
+            'name': 'Cost',
+            plan._column_name(): project.analytic_account_id.id,
+            'amount': -100,
+        })
+
+        self.assertDictEqual(
+            project._get_profitability_items(False)['costs'],
+            {
+                'data': [{
+                    'id': 'other_costs_aal',
+                    'sequence': project._get_profitability_sequence_per_invoice_type()['other_costs_aal'],
+                    'billed': -100.0,
+                    'to_bill': 0.0,
+                }],
+                'total': {'billed': -100.0, 'to_bill': 0.0},
+            },
+            'Lines from different analytic plans should count towards project profitability'
         )

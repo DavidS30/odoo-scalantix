@@ -1,9 +1,8 @@
-import { jsToPyLocale } from "@web/core/l10n/utils";
+/** @odoo-module **/
+
 import { _t } from "@web/core/l10n/translation";
 import { registry } from '@web/core/registry';
-import { user } from "@web/core/user";
 import { loadBundle } from "@web/core/assets";
-import { ensureJQuery } from "@web/core/ensure_jquery";
 
 import { FullscreenIndication } from '../components/fullscreen_indication/fullscreen_indication';
 import { WebsiteLoader } from '../components/website_loader/website_loader';
@@ -25,8 +24,8 @@ export const unslugHtmlDataObject = (repr) => {
 const ANONYMOUS_PROCESS_ID = 'ANONYMOUS_PROCESS_ID';
 
 export const websiteService = {
-    dependencies: ['orm', 'action', 'hotkey'],
-    async start(env, { orm, action, hotkey }) {
+    dependencies: ['orm', 'action', 'user', 'dialog', 'hotkey'],
+    async start(env, { orm, action, user, dialog, hotkey }) {
         let websites = [];
         let currentWebsiteId;
         let currentMetadata = {};
@@ -120,7 +119,7 @@ export const websiteService = {
                 if (!isWebsitePage) {
                     currentMetadata = {};
                 } else {
-                    const { mainObject, seoObject, isPublished, canOptimizeSeo, canPublish, editableInBackend, translatable, viewXmlid, defaultLangName, langName } = dataset;
+                    const { mainObject, seoObject, isPublished, canOptimizeSeo, canPublish, editableInBackend, translatable, viewXmlid } = dataset;
                     // We ignore multiple menus with the same `content_menu_id`
                     // in the DOM, since it's possible to have different
                     // templates for the same content menu (E.g. used for a
@@ -152,9 +151,7 @@ export const websiteService = {
                         // denominator of editable pages.
                         editable: !!document.getElementById('wrapwrap'),
                         viewXmlid: viewXmlid,
-                        lang: jsToPyLocale(document.documentElement.getAttribute("lang")),
-                        defaultLangName: defaultLangName,
-                        langName: langName,
+                        lang: document.documentElement.getAttribute('lang').replace('-', '_'),
                         direction: document.documentElement.querySelector('#wrapwrap.o_rtl') ? 'rtl' : 'ltr',
                     };
                 }
@@ -232,7 +229,6 @@ export const websiteService = {
                 websites = [...(await orm.searchRead('website', [], ['domain', 'id', 'name']))];
             },
             async loadWysiwyg() {
-                await ensureJQuery();
                 await loadBundle('website.backend_assets_all_wysiwyg');
             },
             blockPreview(showLoader, processId) {

@@ -16,19 +16,19 @@ class TestSaleExpectedDate(ValuationReconciliationTestCommon):
 
         product_A = Product.create({
             'name': 'Product A',
-            'is_storable': True,
+            'type': 'product',
             'sale_delay': 5,
             'uom_id': 1,
         })
         product_B = Product.create({
             'name': 'Product B',
-            'is_storable': True,
+            'type': 'product',
             'sale_delay': 10,
             'uom_id': 1,
         })
         product_C = Product.create({
             'name': 'Product C',
-            'is_storable': True,
+            'type': 'product',
             'sale_delay': 15,
             'uom_id': 1,
         })
@@ -97,7 +97,7 @@ class TestSaleExpectedDate(ValuationReconciliationTestCommon):
                 'name': "A product",
                 'product_id': self.env['product.product'].create({
                     'name': 'A product',
-                    'is_storable': True,
+                    'type': 'product',
                 }).id,
                 'product_uom_qty': 1,
                 'price_unit': 750,

@@ -9,9 +9,8 @@ from odoo.tests import tagged
 class TestSaleStockMultiCompany(TestSaleCommon, ValuationReconciliationTestCommon):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.company_data_2 = cls.setup_other_company()
+    def setUpClass(cls, chart_template_ref=None):
+        super().setUpClass(chart_template_ref=chart_template_ref)
 
         cls.warehouse_A = cls.company_data['default_warehouse']
         cls.warehouse_A2 = cls.env['stock.warehouse'].create({

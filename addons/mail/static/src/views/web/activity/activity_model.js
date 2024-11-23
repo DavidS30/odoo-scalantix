@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { RelationalModel } from "@web/model/relational_model/relational_model";
 
 export class ActivityModel extends RelationalModel {

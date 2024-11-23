@@ -1,9 +1,10 @@
+/** @odoo-module **/
+
 import { makeContext } from "@web/core/context";
+import { evaluateBooleanExpr } from "@web/core/py_js/py";
 import { _t } from "@web/core/l10n/translation";
 import { Pager } from "@web/core/pager/pager";
 import { registry } from "@web/core/registry";
-import { useService } from "@web/core/utils/hooks";
-import { getFieldDomain } from "@web/model/relational_model/utils";
 import {
     useActiveActions,
     useAddInlineRecord,
@@ -16,6 +17,7 @@ import { KanbanRenderer } from "@web/views/kanban/kanban_renderer";
 import { ListRenderer } from "@web/views/list/list_renderer";
 import { computeViewClassName } from "@web/views/utils";
 import { ViewButton } from "@web/views/view_button/view_button";
+import { useService } from "@web/core/utils/hooks";
 
 import { Component } from "@odoo/owl";
 
@@ -191,6 +193,9 @@ export class X2ManyField extends Component {
             archInfo,
             list: this.list,
             openRecord: this.openRecord.bind(this),
+            evalViewModifier: (modifier) => {
+                return evaluateBooleanExpr(modifier, this.list.evalContext);
+            },
         };
 
         if (this.props.viewMode === "kanban") {
@@ -218,8 +223,8 @@ export class X2ManyField extends Component {
                 !this.props.readonly && ("editable" in params ? params.editable : editable);
             this.onAdd(params);
         };
-        props.onOpenFormView = this.switchToForm.bind(this);
-        props.hasOpenFormViewButton = archInfo.editable ? archInfo.openFormView : false;
+        const openFormView = archInfo.editable ? archInfo.openFormView : false;
+        props.onOpenFormView = openFormView ? this.switchToForm.bind(this) : undefined;
         return props;
     }
 
@@ -239,9 +244,10 @@ export class X2ManyField extends Component {
     }
 
     async onAdd({ context, editable } = {}) {
+        const domain =
+            typeof this.props.domain === "function" ? this.props.domain() : this.props.domain;
         context = makeContext([this.props.context, context]);
         if (this.isMany2Many) {
-            const domain = getFieldDomain(this.props.record, this.props.name, this.props.domain);
             const { string } = this.props;
             const title = _t("Add: %s", string);
             return this.selectCreate({ domain, context, title });

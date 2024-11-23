@@ -12,20 +12,26 @@ from odoo.tools import file_open
 class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
 
     @classmethod
-    @TestUBLCommon.setup_country('dk')
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpClass(cls, chart_template_ref="dk"):
+        super().setUpClass(chart_template_ref=chart_template_ref)
         cls.company_data['company'].write({
+            'country_id': cls.env.ref('base.dk').id,
+            'currency_id': cls.env.ref('base.DKK').id,
             'city': 'Aalborg',
             'zip': '9430',
             'vat': 'DK12345674',
             'phone': '+45 32 12 34 56',
             'street': 'Paradisæblevej, 10',
+            'invoice_is_ubl_cii': True,
         })
         cls.env['res.partner.bank'].create({
             'acc_type': 'iban',
             'partner_id': cls.company_data['company'].partner_id.id,
             'acc_number': 'DK5000400440116243',
+        })
+
+        cls.company_data['company'].partner_id.update({
+            'peppol_endpoint': False,
         })
 
         cls.partner_a.write({
@@ -36,7 +42,8 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
             'phone': '+45 32 12 35 56',
             'street': 'Paradisæblevej, 11',
             'country_id': cls.env.ref('base.dk').id,
-            'invoice_edi_format': 'oioubl_201',
+            'ubl_cii_format': 'oioubl_201',
+            'peppol_endpoint': False,
         })
         cls.partner_b.write({
             'name': 'SUPER BELGIAN PARTNER',
@@ -46,7 +53,8 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
             'country_id': cls.env.ref('base.be').id,
             'phone': '061928374',
             'vat': 'BE0897223670',
-            'invoice_edi_format': 'oioubl_201',
+            'ubl_cii_format': 'oioubl_201',
+            'peppol_endpoint': False,
         })
         cls.partner_c = cls.env["res.partner"].create({
             'name': 'SUPER FRENCH PARTNER',
@@ -57,7 +65,8 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
             'phone': '+33 1 23 45 67 89',
             'vat': 'FR23334175221',
             'company_registry': '123 568 941 00056',
-            'invoice_edi_format': 'oioubl_201',
+            'ubl_cii_format': 'oioubl_201',
+            'peppol_endpoint': False,
         })
         cls.dk_local_sale_tax_1 = cls.env["account.chart.template"].ref('tax_s1y')
         cls.dk_local_sale_tax_2 = cls.env["account.chart.template"].ref('tax_s1')
@@ -101,10 +110,10 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
             ],
         })
         invoice.action_post()
-        wizard = self.env['account.move.send.wizard'] \
+        self.env['account.move.send'] \
             .with_context(active_model=invoice._name, active_ids=invoice.ids) \
-            .create({})
-        wizard.action_send_and_print()
+            .create({}) \
+            .action_send_and_print()
         return invoice
 
     #########
@@ -119,6 +128,8 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
 
     @freeze_time('2017-01-01')
     def test_export_invoice_two_line_foreign_partner_be(self):
+        # Set peppol endpoint to have schemeID of 'GLN'
+        self.company_data['company'].partner_id.peppol_endpoint = '0239843188'
         invoice = self.create_post_and_send_invoice(partner=self.partner_b)
         self.assertTrue(invoice.ubl_cii_xml_id)
         self._assert_invoice_attachment(invoice.ubl_cii_xml_id, xpaths=None, expected_file_path="from_odoo/oioubl_out_invoice_foreign_partner_be.xml")
@@ -163,7 +174,9 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
     @freeze_time('2017-01-01')
     def test_export_invoice_company_and_partner_without_country_code_prefix_in_vat(self):
         self.company_data['company'].vat = '12345674'
+        self.company_data['company'].partner_id.peppol_endpoint = False
         self.partner_a.vat = 'DK12345674'
+        self.partner_a.peppol_endpoint = False
         invoice = self.create_post_and_send_invoice()
         self.assertTrue(invoice.ubl_cii_xml_id)
         self._assert_invoice_attachment(invoice.ubl_cii_xml_id, xpaths=None, expected_file_path="from_odoo/oioubl_out_invoice_partner_dk.xml")
@@ -171,7 +184,7 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
     @freeze_time('2017-01-01')
     def test_export_partner_fr_without_siret_should_raise_an_error(self):
         self.partner_c.company_registry = False
-        self.partner_c.invoice_edi_format = 'oioubl_201'  # default format for French partners is facturx
+        self.partner_c.ubl_cii_format = 'oioubl_201' # default format for French partners is facturx
         with self.assertRaisesRegex(UserError, "The company registry is required for french partner:"):
             self.create_post_and_send_invoice(partner=self.partner_c)
 
@@ -182,7 +195,7 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
             telling to the user that this field is missing.
         """
         self.partner_b.vat = None
-        self.partner_b.invoice_edi_format = 'oioubl_201'  # default format recomputes when vat is changed
+        self.partner_b.ubl_cii_format = 'oioubl_201' # default format recomputes when vat is changed
         with self.assertRaises(UserError) as exception:
             self.create_post_and_send_invoice(partner=self.partner_b)
         self.assertIn(f"The field '{self.partner_b._fields['vat'].string}' is required", exception.exception.args[0])

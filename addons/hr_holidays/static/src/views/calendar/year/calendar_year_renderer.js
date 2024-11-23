@@ -1,5 +1,6 @@
 /** @odoo-module **/
 
+import { _t } from "@web/core/l10n/translation";
 import { CalendarYearRenderer } from "@web/views/calendar/calendar_year/calendar_year_renderer";
 
 import { useService } from "@web/core/utils/hooks";
@@ -18,17 +19,22 @@ export class TimeOffCalendarYearRenderer extends CalendarYearRenderer {
 
         useEffect(
             (el) => {
-                for (const lastWeek of el) {
-                    // Remove the week if the week is empty.
+                for (const week of el) {
+                    const row = week.parentElement;
+
+                    // Remove the week number if the week is empty.
                     // FullCalendar always displays 6 weeks even when empty.
-                    if (!lastWeek.querySelector("[data-date]")) {
-                        lastWeek.remove();
+                    if (
+                        !row.children[1].classList.length &&
+                        !row.children[row.children.length - 1].classList.length
+                    ) {
+                        row.remove();
                     }
                 }
             },
             () => [
                 this.rootRef.el &&
-                    this.rootRef.el.querySelectorAll(".fc-scrollgrid-sync-table tr:nth-child(6)"),
+                    this.rootRef.el.querySelectorAll(".fc-content-skeleton td.fc-week-number"),
             ]
         );
     }
@@ -36,14 +42,9 @@ export class TimeOffCalendarYearRenderer extends CalendarYearRenderer {
     get options() {
         return Object.assign(super.options, {
             weekNumbers: true,
-        });
-    }
-
-    get customOptions() {
-        return {
-            ...super.customOptions,
             weekNumbersWithinDays: false,
-        };
+            weekLabel: _t("Week"),
+        });
     }
 
     /** @override **/
@@ -78,7 +79,8 @@ export class TimeOffCalendarYearRenderer extends CalendarYearRenderer {
         }
     }
 
-    getDayCellClassNames(info) {
-        return [...super.getDayCellClassNames(info), ...this.mandatoryDays(info)];
+    onDayRender(info) {
+        super.onDayRender(info);
+        this.mandatoryDaysList = this.mandatoryDays(info);
     }
 }

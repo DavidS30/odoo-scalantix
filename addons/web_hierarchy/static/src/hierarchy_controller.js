@@ -35,7 +35,6 @@ export class HierarchyController extends Component {
         this.model = useModel(this.props.Model, {
             resModel: this.props.resModel,
             activeFields,
-            defaultOrderBy: this.props.archInfo.defaultOrder,
             fields,
             parentFieldName,
             childFieldName,
@@ -47,15 +46,11 @@ export class HierarchyController extends Component {
                 this.render(true);
             }
         );
-        useViewButtons(this.rootRef, {
+        useViewButtons(this.model, this.rootRef, {
             beforeExecuteAction: this.beforeExecuteActionButton.bind(this),
             afterExecuteAction: this.afterExecuteActionButton.bind(this),
-            reload: this.model.reload.bind(this.model),
         });
         this.searchBarToggler = useSearchBarToggler();
-    }
-    get displayNoContent() {
-        return this.model.resIds.length === 0;
     }
 
     async openRecord(node, mode) {

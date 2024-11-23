@@ -1,3 +1,4 @@
+/* @odoo-module */
 import { Component, useState, onWillUnmount } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
@@ -28,8 +29,8 @@ export class VoiceRecorder extends Component {
     processor;
     /** @type {Mp3Encoder} */
     encoder;
-    /** @type {import("models").Store} */
-    store;
+    /** @type {import("@mail/core/common/user_settings_service").UserSettings} */
+    userSettings;
     /** @type {ReturnType<typeof import("@web/core/notifications/notification_service").notificationService.start>} */
     notification;
     /** @type {Object} */
@@ -38,7 +39,6 @@ export class VoiceRecorder extends Component {
     voiceMessageService;
 
     setup() {
-        super.setup();
         this.state = useState({
             limitWarning: false,
             isActionPending: false,
@@ -46,7 +46,7 @@ export class VoiceRecorder extends Component {
             elapsed: "00 : 00",
         });
         this.notification = useService("notification");
-        this.store = useState(useService("mail.store"));
+        this.userSettings = useService("mail.user_settings");
         this.voiceMessageService = useState(useService("discuss.voice_message"));
         this.config = {
             // 128 or 160 kbit/s – mid-range bitrate quality
@@ -80,7 +80,7 @@ export class VoiceRecorder extends Component {
         if (!this.microphone) {
             try {
                 this.microphone = await browser.navigator.mediaDevices.getUserMedia({
-                    audio: this.store.settings.audioConstraints,
+                    audio: this.userSettings.audioConstraints,
                 });
             } catch {
                 this.notification.add(
@@ -156,7 +156,7 @@ export class VoiceRecorder extends Component {
         this.getMp3()
             .then((buffer) => {
                 const file = this._makeFile(buffer, "audio/mp3");
-                this.props.attachmentUploader.uploadFile(file, { voice: true });
+                this.props.attachmentUploader.uploadFile(file, { isVoice: true });
             })
             .catch(() => {});
         this.cleanUp();

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import http, _
 from odoo.addons.website_sale.controllers.main import WebsiteSale
-from odoo.addons.website_sale.controllers.delivery import Delivery
+from odoo.addons.website_sale.controllers.delivery import WebsiteSaleDelivery
 
 from odoo.exceptions import AccessDenied, UserError
 from odoo.http import request
@@ -28,7 +28,6 @@ class MondialRelay(http.Controller):
             'zip': data['CP'],
             'city': data['Ville'],
             'country_code': data['Pays'][:2].lower(),
-            'phone': order.partner_id.phone,
         })
         if order.partner_shipping_id != partner_shipping:
             order.partner_shipping_id = partner_shipping
@@ -44,26 +43,26 @@ class MondialRelay(http.Controller):
 
 class WebsiteSaleMondialrelay(WebsiteSale):
 
-    def _prepare_address_update(self, *args, **kwargs):
-        """Updates of mondialrelay addresses are forbidden"""
-        partner_sudo, _address_type = super()._prepare_address_update(*args, **kwargs)
-
-        if partner_sudo and partner_sudo.is_mondialrelay:
+    @http.route()
+    def address(self, **kw):
+        res = super().address(**kw)
+        Partner_sudo = request.env['res.partner'].sudo()
+        partner_id = res.qcontext.get('partner_id', 0)
+        if partner_id > 0 and Partner_sudo.browse(partner_id).is_mondialrelay:
             raise UserError(_('You cannot edit the address of a Point Relais®.'))
+        return res
 
-        return partner_sudo, _address_type
-
-    def _check_delivery_address(self, partner_sudo):
-        # skip check for mondialrelay partners as the customer can not edit them
-        if partner_sudo.is_mondialrelay:
+    def _check_shipping_partner_mandatory_fields(self, partner_id):
+        # skip check for mondialrelay partners as the user can not edit them
+        if partner_id.is_mondialrelay:
             return True
-        return super()._check_delivery_address(partner_sudo)
+        return super()._check_shipping_partner_mandatory_fields(partner_id)
 
 
-class WebsiteSaleDeliveryMondialrelay(Delivery):
+class WebsiteSaleDeliveryMondialrelay(WebsiteSaleDelivery):
 
-    def _order_summary_values(self, order, **post):
-        res = super()._order_summary_values(order, **post)
+    def _update_website_sale_delivery_return(self, order, **post):
+        res = super()._update_website_sale_delivery_return(order, **post)
         if order.carrier_id.is_mondialrelay:
             res['mondial_relay'] = {
                 'brand': order.carrier_id.mondialrelay_brand,

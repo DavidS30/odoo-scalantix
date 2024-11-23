@@ -1,16 +1,13 @@
 /** @odoo-module **/
 
     import publicWidget from '@web/legacy/js/public/public_widget';
-    import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+    import Dialog from '@web/legacy/js/core/dialog';
     import { renderToElement } from "@web/core/utils/render";
-    import { escape } from "@web/core/utils/strings";
     import { session } from "@web/session";
     import CourseJoin from '@website_slides/js/slides_course_join';
     import QuestionFormWidget from '@website_slides/js/slides_course_quiz_question_form';
+    import SlideQuizFinishModal from '@website_slides/js/slides_course_quiz_finish';
     import { SlideCoursePage } from '@website_slides/js/slides_course_page';
-    import { rpc } from "@web/core/network/rpc";
-    import { SlideQuizFinishDialog } from "@website_slides/js/public/components/slide_quiz_finish_dialog/slide_quiz_finish_dialog";
-    import { user } from "@web/core/user";
 
     import { _t } from "@web/core/l10n/translation";
 
@@ -34,6 +31,7 @@
         events: {
             "click .o_wslides_quiz_answer": '_onAnswerClick',
             "click .o_wslides_js_lesson_quiz_submit": '_submitQuiz',
+            "click .o_wslides_quiz_modal_btn": '_onClickNext',
             "click .o_wslides_quiz_continue": '_onClickNext',
             "click .o_wslides_js_lesson_quiz_reset": '_onClickReset',
             'click .o_wslides_js_quiz_add': '_onCreateQuizClick',
@@ -71,10 +69,11 @@
             this.isMember = slide_data.isMember || false;
             this.isMemberOrInvited = slide_data.isMemberOrInvited || false;
             this.publicUser = session.is_website_user;
-            this.userId = user.userId;
+            this.userId = session.user_id;
             this.redirectURL = encodeURIComponent(document.URL);
             this.channel = channel_data;
 
+            this.rpc = this.bindService("rpc");
             this.orm = this.bindService("orm");
         },
 
@@ -195,7 +194,7 @@
          * @private
          */
         _reorderQuestions: function () {
-            rpc('/web/dataset/resequence', {
+            this.rpc('/web/dataset/resequence', {
                 model: "slide.question",
                 ids: this._getQuestionsIds()
             }).then(this._modifyQuestionsSequence.bind(this))
@@ -206,7 +205,7 @@
          */
         _fetchQuiz: function () {
             var self = this;
-            return rpc('/slides/slide/quiz/get', {
+            return self.rpc('/slides/slide/quiz/get', {
                 'slide_id': self.slide.id,
             }).then(function (quiz_data) {
                 self.slide.sessionAnswers = quiz_data.session_answers;
@@ -371,7 +370,7 @@
          * @private
          */
          async _submitQuiz() {
-            const data = await rpc('/slides/slide/quiz/submit', {
+            const data = await this.rpc('/slides/slide/quiz/submit', {
                 slide_id: this.slide.id,
                 answer_ids: this._getQuizAnswers(),
             });
@@ -383,22 +382,19 @@
             }
             Object.assign(this.quiz, data);
             const {rankProgress, completed, channel_completion: completion} = this.quiz;
-            // three of the rankProgress properties are HTML messages, mark if set
+            // two of the rankProgress properties are HTML messages, mark if set
             if ('description' in rankProgress) {
                 rankProgress['description'] = markup(rankProgress['description'] || '');
                 rankProgress['previous_rank']['motivational'] =
                     markup(rankProgress['previous_rank']['motivational'] || '');
-                rankProgress['new_rank']['motivational'] =
-                    markup(rankProgress['new_rank']['motivational'] || '');
             }
             if (completed) {
                 this._disableAnswers();
-                this.call("dialog", "add", SlideQuizFinishDialog, {
+                new SlideQuizFinishModal(this, {
                     quiz: this.quiz,
                     hasNext: this.slide.hasNext,
-                    onClickNext: (ev) => this._onClickNext(ev),
-                    userId: this.userId,
-                });
+                    userId: this.userId
+                }).open();
                 this.slide.completed = true;
                 this.trigger_up('slide_completed', {
                     slideId: this.slide.id,
@@ -484,7 +480,7 @@
          * @private
          */
         _onClickReset: function () {
-            rpc('/slides/slide/quiz/reset', {
+            this.rpc('/slides/slide/quiz/reset', {
                 slide_id: this.slide.id
             }).then(function () {
                 window.location.reload();
@@ -499,7 +495,7 @@
         _saveQuizAnswersToSession: function () {
             this._hideErrorMessage();
 
-            return rpc('/slides/slide/quiz/save_to_session', {
+            return this.rpc('/slides/slide/quiz/save_to_session', {
                 'quiz_answers': {'slide_id': this.slide.id, 'slide_answers': this._getQuizAnswers()},
             });
         },
@@ -551,27 +547,17 @@
         },
 
         /**
-         * When clicking on the delete button of a question it toggles a modal
-         * to confirm the deletion. When confirming it sends an RPC request to
-         * delete the Question and triggers an event to delete it from the UI.
+         * When clicking on the delete button of a question it
+         * toggles a modal to confirm the deletion
          * @param ev
          * @private
          */
         _onDeleteQuestionClick: function (ev) {
-            const question = ev.currentTarget.closest('.o_wslides_js_lesson_quiz_question');
-            const questionId = parseInt(question.dataset.questionId);
-            this.call('dialog', 'add', ConfirmationDialog, {
-                title: _t('Delete Question'),
-                body: markup(_t('Are you sure you want to delete this question "<strong>%s</strong>"?', escape(question.dataset.title))),
-                cancel: () => {
-                },
-                cancelLabel: _t('No'),
-                confirm: async () => {
-                    await this.orm.unlink('slide.question', [questionId]);
-                    this.trigger_up('delete_question', { questionId });
-                },
-                confirmLabel: _t('Yes'),
-            });
+            var question = $(ev.currentTarget).closest('.o_wslides_js_lesson_quiz_question');
+            new ConfirmationDialog(this, {
+                questionId: question.data('questionId'),
+                questionTitle: question.data('title')
+            }).open();
         },
 
         /**
@@ -648,6 +634,46 @@
                 this.$('.o_wslides_js_lesson_quiz_validation').addClass('d-none');
             }
         },
+    });
+
+    /**
+     * Dialog box shown when clicking the deletion button on a Question.
+     * When confirming it sends a RPC request to delete the Question.
+     */
+    var ConfirmationDialog = Dialog.extend({
+        template: 'slide.quiz.confirm.deletion',
+        /**
+         * @override
+         * @param parent
+         * @param options
+         */
+        init: function (parent, options) {
+            options = Object.assign({
+                title: _t('Delete Question'),
+                buttons: [
+                    { text: _t('Yes'), classes: 'btn-primary', click: this._onConfirmClick },
+                    { text: _t('No'), close: true}
+                ],
+                size: 'medium'
+            }, options || {});
+            this.questionId = options.questionId;
+            this.questionTitle = options.questionTitle;
+            this._super.apply(this, arguments);
+        },
+
+        /**
+         * Handler when the user confirm the deletion by clicking on 'Yes'
+         * it sends a RPC request to the server and triggers an event to
+         * visually delete the question.
+         * @private
+         */
+        _onConfirmClick: function () {
+            var self = this;
+            this.orm.unlink("slide.question", [this.questionId]).then(function () {
+                self.trigger_up('delete_question', { questionId: self.questionId });
+                self.close();
+            });
+        }
     });
 
     publicWidget.registry.websiteSlidesQuizNoFullscreen = SlideCoursePage.extend({
@@ -796,4 +822,5 @@
     });
 
     export var Quiz = Quiz;
+    export var ConfirmationDialog = ConfirmationDialog;
     export const websiteSlidesQuizNoFullscreen = publicWidget.registry.websiteSlidesQuizNoFullscreen;

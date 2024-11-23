@@ -4,7 +4,7 @@
 import { _t } from '@web/core/l10n/translation';
 import { pyToJsLocale } from '@web/core/l10n/utils';
 import paymentForm from '@payment/js/payment_form';
-import { rpc, RPCError } from '@web/core/network/rpc';
+import { RPCError } from '@web/core/network/rpc_service';
 
 paymentForm.include({
 
@@ -55,7 +55,7 @@ paymentForm.include({
         if (!this.adyenCheckout) {
             try {
                 // Await the RPC to let it create AdyenCheckout before using it.
-                const response = await rpc('/payment/adyen/payment_methods', {
+                const response = await this.rpc('/payment/adyen/payment_methods', {
                     'provider_id': providerId,
                     'partner_id': parseInt(this.paymentContext['partnerId']),
                     'formatted_amount': formattedAmount,
@@ -66,7 +66,7 @@ paymentForm.include({
                     paymentMethodsResponse: response,
                     clientKey: inlineFormValues['client_key'],
                     amount: formattedAmount,
-                    locale: pyToJsLocale(this._getContext().lang) || 'en-US',
+                    locale: pyToJsLocale(this._getContext().lang || 'en-US'),
                     environment: providerState === 'enabled' ? 'live' : 'test',
                     onAdditionalDetails: this._adyenOnSubmitAdditionalDetails.bind(this),
                     onError: this._adyenOnError.bind(this),
@@ -142,9 +142,9 @@ paymentForm.include({
      * @param {string} flow - The online payment flow of the transaction.
      * @return {void}
      */
-    _initiatePaymentFlow(providerCode, paymentOptionId, paymentMethodCode, flow) {
+    async _initiatePaymentFlow(providerCode, paymentOptionId, paymentMethodCode, flow) {
         if (providerCode !== 'adyen' || flow === 'token') {
-            this._super(...arguments); // Tokens are handled by the generic flow
+            await this._super(...arguments); // Tokens are handled by the generic flow
             return;
         }
 
@@ -172,13 +172,13 @@ paymentForm.include({
      */
     _adyenOnSubmit(state, component) {
         // Create the transaction and retrieve the processing values.
-        rpc(
+        this.rpc(
             this.paymentContext['transactionRoute'],
             this._prepareTransactionRouteParams(),
         ).then(processingValues => {
             component.reference = processingValues.reference; // Store final reference.
             // Initiate the payment.
-            return rpc('/payment/adyen/payments', {
+            return this.rpc('/payment/adyen/payments', {
                 'provider_id': processingValues.provider_id,
                 'reference': processingValues.reference,
                 'converted_amount': processingValues.converted_amount,
@@ -215,7 +215,7 @@ paymentForm.include({
      * @return {void}
      */
     _adyenOnSubmitAdditionalDetails(state, component) {
-        rpc('/payment/adyen/payments/details', {
+        this.rpc('/payment/adyen/payments/details', {
             'provider_id': this.paymentContext['providerId'],
             'reference': component.reference,
             'payment_details': state.data,

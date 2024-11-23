@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { Component, onWillStart, onWillUpdateProps } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { RecordAutocomplete } from "./record_autocomplete";

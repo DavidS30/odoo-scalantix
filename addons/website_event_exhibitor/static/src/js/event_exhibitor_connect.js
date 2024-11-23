@@ -2,7 +2,6 @@
 
 import { debounce } from "@web/core/utils/timing";
 import publicWidget from "@web/legacy/js/public/public_widget";
-import { redirect } from "@web/core/utils/urls";
 import { ExhibitorConnectClosedDialog } from "../components/exhibitor_connect_closed_dialog/exhibitor_connect_closed_dialog";
 
 publicWidget.registry.eventExhibitorConnect = publicWidget.Widget.extend({
@@ -13,7 +12,7 @@ publicWidget.registry.eventExhibitorConnect = publicWidget.Widget.extend({
      */
     init: function () {
         this._super(...arguments);
-        this._onConnectClick = debounce(this._onConnectClick, 500, true).bind(this);
+        this._onConnectClick = debounce(this._onConnectClick, 500, true);
     },
 
     /**
@@ -23,21 +22,12 @@ publicWidget.registry.eventExhibitorConnect = publicWidget.Widget.extend({
     start: function () {
         var self = this;
         return this._super(...arguments).then(function () {
-            self.eventIsOngoing = self.el.dataset.eventIsOngoing || false;
-            self.sponsorIsOngoing = self.el.dataset.sponsorIsOngoing || false;
-            self.isParticipating = self.el.dataset.isParticipating || false;
-            self.userEventManager = self.el.dataset.userEventManager || false;
-            self.el.addEventListener("click", self._onConnectClick);
+            self.eventIsOngoing = self.$el.data('eventIsOngoing') || false;
+            self.sponsorIsOngoing = self.$el.data('sponsorIsOngoing') || false;
+            self.isParticipating = self.$el.data('isParticipating') || false;
+            self.userEventManager = self.$el.data('userEventManager') || false;
+            self.$el.on('click', self._onConnectClick.bind(self));
         });
-    },
-
-    /**
-     * @override
-     * @public
-     */
-    destory () {
-        this._super(...arguments);
-        this.el.removeEventListener("click", this._onConnectClick);
     },
 
     //--------------------------------------------------------------------------
@@ -55,11 +45,11 @@ publicWidget.registry.eventExhibitorConnect = publicWidget.Widget.extend({
         ev.preventDefault();
 
         if (this.userEventManager) {
-            redirect(this.el.dataset.sponsorUrl);
+            document.location = this.$el.data('sponsorUrl');
         } else if (!this.eventIsOngoing || ! this.sponsorIsOngoing) {
             return this._openClosedDialog();
         } else {
-            redirect(this.el.dataset.sponsorUrl);
+            document.location = this.$el.data('sponsorUrl');
         }
     },
 
@@ -67,8 +57,8 @@ publicWidget.registry.eventExhibitorConnect = publicWidget.Widget.extend({
     // Private
     //--------------------------------------------------------------------------
 
-    _openClosedDialog: function () {
-        const sponsorId = parseInt(this.el.dataset.sponsorId);
+    _openClosedDialog: function ($element) {
+        const sponsorId = this.$el.data('sponsorId');
         this.call("dialog", "add", ExhibitorConnectClosedDialog, { sponsorId });
     },
 

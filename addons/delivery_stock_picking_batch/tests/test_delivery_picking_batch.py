@@ -11,7 +11,24 @@ class TestDeliveryPickingBatch(common.TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.picking_type_out = cls.env.ref('stock.picking_type_out')
-        cls.local_delivery_carrier = cls.env.ref('delivery.delivery_local_delivery')
+        cls.local_delivery_carrier = cls.env['delivery.carrier'].create({
+            'name': 'Local Delivery - Testing',
+            'fixed_price': 5.0,
+            'free_over': True,
+            'amount': 50,
+            'sequence': 4,
+            'delivery_type': 'fixed',
+            'product_id': cls.env['product.product'].create({
+                'name': 'Local Delivery - Testing',
+                'default_code': 'Delivery_Testing',
+                'type': 'service',
+                'categ_id': cls.env.ref('delivery.product_category_deliveries').id,
+                'sale_ok': False,
+                'purchase_ok': False,
+                'list_price': 10.0,
+                'invoice_policy': 'order'
+            }).id
+        })
         cls.stock_location = cls.env.ref('stock.stock_location_stock')
         cls.customer_location = cls.env.ref('stock.stock_location_customers')
 
@@ -22,13 +39,13 @@ class TestDeliveryPickingBatch(common.TransactionCase):
 
         cls.product_a = cls.env['product.product'].create({
             'name': 'product_a',
-            'is_storable': True,
+            'type': 'product',
             'weight': 1.0,
         })
 
     def test_batch_picking_pack_shipping_weight_compute(self):
         """ Having a batch transfer with 2+ of the same product across multiple pickings and adding
-        the products to the same pack should result in an accurate computed shipping weight.gau
+        the products to the same pack should result in an accurate computed shipping weight.
         """
         picking_create_vals = {
             'picking_type_id': self.picking_type_out.id,

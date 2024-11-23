@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 export function getDomainDisplayedOperators(fieldDef) {
     if (!fieldDef) {
         fieldDef = {};
@@ -23,21 +25,10 @@ export function getDomainDisplayedOperators(fieldDef) {
         case "char":
         case "text":
         case "html":
-            return [
-                "=",
-                "!=",
-                "ilike",
-                "not ilike",
-                "in",
-                "not in",
-                "set",
-                "not_set",
-                "starts_with",
-                "ends_with",
-            ];
+            return ["=", "!=", "ilike", "not ilike", "in", "not in", "set", "not_set"];
         case "date":
         case "datetime":
-            return ["=", "!=", ">", ">=", "<", "<=", "between", "within", "set", "not_set"];
+            return ["=", "!=", ">", ">=", "<", "<=", "between", "set", "not_set"];
         case "integer":
         case "float":
         case "monetary":
@@ -57,20 +48,7 @@ export function getDomainDisplayedOperators(fieldDef) {
         case "many2one":
         case "many2many":
         case "one2many":
-            return [
-                "in",
-                "not in",
-                "=",
-                "!=",
-                "ilike",
-                "not ilike",
-                "set",
-                "not_set",
-                "starts_with",
-                "ends_with",
-                "any",
-                "not any",
-            ];
+            return ["in", "not in", "=", "!=", "ilike", "not ilike", "set", "not_set"];
         case "json":
             return ["=", "!=", "ilike", "not ilike", "set", "not_set"];
         case "properties":

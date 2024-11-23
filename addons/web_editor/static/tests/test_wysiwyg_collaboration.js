@@ -318,8 +318,6 @@ QUnit.module('web_editor', {
                 setup() {
                     const result = super.setup(...arguments);
                     this.busService = {
-                        subscribe() {},
-                        unsubscribe() {},
                         addEventListener: () => {},
                         removeEventListener: () => {},
                         addChannel: () => {},

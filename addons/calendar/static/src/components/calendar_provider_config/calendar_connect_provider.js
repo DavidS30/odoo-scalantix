@@ -1,8 +1,7 @@
 /** @odoo-module **/
 
-import { rpc } from "@web/core/network/rpc";
 import { registry } from "@web/core/registry";
-import { user } from "@web/core/user";
+import { session } from "@web/session";
 import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
 import { useService } from "@web/core/utils/hooks";
 import { Component } from "@odoo/owl";
@@ -19,14 +18,10 @@ const providerData = {
 };
 
 export class CalendarConnectProvider extends Component {
-    static props = {
-        ...standardWidgetProps,
-    };
-    static template = "calendar.CalendarConnectProvider";
-
     setup() {
         super.setup();
         this.orm = useService("orm");
+        this.rpc = useService("rpc");
     }
 
     /**
@@ -49,8 +44,8 @@ export class CalendarConnectProvider extends Component {
         // See google/microsoft_calendar for the origin of this shortened version
         const { restart_sync_method, sync_route } =
             providerData[this.props.record.data.external_calendar_provider];
-        await this.orm.call("res.users", restart_sync_method, [[user.userId]]);
-        const response = await rpc(sync_route, {
+        await this.orm.call("res.users", restart_sync_method, [[session.uid]]);
+        const response = await this.rpc(sync_route, {
             model: "calendar.event",
             fromurl: window.location.href,
         });
@@ -70,6 +65,10 @@ export class CalendarConnectProvider extends Component {
         return Promise.resolve();
     }
 }
+CalendarConnectProvider.props = {
+    ...standardWidgetProps,
+};
+CalendarConnectProvider.template = "calendar.CalendarConnectProvider";
 
 const calendarConnectProvider = {
     component: CalendarConnectProvider,

@@ -1,4 +1,7 @@
+/* @odoo-module */
+
 import { patch } from "@web/core/utils/patch";
+import { browser } from "@web/core/browser/browser";
 
 import { Thread } from '@mail/core/common/thread';
 
@@ -9,11 +12,9 @@ patch(Thread.prototype, {
             this.props.thread.nonEmptyMessages :
             [...this.props.thread.nonEmptyMessages].reverse()
         );
-        if (!this.props.showNotificationMessages) {
+        if (!this.props.showTrackingMessages) {
             messages = messages.filter(
-                (msg) => !['user_notification', 'notification'].includes(
-                    msg.message_type
-                )
+                (msg) => msg.trackingValues.length == 0
             );
         }
         return messages;
@@ -22,9 +23,9 @@ patch(Thread.prototype, {
 
 Thread.props = [
     ...Thread.props,
-    'showNotificationMessages?',
+    'showTrackingMessages?',
 ];
 Thread.defaultProps = {
     ...Thread.defaultProps,
-    showNotificationMessages: true,
+    showTrackingMessages: true,
 };

@@ -4,15 +4,16 @@ import pytz
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
+from inspect import Parameter, signature
 
-from odoo.tools import consteq
+import odoo
+from odoo.tools import consteq, get_lang
 from odoo import _, api, fields, models
 from odoo.http import request
 from odoo.addons.base.models.res_partner import _tz_get
 from odoo.exceptions import UserError
 from odoo.addons.bus.models.bus_presence import AWAY_TIMER, DISCONNECTION_TIMER
 from odoo.addons.bus.websocket import wsrequest
-from odoo.addons.mail.tools.discuss import Store
 
 
 def add_guest_to_context(func):
@@ -24,10 +25,10 @@ def add_guest_to_context(func):
     def wrapper(self, *args, **kwargs):
         req = request or wsrequest
         token = (
-            req.cookies.get(req.env["mail.guest"]._cookie_name, "")
+            req.httprequest.cookies.get(req.env["mail.guest"]._cookie_name, "")
         )
         guest = req.env["mail.guest"]._get_guest_from_token(token)
-        if guest and not guest.timezone and not req.env.cr.readonly:
+        if guest and not guest.timezone:
             timezone = req.env["mail.guest"]._get_timezone_from_request(req)
             if timezone:
                 guest._update_timezone(timezone)
@@ -43,7 +44,7 @@ def add_guest_to_context(func):
 class MailGuest(models.Model):
     _name = 'mail.guest'
     _description = "Guest"
-    _inherit = ["avatar.mixin", "bus.listener.mixin"]
+    _inherit = ['avatar.mixin']
     _avatar_name_field = "name"
     _cookie_name = 'dgid'
     _cookie_separator = '|'
@@ -87,7 +88,7 @@ class MailGuest(models.Model):
         return self.env['mail.guest']
 
     def _get_timezone_from_request(self, request):
-        timezone = request.cookies.get('tz')
+        timezone = request.httprequest.cookies.get('tz')
         return timezone if timezone in pytz.all_timezones else False
 
     def _update_name(self, name):
@@ -98,9 +99,14 @@ class MailGuest(models.Model):
         if len(name) > 512:
             raise UserError(_("Guest's name is too long."))
         self.name = name
-        store = Store(self, fields=["name", "write_date"])
-        self.channel_ids._bus_send_store(store)
-        self._bus_send_store(store)
+        guest_data = {
+            'id': self.id,
+            'name': self.name,
+            'type': "guest"
+        }
+        bus_notifs = [(channel, 'mail.record/insert', {'Persona': guest_data}) for channel in self.channel_ids]
+        bus_notifs.append((self, 'mail.record/insert', {'Persona': guest_data}))
+        self.env['bus.bus']._sendmany(bus_notifs)
 
     def _update_timezone(self, timezone):
         query = """
@@ -113,10 +119,57 @@ class MailGuest(models.Model):
         """
         self.env.cr.execute(query, (timezone, self.id))
 
-    def _to_store(self, store: Store, /, *, fields=None):
-        if fields is None:
-            fields = ["im_status", "name", "write_date"]
-        store.add("mail.guest", self._read_format(fields, load=False))
+    def _init_messaging(self):
+        self.ensure_one()
+        # sudo: res.partner - exposing OdooBot name and id
+        odoobot = self.env.ref('base.partner_root').sudo()
+        # sudo: mail.guest - guest reading their own id/name/channels
+        guest_sudo = self.sudo()
+        return {
+            'channels': guest_sudo.channel_ids.sudo(False)._channel_info(),
+            'companyName': self.env.company.name,
+            'currentGuest': {
+                'id': guest_sudo.id,
+                'name': guest_sudo.name,
+                'type': "guest",
+            },
+            'current_partner': False,
+            'current_user_id': False,
+            'current_user_settings': False,
+             # sudo: ir.config_parameter: safe to check for existence of tenor api key
+            'hasGifPickerFeature': bool(self.env["ir.config_parameter"].sudo().get_param("discuss.tenor_api_key")),
+            'hasLinkPreviewFeature': self.env['mail.link.preview']._is_link_preview_enabled(),
+            'hasMessageTranslationFeature': False,
+             # sudo: bus.bus: reading non-sensitive last id
+            'initBusId': self.env['bus.bus'].sudo()._bus_last_id(),
+            'menu_id': False,
+            'needaction_inbox_counter': False,
+            'odoobot': {
+                'id': odoobot.id,
+                'name': odoobot.name,
+                'type': "partner",
+            },
+            'shortcodes': [],
+            'starred_counter': False,
+        }
+
+    def _guest_format(self, fields=None):
+        if not fields:
+            fields = {'id': True, 'name': True, 'im_status': True, "write_date": True}
+        guests_formatted_data = {}
+        for guest in self:
+            data = {}
+            if 'id' in fields:
+                data['id'] = guest.id
+            if 'name' in fields:
+                data['name'] = guest.name
+            if 'im_status' in fields:
+                data['im_status'] = guest.im_status
+            if "write_date" in fields:
+                data["write_date"] = odoo.fields.Datetime.to_string(guest.write_date)
+            data['type'] = "guest"
+            guests_formatted_data[guest] = data
+        return guests_formatted_data
 
     def _set_auth_cookie(self):
         """Add a cookie to the response to identify the guest. Every route

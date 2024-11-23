@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import { isMacOS } from "@web/core/browser/feature_detection";
 import { useHotkey } from "@web/core/hotkeys/hotkey_hook";
 import { _t } from "@web/core/l10n/translation";
@@ -15,8 +17,6 @@ commandSetupRegistry.add("default", {
 });
 
 export class HotkeyCommandItem extends Component {
-    static template = "web.HotkeyCommandItem";
-    static props = ["hotkey", "hotkeyOptions?", "name?", "searchValue?", "executeCommand", "slots"];
     setup() {
         useHotkey(this.props.hotkey, this.props.executeCommand);
     }
@@ -32,6 +32,7 @@ export class HotkeyCommandItem extends Component {
         return result.map((key) => key.toUpperCase());
     }
 }
+HotkeyCommandItem.template = "web.HotkeyCommandItem";
 
 const commandCategoryRegistry = registry.category("command_categories");
 const commandProviderRegistry = registry.category("command_provider");

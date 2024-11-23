@@ -11,7 +11,7 @@ export class AltDialog extends Component {
         alt: String,
         tag_title: String,
     };
-    static template = 'web_editor.AltDialog';
+    static template = 'web_edior.AltDialog';
     altRef = useRef("alt");
     tagTitleRef = useRef("tag_title");
 

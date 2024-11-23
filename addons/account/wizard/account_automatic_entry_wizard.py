@@ -124,13 +124,8 @@ class AutomaticEntryWizard(models.TransientModel):
     @api.constrains('date', 'move_line_ids')
     def _check_date(self):
         for wizard in self:
-            for move in wizard.move_line_ids.move_id:
-                violated_lock_dates = move._get_violated_lock_dates(wizard.date, False)
-                if violated_lock_dates:
-                    raise ValidationError(_(
-                        "The date selected is protected by: %(lock_date_info)s.",
-                        lock_date_info=self.env['res.company']._format_lock_dates(violated_lock_dates)
-                    ))
+            if wizard.move_line_ids.move_id._get_violated_lock_dates(wizard.date, False):
+                raise ValidationError(_("The date selected is protected by a lock date"))
 
     @api.model
     def default_get(self, fields):
@@ -160,11 +155,6 @@ class AutomaticEntryWizard(models.TransientModel):
             raise UserError(_('No possible action found with the selected lines.'))
         res['action'] = allowed_actions.pop()
         return res
-
-    def _get_cut_off_label_format(self):
-        """ Get the translated format string used in cut-off labels """
-        self.ensure_one()
-        return _("Cut-off {label}") if self.percentage == 100 else _("Cut-off {label} {percent}%")
 
     def _get_move_dict_vals_change_account(self):
         line_vals = []
@@ -245,7 +235,7 @@ class AutomaticEntryWizard(models.TransientModel):
 
         # Get the lowest child company based on accounts used to avoid access error
         accounts = self.env['account.account'].browse([line['account_id'] for line in line_vals])
-        companies = accounts.company_ids.filtered(lambda c: self.env.company in c.parent_ids) | self.env.company
+        companies = accounts.company_id | self.env.company
         lowest_child_company = max(companies, key=lambda company: len(company.parent_ids))
 
         return [{
@@ -265,12 +255,11 @@ class AutomaticEntryWizard(models.TransientModel):
         reported_debit = aml.company_id.currency_id.round((self.percentage / 100) * aml.debit)
         reported_credit = aml.company_id.currency_id.round((self.percentage / 100) * aml.credit)
         reported_amount_currency = aml.currency_id.round((self.percentage / 100) * aml.amount_currency)
-        name = self._format_strings(self._get_cut_off_label_format(), aml.move_id)
 
         if date == 'new_date':
             return [
                 (0, 0, {
-                    'name': name,
+                    'name': aml.name or '',
                     'debit': reported_debit,
                     'credit': reported_credit,
                     'amount_currency': reported_amount_currency,
@@ -280,7 +269,7 @@ class AutomaticEntryWizard(models.TransientModel):
                     'analytic_distribution': aml.analytic_distribution,
                 }),
                 (0, 0, {
-                    'name': name,
+                    'name': self._format_strings(_('{percent}% recognized on {new_date}'), aml.move_id),
                     'debit': reported_credit,
                     'credit': reported_debit,
                     'amount_currency': -reported_amount_currency,
@@ -292,7 +281,7 @@ class AutomaticEntryWizard(models.TransientModel):
             ]
         return [
             (0, 0, {
-                'name': name,
+                'name': aml.name or '',
                 'debit': reported_credit,
                 'credit': reported_debit,
                 'amount_currency': -reported_amount_currency,
@@ -302,7 +291,7 @@ class AutomaticEntryWizard(models.TransientModel):
                 'analytic_distribution': aml.analytic_distribution,
             }),
             (0, 0, {
-                'name': name,
+                'name': self._format_strings(_('{percent}% recognized on {new_date}'), aml.move_id),
                 'debit': reported_debit,
                 'credit': reported_credit,
                 'amount_currency': reported_amount_currency,
@@ -322,12 +311,11 @@ class AutomaticEntryWizard(models.TransientModel):
 
         # set the change_period account on the selected journal items
 
-        ref_format = self._get_cut_off_label_format()
         move_data = {'new_date': {
             'currency_id': self.journal_id.currency_id.id or self.journal_id.company_id.currency_id.id,
             'move_type': 'entry',
             'line_ids': [],
-            'ref': self._format_strings(ref_format, self.move_line_ids[0].move_id),
+            'ref': self._format_strings(_('{label}: Adjusting Entry of {new_date}'), self.move_line_ids[0].move_id),
             'date': fields.Date.to_string(self.date),
             'journal_id': self.journal_id.id,
         }}
@@ -339,7 +327,7 @@ class AutomaticEntryWizard(models.TransientModel):
                 'currency_id': self.journal_id.currency_id.id or self.journal_id.company_id.currency_id.id,
                 'move_type': 'entry',
                 'line_ids': [],
-                'ref': self._format_strings(ref_format, grouped_lines[0].move_id, amount),
+                'ref': self._format_strings(_('{label}: Adjusting Entry of {date}'), grouped_lines[0].move_id, amount),
                 'date': fields.Date.to_string(date),
                 'journal_id': self.journal_id.id,
             }
@@ -448,9 +436,9 @@ class AutomaticEntryWizard(models.TransientModel):
             'name': _('Generated Entries'),
             'domain': [('id', 'in', created_moves.ids)],
             'res_model': 'account.move',
-            'view_mode': 'list,form',
+            'view_mode': 'tree,form',
             'type': 'ir.actions.act_window',
-            'views': [(self.env.ref('account.view_move_tree').id, 'list'), (False, 'form')],
+            'views': [(self.env.ref('account.view_move_tree').id, 'tree'), (False, 'form')],
         }
         if len(created_moves) == 1:
             action.update({'view_mode': 'form', 'res_id': created_moves.id})
@@ -501,18 +489,14 @@ class AutomaticEntryWizard(models.TransientModel):
     def _format_new_transfer_move_log(self, acc_transfer_per_move):
         transfer_format = Markup("<li>%s, <strong>%%(account_source_name)s</strong></li>") % \
             _("{amount} ({debit_credit}) from {link}")
-        rslt = _(
-            "This entry transfers the following amounts to %(destination)s",
-            destination=Markup("<strong>%s</strong>") % self.destination_account_id.display_name,
-        ) + Markup("<ul>%(transfer_logs)s</ul>") % {
-            "transfer_logs": Markup().join(
-                [
-                    self._format_strings(transfer_format % {"account_source_name": account.display_name}, move, balance)
-                    for move, balances_per_account in acc_transfer_per_move.items()
-                    for account, balance in balances_per_account.items()
-                    if account != self.destination_account_id  # Otherwise, logging it here is confusing for the user
-                ],
-            ),
+        rslt = Markup(_("This entry transfers the following amounts to %(destination)s") + "<ul>%(transfer_logs)s</ul>") % {
+            'destination': Markup("<strong>%s</strong>") % self.destination_account_id.display_name,
+            'transfer_logs': Markup().join([
+                self._format_strings(transfer_format % {'account_source_name': account.display_name}, move, balance)
+                for move, balances_per_account in acc_transfer_per_move.items()
+                for account, balance in balances_per_account.items()
+                if account != self.destination_account_id  # Otherwise, logging it here is confusing for the user
+            ])
         }
         return rslt
 
@@ -521,12 +505,12 @@ class AutomaticEntryWizard(models.TransientModel):
             return None
 
         transfer_format = Markup(
-            _("{amount} ({debit_credit}) from <strong>{account_source_name}</strong> were transferred to <strong>{account_target_name}</strong> by {link}")
+            _("{amount} ({debit_credit}) from %s were transferred to <strong>{account_target_name}</strong> by {link}")
         )
 
         return Markup("<ul>%s</ul>") % Markup().join([
             Markup("<li>%s</li>") % \
-                self._format_strings(transfer_format, transfer_move, balance, account.display_name)
+                self._format_strings(transfer_format % (Markup("<strong>%s</strong>") % account.display_name), transfer_move, balance)
             for account, balance in balances_per_account.items()
             if account != self.destination_account_id
         ])
@@ -534,7 +518,7 @@ class AutomaticEntryWizard(models.TransientModel):
     def _format_move_link(self, move):
         return move._get_html_link()
 
-    def _format_strings(self, string, move, amount=None, account_source_name=''):
+    def _format_strings(self, string, move, amount=None):
         return string.format(
             label=move.name or _('Adjusting Entry'),
             percent=float_repr(self.percentage, 2),
@@ -545,6 +529,5 @@ class AutomaticEntryWizard(models.TransientModel):
             link=self._format_move_link(move),
             date=format_date(self.env, move.date),
             new_date=self.date and format_date(self.env, self.date) or _('[Not set]'),
-            account_source_name=account_source_name,
             account_target_name=self.destination_account_id.display_name,
         )

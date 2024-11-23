@@ -1,12 +1,11 @@
+/** @odoo-module */
+
 import { Component, useState } from "@odoo/owl";
 import { useSelfOrder } from "@pos_self_order/app/self_order_service";
 import { useService } from "@web/core/utils/hooks";
-import { Numpad } from "@point_of_sale/app/generic_components/numpad/numpad";
 
 export class StandNumberPage extends Component {
     static template = "pos_self_order.StandNumberPage";
-    static components = { Numpad };
-    static props = {};
 
     setup() {
         this.selfOrder = useSelfOrder();
@@ -16,16 +15,27 @@ export class StandNumberPage extends Component {
             standNumber: "",
         });
     }
-    numberClick(key) {
-        if (key === "Backspace") {
+
+    get tableInput() {
+        return this.state.standNumber ? this.state.standNumber : "_ _";
+    }
+
+    numberClick(event) {
+        const key = event.target.attributes.data.value;
+
+        if (key === "reset") {
             this.state.standNumber = this.state.standNumber.slice(0, -1);
-            return;
+        } else if (key === "clear") {
+            this.state.standNumber = "";
+        } else {
+            this.state.standNumber += key;
         }
-        this.state.standNumber += key;
     }
 
     confirm() {
-        this.selfOrder.currentOrder.table_stand_number = this.state.standNumber;
-        this.selfOrder.confirmOrder();
+        if (this.state.standNumber.length > 0) {
+            this.selfOrder.currentOrder.table_stand_number = this.state.standNumber;
+            this.selfOrder.confirmOrder();
+        }
     }
 }

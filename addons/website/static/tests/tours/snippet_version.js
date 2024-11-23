@@ -1,24 +1,19 @@
 /** @odoo-module **/
 
-import {
-    clickOnSave,
-    insertSnippet,
-    registerWebsitePreviewTour
-} from '@website/js/tours/tour_utils';
+import wTourUtils from "@website/js/tours/tour_utils";
 
-registerWebsitePreviewTour("snippet_version_1", {
+wTourUtils.registerWebsitePreviewTour("snippet_version", {
     edition: true,
     url: "/",
+    test: true,
 }, () => [
-    ...insertSnippet({
+    wTourUtils.dragNDrop({
         id: 's_test_snip',
         name: 'Test snip',
-        groupName: "Content",
     }),
-    ...insertSnippet({
+    wTourUtils.dragNDrop({
         id: 's_text_image',
         name: 'Text - Image',
-        groupName: "Content",
     }),
     {
     content: "Test t-snippet and t-snippet-call: snippets have data-snippet set",
@@ -29,45 +24,38 @@ registerWebsitePreviewTour("snippet_version_1", {
         if (draggableSnippets.length && !draggableSnippets.every(el => el.dataset.snippet)) {
             console.error("error Some t-snippet are missing their template name or there are no snippets to drop");
         }
+        if (!document.querySelector('#oe_snippets [data-snippet="s_test_snip"] [data-snippet="s_share"]')) {
+            console.error("error s_share t-called inside s_test_snip is missing template name");
+        }
         if (!document.querySelector('iframe:not(.o_ignore_in_tour)').contentDocument.querySelector('#wrap [data-snippet="s_test_snip"] [data-snippet="s_share"]')) {
             console.error("error Dropped a s_test_snip snippet but missing s_share template name in it");
         }
     },
 },
-    ...clickOnSave(),
-]);
-registerWebsitePreviewTour("snippet_version_2", {
-    edition: true,
-    url: "/",
-}, () => [
+    ...wTourUtils.clickOnSave(),
+    ...wTourUtils.clickOnEditAndWaitEditMode(),
 {
+    content: "Modify the version of snippets",
+    trigger: '#oe_snippets .o_panel_body > .oe_snippet',
+    run: function () {
+        document.querySelector('#oe_snippets .oe_snippet > [data-snippet="s_test_snip"]').dataset.vjs = '999';
+        document.querySelector('#oe_snippets .oe_snippet > [data-snippet="s_share"]').dataset.vcss = '999';
+        document.querySelector('#oe_snippets .oe_snippet > [data-snippet="s_text_image"]').dataset.vxml = '999';
+    },
+}, {
     content: "Edit s_test_snip",
-    trigger: ':iframe #wrap.o_editable .s_test_snip',
-    run: "click",
-},
-{
-    trigger:
-        "we-customizeblock-options:contains(Test snip) .snippet-option-VersionControl > we-alert",
-},
-{
+    trigger: 'iframe #wrap.o_editable .s_test_snip',
+}, {
     content: "Edit text_image",
-    trigger: ':iframe #wrap.o_editable .s_text_image',
-    run: "click",
-},
-{
-    trigger:
-        "we-customizeblock-options:contains(Text - Image) .snippet-option-VersionControl  > we-alert",
-},
-{
+    extra_trigger: 'we-customizeblock-options:contains(Test snip) .snippet-option-VersionControl > we-alert',
+    trigger: 'iframe #wrap.o_editable .s_text_image',
+}, {
     content: "Edit s_share",
-    trigger: ':iframe #wrap.o_editable .s_share',
-    run: "click",
-},
-{
-    trigger:
-        "we-customizeblock-options:contains(Share) .snippet-option-VersionControl > we-alert",
-},
-{
+    extra_trigger: 'we-customizeblock-options:contains(Text - Image) .snippet-option-VersionControl  > we-alert',
+    trigger: 'iframe #wrap.o_editable .s_share',
+}, {
     content: "s_share is outdated",
-    trigger: ':iframe body',
+    extra_trigger: 'we-customizeblock-options:contains(Share) .snippet-option-VersionControl > we-alert',
+    trigger: 'iframe body',
+    isCheck: true,
 }]);

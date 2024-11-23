@@ -1,13 +1,15 @@
+/** @odoo-module */
+
 import { App } from "@odoo/owl";
 import { registry } from "@web/core/registry";
-import { getTemplate } from "@web/core/templates";
+import { templates } from "@web/core/assets";
 import { _t } from "@web/core/l10n/translation";
 
 class ComponentManager {
     constructor(env) {
         this.env = env;
         this.appConfig = {
-            getTemplate,
+            templates,
             env: env,
             dev: env.debug,
             translateFn: _t,

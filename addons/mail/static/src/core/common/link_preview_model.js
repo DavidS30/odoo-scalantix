@@ -1,3 +1,5 @@
+/* @odoo-module */
+
 import { Record } from "@mail/core/common/record";
 
 export class LinkPreview extends Record {

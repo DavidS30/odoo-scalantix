@@ -1,5 +1,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from werkzeug.urls import url_encode
+
 from odoo import http
 from odoo.http import request
 
@@ -24,8 +26,9 @@ class OnboardingController(http.Controller):
         request.env['onboarding.onboarding.step'].with_company(
             stripe_provider.company_id
         ).action_validate_step_payment_provider()
-        url = f"/odoo/action-payment_stripe.action_payment_provider_onboarding/{provider_id}?menu_id={menu_id}"
-        return request.redirect(url)
+        action = request.env.ref('payment_stripe.action_payment_provider_onboarding')
+        get_params_string = url_encode({'action': action.id, 'id': provider_id, 'menu_id': menu_id})
+        return request.redirect(f'/web?#{get_params_string}')
 
     @http.route(_onboarding_refresh_url, type='http', methods=['GET'], auth='user')
     def stripe_refresh_onboarding(self, provider_id, account_id, menu_id):

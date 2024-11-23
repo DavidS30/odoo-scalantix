@@ -149,6 +149,11 @@ class TestMrpProductionBackorder(TestMrpCommon):
         self.assertEqual(sum(pbm_move.filtered(lambda m: m.product_id.id == product_to_use_1.id).mapped("product_qty")), 16)
         self.assertEqual(sum(pbm_move.filtered(lambda m: m.product_id.id == product_to_use_2.id).mapped("product_qty")), 4)
 
+        sam_move = production.move_finished_ids.move_dest_ids
+        self.assertEqual(len(sam_move), 1)
+        self.assertEqual(sam_move.product_id.id, product_to_build.id)
+        self.assertEqual(sum(sam_move.mapped("product_qty")), 4)
+
         mo_form = Form(production)
         mo_form.qty_producing = 1
         production = mo_form.save()
@@ -156,11 +161,6 @@ class TestMrpProductionBackorder(TestMrpCommon):
         action = production.button_mark_done()
         backorder = Form(self.env['mrp.production.backorder'].with_context(**action['context']))
         backorder.save().action_backorder()
-
-        sam_move = production.move_finished_ids.move_dest_ids
-        self.assertEqual(len(sam_move), 1)
-        self.assertEqual(sam_move.product_id.id, product_to_build.id)
-        self.assertEqual(sum(sam_move.mapped("product_qty")), 1)
 
         mo_backorder = production.procurement_group_id.mrp_production_ids[-1]
         self.assertEqual(mo_backorder.delivery_count, 2)
@@ -170,11 +170,7 @@ class TestMrpProductionBackorder(TestMrpCommon):
         self.assertEqual(sum(pbm_move.filtered(lambda m: m.product_id.id == product_to_use_2.id).mapped("product_qty")), 4)
 
         sam_move |= mo_backorder.move_finished_ids.move_orig_ids
-        self.assertEqual(sum(sam_move.mapped("product_qty")), 1)
-
-        mo_backorder.button_mark_done()
-        self.assertEqual(len(sam_move), 1.0)
-        self.assertEqual(sam_move.product_qty, 4.0)
+        self.assertEqual(sum(sam_move.mapped("product_qty")), 4)
 
     def test_tracking_backorder_series_lot_1(self):
         """ Create a MO of 4 tracked products. all component is tracked by lots
@@ -185,14 +181,17 @@ class TestMrpProductionBackorder(TestMrpCommon):
         lot_final = self.env['stock.lot'].create({
             'name': 'lot_final',
             'product_id': p_final.id,
+            'company_id': self.env.company.id,
         })
         lot_1 = self.env['stock.lot'].create({
             'name': 'lot_consumed_1',
             'product_id': p1.id,
+            'company_id': self.env.company.id,
         })
         lot_2 = self.env['stock.lot'].create({
             'name': 'lot_consumed_2',
             'product_id': p2.id,
+            'company_id': self.env.company.id,
         })
 
         self.env['stock.quant']._update_available_quantity(p1, self.stock_location, nb_product_todo*4, lot_id=lot_1)
@@ -240,6 +239,7 @@ class TestMrpProductionBackorder(TestMrpCommon):
         lot1, lot2 = self.env['stock.lot'].create([{
             'name': f'lot_consumed_{i}',
             'product_id': p2.id,
+            'company_id': self.env.company.id,
         } for i in range(2)])
         self.env['stock.quant']._update_available_quantity(p1, self.stock_location, 20)
         self.env['stock.quant']._update_available_quantity(p2, self.stock_location, 3, lot_id=lot1)
@@ -283,13 +283,11 @@ class TestMrpProductionBackorder(TestMrpCommon):
         """
         product_finished = self.env['product.product'].create({
             'name': 'Young Tom',
-            'type': 'consu',
-            'is_storable': True,
+            'type': 'product',
         })
         product_component = self.env['product.product'].create({
             'name': 'Botox',
-            'type': 'consu',
-            'is_storable': True,
+            'type': 'product',
             'uom_id': self.env.ref('uom.product_uom_kgm').id,
             'uom_po_id': self.env.ref('uom.product_uom_kgm').id,
         })
@@ -368,14 +366,17 @@ class TestMrpProductionBackorder(TestMrpCommon):
             serials_final.append(self.env['stock.lot'].create({
                 'name': f'lot_final_{i}',
                 'product_id': p_final.id,
+                'company_id': self.env.company.id,
             }))
             serials_p1.append(self.env['stock.lot'].create({
                 'name': f'lot_consumed_1_{i}',
                 'product_id': p1.id,
+                'company_id': self.env.company.id,
             }))
             serials_p2.append(self.env['stock.lot'].create({
                 'name': f'lot_consumed_2_{i}',
                 'product_id': p2.id,
+                'company_id': self.env.company.id,
             }))
             self.env['stock.quant']._update_available_quantity(p1, self.stock_location, 1, lot_id=serials_p1[-1])
             self.env['stock.quant']._update_available_quantity(p2, self.stock_location, 1, lot_id=serials_p2[-1])
@@ -416,15 +417,15 @@ class TestMrpProductionBackorder(TestMrpCommon):
         self.env['stock.quant']._update_available_quantity(p1, self.stock_location_components, 2.0)
         self.env['stock.quant']._update_available_quantity(p2, self.stock_location_components, 2.0)
         mo.action_assign()
-        mo.action_generate_serial()
         res_dict = mo.button_mark_done()
         self.assertEqual(res_dict.get('res_model'), 'mrp.production.backorder')
-        backorder_wizard = Form.from_action(self.env, res_dict)
+        backorder_wizard = Form(self.env[res_dict['res_model']].with_context(res_dict['context']))
 
         # backorder should automatically open
         action = backorder_wizard.save().action_backorder()
         self.assertEqual(action.get('res_model'), 'mrp.production')
-        backorder_mo = Form.from_action(self.env, action).save()
+        backorder_mo_form = Form(self.env[action['res_model']].with_context(action['context']).browse(action['res_id']))
+        backorder_mo = backorder_mo_form.save()
         backorder_mo.button_mark_done()
 
         self.assertEqual(self.env['stock.quant']._get_available_quantity(p_final, self.stock_location), 2, "Incorrect number of final product produced.")
@@ -486,7 +487,7 @@ class TestMrpProductionBackorder(TestMrpCommon):
         self.assertEqual(mo.state, 'draft')
 
         action = mo.action_split()
-        wizard = Form.from_action(self.env, action)
+        wizard = Form(self.env[action['res_model']].with_context(action['context']))
         wizard.counter = 2
         wizard.save().action_split()
         self.assertEqual(len(mo.procurement_group_id.mrp_production_ids), 2)
@@ -503,7 +504,7 @@ class TestMrpProductionBackorder(TestMrpCommon):
         mo, _, _, p1, p2 = self.generate_mo(qty_final=10)
         # Split in 3 parts
         action = mo.action_split()
-        wizard = Form.from_action(self.env, action)
+        wizard = Form(self.env[action['res_model']].with_context(action['context']))
         wizard.counter = 3
         action = wizard.save().action_split()
         # Should have 3 mos
@@ -558,7 +559,7 @@ class TestMrpProductionBackorder(TestMrpCommon):
 
         # Make some stock and reserve
         for product in self.bom_1.bom_line_ids.product_id:
-            product.is_storable = True
+            product.type = 'product'
             self.env['stock.quant'].with_context(inventory_mode=True).create({
                 'product_id': product.id,
                 'inventory_quantity': 100,
@@ -619,7 +620,7 @@ class TestMrpProductionBackorder(TestMrpCommon):
         self.assertEqual(mo.move_raw_ids.mapped('product_uom_qty'), [5, 10])
         self.assertEqual(mo.state, 'draft')
         action = mo.action_split()
-        wizard = Form.from_action(self.env, action)
+        wizard = Form(self.env[action['res_model']].with_context(action['context']))
         wizard.counter = 10
         action = wizard.save().action_split()
         # check that the MO is split in 10 and the components are split accordingly
@@ -652,7 +653,7 @@ class TestMrpProductionBackorder(TestMrpCommon):
         self.assertEqual(mo.state, 'confirmed')
         mo.action_assign()
         action = mo.action_split()
-        wizard = Form.from_action(self.env, action)
+        wizard = Form(self.env[action['res_model']].with_context(action['context']))
         wizard.counter = 10
         action = wizard.save().action_split()
         # check that the MO is split in 10 and exactly one of the components is not available
@@ -871,18 +872,15 @@ class TestMrpWorkorderBackorder(TransactionCase):
         ], limit=1)
         cls.finished1 = cls.env['product.product'].create({
             'name': 'finished1',
-            'type': 'consu',
-            'is_storable': True,
+            'type': 'product',
         })
         cls.compfinished1 = cls.env['product.product'].create({
             'name': 'compfinished1',
-            'type': 'consu',
-            'is_storable': True,
+            'type': 'product',
         })
         cls.compfinished2 = cls.env['product.product'].create({
             'name': 'compfinished2',
-            'type': 'consu',
-            'is_storable': True,
+            'type': 'product',
         })
         cls.workcenter1 = cls.env['mrp.workcenter'].create({
             'name': 'workcenter1',
@@ -917,6 +915,9 @@ class TestMrpWorkorderBackorder(TransactionCase):
             - Create a backorder and validate op 2 partially
             - Create a backorder and validate it completely
         """
+        self.env.ref('base.group_user').implied_ids += (
+            self.env.ref('mrp.group_mrp_routings')
+        )
         mo_form = Form(self.env['mrp.production'])
         mo_form.bom_id = self.bom_finished1
         mo_form.product_qty = 10
@@ -962,9 +963,12 @@ class TestMrpWorkorderBackorder(TransactionCase):
         self.assertRecordValues(op_6, [{'state': 'done', 'qty_remaining': 0.0}])
 
     def test_kit_bom_order_splitting(self):
+        self.env.ref('base.group_user').implied_ids += (
+            self.env.ref('mrp.group_mrp_routings')
+        )
         water_bottle_kit_product = self.env["product.product"].create({
                 "name": "Water Bottle Kit",
-                "is_storable": True,
+                "type": "product",  # Storable product
             })
         water_bottle_kit = self.env['mrp.bom'].create({
             'product_id': water_bottle_kit_product.id,
@@ -979,7 +983,7 @@ class TestMrpWorkorderBackorder(TransactionCase):
         })
         water_bottle = self.env["product.product"].create({
             "name": "Water Bottle",
-            "is_storable": True,
+            "type": "product",  # Storable product
         })
         water_bottle_bom = self.env['mrp.bom'].create({
             'product_id': water_bottle.id,

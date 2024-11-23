@@ -94,6 +94,8 @@ class AccountEdiXmlUBLMyInvoisMY(models.AbstractModel):
             'DebitNoteLineType_template': 'l10n_my_edi.ubl_20_InvoiceLineType_my',
 
             'DeliveryType_template': 'l10n_my_edi.ubl_20_DeliveryType_my',
+            'AddressType_template': 'l10n_my_edi.ubl_20_AddressType_my',
+            'PartyType_template': 'l10n_my_edi.ubl_20_PartyType_my',
         })
 
         document_type_code, original_document = self._l10n_my_edi_get_document_type_code(invoice)
@@ -251,17 +253,17 @@ class AccountEdiXmlUBLMyInvoisMY(models.AbstractModel):
         # OVERRIDE 'account_edi_ubl_cii'
         return []
 
-    def _get_tax_unece_codes(self, customer, supplier, tax):
+    def _get_tax_unece_codes(self, invoice, tax):
         # OVERRIDE 'account_edi_ubl_cii'
         return {
             'tax_category_code': tax.l10n_my_tax_type,
             'tax_exemption_reason_code': None,  # Unused in this file.
-            'tax_exemption_reason': None,  # Should be set here but we no longer have access to the invoice info...
+            'tax_exemption_reason': invoice.l10n_my_edi_exemption_reason if tax.l10n_my_tax_type == 'E' else None,
         }
 
-    def _get_tax_category_list(self, customer, supplier, taxes):
+    def _get_tax_category_list(self, invoice, taxes):
         # EXTENDS 'account_edi_ubl_cii'
-        vals_list = super()._get_tax_category_list(customer, supplier, taxes)
+        vals_list = super()._get_tax_category_list(invoice, taxes)
 
         for vals in vals_list:
             vals['tax_scheme_vals']['id'] = 'OTH'
@@ -321,24 +323,7 @@ class AccountEdiXmlUBLMyInvoisMY(models.AbstractModel):
             'item_classification_code': line.product_id.product_tmpl_id.l10n_my_edi_classification_code,
             'item_classification_attrs': {'listID': 'CLASS'},
         }]
-        # User the tax_details in order to fill the classified_tax_category_vals as would be expected.
-        for tax_detail in taxes_vals['tax_details']:
-            tax_category_vals = tax_detail['_tax_category_vals_']
-            for classified_tax_category_vals in vals['classified_tax_category_vals']:
-                if tax_category_vals['id'] == classified_tax_category_vals['id']:
-                    classified_tax_category_vals['name'] = tax_category_vals['name']
-                    classified_tax_category_vals['tax_exemption_reason'] = tax_category_vals['name']
-
         return vals
-
-    def _get_tax_grouping_key(self, base_line, tax_data):
-        # EXTENDS 'account_edi_ubl_cii'
-        grouping_key = super()._get_tax_grouping_key(base_line, tax_data)
-        # Add the tax exemption here as well to ensure consistency.
-        tax = tax_data['tax']
-        invoice = base_line['record'].move_id
-        grouping_key['_tax_category_vals_']['name'] = invoice.l10n_my_edi_exemption_reason if tax.l10n_my_tax_type == 'E' else None
-        return grouping_key
 
     def _get_invoice_line_vals(self, line, line_id, taxes_vals):
         # EXTENDS 'account_edi_ubl_cii'
