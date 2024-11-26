@@ -23,7 +23,7 @@ export class AppsMenu extends Dropdown {
                 id: this.companyService.currentCompany.id,
             });
     	} else {
-    		this.backgroundImageUrl = '/muk_web_theme/static/src/img/background.png';
+    		this.backgroundImageUrl = '/muk_web_theme/static/src/img/background.svg';
     	}
         useEffect(
             (open) => {

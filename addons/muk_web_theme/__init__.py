@@ -11,7 +11,7 @@ def _setup_module(env):
             env.ref('base.main_company').write({
                 'favicon': base64.b64encode(file.read())
             })
-        with file_open('muk_web_theme/static/src/img/background.png', 'rb') as file:
+        with file_open('muk_web_theme/static/src/img/background.svg', 'rb') as file:
             env.ref('base.main_company').write({
                 'background_image': base64.b64encode(file.read())
             })

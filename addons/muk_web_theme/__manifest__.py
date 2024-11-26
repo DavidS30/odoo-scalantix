@@ -17,7 +17,6 @@
     'depends': [
         'muk_web_chatter',
         'muk_web_dialog',
-        'muk_web_appsbar',
         'muk_web_colors',
     ],
     'excludes': [

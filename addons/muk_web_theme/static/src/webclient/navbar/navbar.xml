@@ -13,8 +13,12 @@
 				title="'Home Menu'" 
 				class="'o_navbar_apps_menu'" 
 			>
+				
 				<t t-set-slot="toggler">
-					<i class="fa fa-th" />
+					<button  t-ref="menu_button">
+						<i class="oi oi-apps icon" t-ref="menu_icon"/>
+					</button>
+					<!-- <i class="fa fa-th" /> -->
 				</t>
 			    <DropdownItem
 			        t-foreach="this.appMenuService.getAppsMenuItems()"
@@ -22,7 +26,7 @@
 			        t-key="app.id"
 			        class="'o_app'"
 			        dataset="{ menuXmlid: app.xmlid, section: app.id }"
-					onSelected="() => app.action()"
+					onSelected="() => action(app)"
                 	parentClosingMode="'none'"
 				>
 					<a 
