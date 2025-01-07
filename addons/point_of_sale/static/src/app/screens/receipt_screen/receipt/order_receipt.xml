@@ -22,38 +22,39 @@
                     </ul>
                 </Orderline>
             </OrderWidget>
-
             <!-- Total -->
-            <div class="pos-receipt-right-align">--------</div>
-            <br/>
-            <div class="pos-receipt-amount">
-                TOTAL
-                <span t-esc="props.formatCurrency(props.data.amount_total)" class="pos-receipt-right-align"/>
+            <div >
+                
+                <div t-esc="props.formatCurrency(props.data.amount_total)" />
             </div>
             <t t-if="props.data.rounding_applied">
                 <div class="pos-receipt-amount">
                   Rounding
-                <span t-esc='props.formatCurrency(props.data.rounding_applied)' class="pos-receipt-right-align"/>
+                <span t-esc='props.formatCurrency(props.data.rounding_applied)' />
                 </div>
                 <div class="pos-receipt-amount">
                   To Pay
-                 <span t-esc='props.formatCurrency(props.data.amount_total + props.data.rounding_applied)' class="pos-receipt-right-align"/>
+                 <span t-esc='props.formatCurrency(props.data.amount_total + props.data.rounding_applied)' />
               </div>
             </t>
             <br/><br/>
 
             <!-- Payment Lines -->
 
-            <div class="paymentlines" t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
-                <t t-esc="line.name" />
-                <span t-esc="props.formatCurrency(line.amount, false)" class="pos-receipt-right-align"/>
+            <div class="" t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
+                <span t-esc="props.formatCurrency(line.amount, false)" class=""/>
             </div>
 
             <div class="pos-receipt-amount receipt-change mt-2">
                 CHANGE
                 <span t-esc="props.formatCurrency(props.data.change)" class="pos-receipt-right-align"/>
             </div>
+<!-- <pre>
+TOTAL          $30.00
+CHANGE         $10.00
 
+      Thank you for your purchase!
+</pre> -->
             <!-- Extra Payment Info -->
 
             <t t-if="props.data.total_discount">
