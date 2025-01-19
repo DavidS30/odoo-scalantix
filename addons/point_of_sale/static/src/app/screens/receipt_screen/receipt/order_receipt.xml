@@ -10,7 +10,7 @@
                         <i class="fa fa-sticky-note me-1" role="img" aria-label="Customer Note" title="Customer Note"/>
                         <t t-esc="line.customerNote" />
                     </li>
-                    <ul t-if="line.pack_lot_lines">
+                    <ul t-if="line.pack_lot_lines" class="font_text_receipt_58mm">
                         <li t-foreach="line.pack_lot_lines" t-as="lot" t-key="lot.cid">
                             <t t-if="lot.order_line.product.tracking == 'lot'">
                                 Lot Number <t t-esc="lot.lot_name"/>
@@ -24,9 +24,9 @@
             </OrderWidget>
 
             <!-- Total -->
-            <div class="pos-receipt-right-align">--------</div>
+            <div class="receipt-line">-----------------------------------------------</div>
             <br/>
-            <div class="pos-receipt-amount">
+            <div class="pos-receipt-amount font_text_receipt_58mm">
                 TOTAL
                 <span t-esc="props.formatCurrency(props.data.amount_total)" class="pos-receipt-right-align"/>
             </div>
@@ -40,15 +40,20 @@
                  <span t-esc='props.formatCurrency(props.data.amount_total + props.data.rounding_applied)' class="pos-receipt-right-align"/>
               </div>
             </t>
+            <hr />
+            <div class="receipt-line">-----------------------------------------------</div>
             <br/><br/>
 
             <!-- Payment Lines -->
 
-            <div class="paymentlines" t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
+
+            <div class="paymentlines font_text_receipt_58mm" t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
                 <t t-esc="line.name" />
                 <span t-esc="props.formatCurrency(line.amount, false)" class="pos-receipt-right-align"/>
             </div>
 
+            <hr />
+            <div class="receipt-line">-----------------------------------------------</div>
             <div class="pos-receipt-amount receipt-change mt-2">
                 CHANGE
                 <span t-esc="props.formatCurrency(props.data.change)" class="pos-receipt-right-align"/>
@@ -62,19 +67,26 @@
                     <span t-esc="props.formatCurrency(props.data.total_discount)" class="pos-receipt-right-align"/>
                 </div>
             </t>
-            <div t-if="props.data.tax_details.length > 0" class="pos-receipt-taxes">
-                <span />
-                <span>Tax</span>
-                <span>Amount</span>
-                <span>Base</span>
-                <span>Total</span>
+            <div t-if="props.data.tax_details.length > 0" class="mt-2 font_text_receipt_58mm">
                 <t t-foreach="props.data.tax_details" t-as="tax" t-key="tax.tax.id">
-                    <span t-esc="tax.tax.letter || ''"/>
-                    <span t-if="tax.tax.amount_type != 'fixed'"><t t-esc="tax.tax.amount"/>%</span>
-                    <span t-else="" t-esc="tax.tax.name"/>
-                    <span t-esc="props.formatCurrency(tax.amount, false)" />
-                    <span t-esc="props.formatCurrency(tax.base, false)" />
-                    <span t-esc="props.formatCurrency(tax.amount + tax.base, false)" />
+                    <div>
+                        Tax:
+                        <span t-esc="tax.tax.letter || ''"/>
+                        <span t-if="tax.tax.amount_type != 'fixed'"><t t-esc="tax.tax.amount"/>%</span>
+                        <span t-else="" t-esc="tax.tax.name"/>
+                    </div>
+                    <div>
+                        Amount:
+                        <span t-esc="props.formatCurrency(tax.amount, false)" />
+                    </div>
+                    <div>
+                        Base:
+                        <span t-esc="props.formatCurrency(tax.base, false)" />
+                    </div>
+                    <div>
+                        Total:
+                        <span t-esc="props.formatCurrency(tax.amount + tax.base, false)" />
+                    </div>
                 </t>
                 <t t-if="props.data.tax_details.length > 1">
                     <span />
@@ -134,7 +146,7 @@
 
             <br/>
             <div class="pos-receipt-order-data">
-                <p>Powered by Odoo</p>
+                <p>Proveedor Tecnologico: Scalantix</p>
                 <div t-esc="props.data.name" />
                 <div id="order-date" t-esc="props.data.date" />
             </div>
