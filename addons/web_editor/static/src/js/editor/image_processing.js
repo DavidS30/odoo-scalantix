@@ -1,7 +1,7 @@
 /** @odoo-module **/
 
 import { pick } from "@web/core/utils/objects";
-import {getAffineApproximation, getProjective} from "@web_editor/js/editor/perspective_utils";
+import { getAffineApproximation, getProjective } from "@web_editor/js/editor/perspective_utils";
 
 // Fields returned by cropperjs 'getData' method, also need to be passed when
 // initializing the cropper to reuse the previous crop.
@@ -239,7 +239,7 @@ export async function applyModifications(img, dataOptions = {}) {
     originalSrc = original.getAttribute('src');
     container.appendChild(original);
     await activateCropper(original, 0, data);
-    let croppedImg = $(original).cropper('getCroppedCanvas', {width, height});
+    let croppedImg = $(original).cropper('getCroppedCanvas', { width, height });
     $(original).cropper('destroy');
 
     // Aspect Ratio
@@ -247,7 +247,7 @@ export async function applyModifications(img, dataOptions = {}) {
         document.createElement('div').appendChild(croppedImg);
         imgAspectRatio = imgAspectRatio.split(':');
         imgAspectRatio = parseFloat(imgAspectRatio[0]) / parseFloat(imgAspectRatio[1]);
-        await activateCropper(croppedImg, imgAspectRatio, {y: 0});
+        await activateCropper(croppedImg, imgAspectRatio, { y: 0 });
         croppedImg = $(croppedImg).cropper('getCroppedCanvas');
         $(croppedImg).cropper('destroy');
     }
@@ -283,10 +283,10 @@ export async function applyModifications(img, dataOptions = {}) {
             for (let j = 0; j < divisions; j++) {
                 const [dx, dy] = [w / divisions, h / divisions];
 
-                const upper = {origin: [i * dx, j * dy], sides: [dx, dy], flange: 0.1, overlap: 0};
-                const lower = {origin: [i * dx + dx, j * dy + dy], sides: [-dx, -dy], flange: 0, overlap: 0.1};
+                const upper = { origin: [i * dx, j * dy], sides: [dx, dy], flange: 0.1, overlap: 0 };
+                const lower = { origin: [i * dx + dx, j * dy + dy], sides: [-dx, -dy], flange: 0, overlap: 0.1 };
 
-                for (let {origin, sides, flange, overlap} of [upper, lower]) {
+                for (let { origin, sides, flange, overlap } of [upper, lower]) {
                     const [[a, c, e], [b, d, f]] = getAffineApproximation(project, [
                         origin, [origin[0] + sides[0], origin[1]], [origin[0], origin[1] + sides[1]]
                     ]);
@@ -357,8 +357,8 @@ export async function applyModifications(img, dataOptions = {}) {
  */
 export function loadImage(src, img = new Image()) {
     const handleImage = (source, resolve, reject) => {
-        img.addEventListener("load", () => resolve(img), {once: true});
-        img.addEventListener("error", reject, {once: true});
+        img.addEventListener("load", () => resolve(img), { once: true });
+        img.addEventListener("error", reject, { once: true });
         img.src = source;
     };
     // The server will return a placeholder image with the following src.
@@ -419,7 +419,7 @@ async function _updateImageData(src, key = 'objectURL') {
     } else {
         value = URL.createObjectURL(blob);
     }
-    imageCache.set(src, Object.assign(currentImageData || {}, {[key]: value, size: blob.size}));
+    imageCache.set(src, Object.assign(currentImageData || {}, { [key]: value, size: blob.size }));
     return value;
 }
 /**
@@ -458,7 +458,7 @@ export async function activateCropper(image, aspectRatio, dataset) {
     if (oldSrc === newSrc && image.complete) {
         return;
     }
-    return new Promise(resolve => image.addEventListener('ready', resolve, {once: true}));
+    return new Promise(resolve => image.addEventListener('ready', resolve, { once: true }));
 }
 /**
  * Marks an <img> with its attachment data (originalId, originalSrc, mimetype)
@@ -491,7 +491,7 @@ export async function loadImageInfo(img, rpc, attachmentSrc = '') {
     const srcUrl = new URL(src, docHref);
     const relativeSrc = srcUrl.pathname;
 
-    const {original} = await rpc('/web_editor/get_image_info', {src: relativeSrc});
+    const { original } = await rpc('/web_editor/get_image_info', { src: relativeSrc });
     // If src was an absolute "external" URL, we consider unlikely that its
     // relative part matches something from the DB and even if it does, nothing
     // bad happens, besides using this random image as the original when using
@@ -573,6 +573,31 @@ export function createDataURL(blob) {
 export function getDataURLBinarySize(dataURL) {
     // Every 4 bytes of base64 represent 3 bytes.
     return dataURL.split(',')[1].length / 4 * 3;
+}
+
+/*
+ImageCorsProtected (added for problem with cors protected images)
+*/
+export async function isImageCorsProtected(img) {
+    const src = img.getAttribute('src');
+    if (!src) {
+        return false;
+    }
+    let isCorsProtected = false;
+    if (!src.startsWith("/") || /\/web\/image\/\d+-redirect\//.test(src)) {
+        // The `fetch()` used later in the code might fail if the image is
+        // CORS protected. We check upfront if it's the case.
+        // Two possible cases:
+        // 1. the `src` is an absolute URL from another domain.
+        //    For instance, abc.odoo.com vs abc.com which are actually the
+        //    same database behind.
+        // 2. A "attachment-url" which is just a redirect to the real image
+        //    which could be hosted on another website.
+        isCorsProtected = await fetch(src, { method: 'HEAD' })
+            .then(() => false)
+            .catch(() => true);
+    }
+    return isCorsProtected;
 }
 
 export const removeOnImageChangeAttrs = [...cropperDataFields, ...modifierFields];

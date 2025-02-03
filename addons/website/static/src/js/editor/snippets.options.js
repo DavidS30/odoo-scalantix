@@ -3675,7 +3675,7 @@ options.registry.WebsiteAnimate = options.Class.extend({
                     const imageToolsOpt = hoverEffectWidget.getParent();
                     return (
                         imageToolsOpt._canHaveHoverEffect() && imageToolsOpt._isImageSupportedForShapes()
-                        && !await wUtils.isImageCorsProtected(this.$target[0])
+                        && !await isImageCorsProtected(this.$target[0])
                     );
                 }
                 return false;
