@@ -131,7 +131,7 @@ export class Product extends PosModel {
         }
         return this.pos.units_by_id[unit_id];
     }
-    async _onScaleNotAvailable() {}
+    async _onScaleNotAvailable() { }
     get isScaleAvailable() {
         return true;
     }
@@ -274,8 +274,8 @@ export class Product extends PosModel {
         const categories = this.parent_category_ids.concat(this.categ.id);
         return (
             (!item.categ_id || categories.includes(item.categ_id[0])) &&
-            (!item.date_start || deserializeDate(item.date_start, {zone: "utc"}) <= date) &&
-            (!item.date_end || deserializeDate(item.date_end, {zone: "utc"}) >= date)
+            (!item.date_start || deserializeDate(item.date_start, { zone: "utc" }) <= date) &&
+            (!item.date_end || deserializeDate(item.date_end, { zone: "utc" }) >= date)
         );
     }
     // Port of _get_product_price on product.pricelist.
@@ -300,7 +300,7 @@ export class Product extends PosModel {
             alert(
                 _t(
                     "An error occurred when loading product prices. " +
-                        "Make sure all pricelists are available in the POS."
+                    "Make sure all pricelists are available in the POS."
                 )
             );
         }
@@ -308,8 +308,8 @@ export class Product extends PosModel {
         const rules = !pricelist
             ? []
             : (this.applicablePricelistItems[pricelist.id] || []).filter((item) =>
-                  this.isPricelistItemUsable(item, date)
-              );
+                this.isPricelistItemUsable(item, date)
+            );
 
         let price = this.lst_price + (price_extra || 0);
         const rule = rules.find((rule) => !rule.min_quantity || quantity >= rule.min_quantity);
@@ -578,8 +578,8 @@ export class Orderline extends PosModel {
             typeof discount === "number"
                 ? discount
                 : isNaN(parseFloat(discount))
-                ? 0
-                : oParseFloat("" + discount);
+                    ? 0
+                    : oParseFloat("" + discount);
         var disc = Math.min(Math.max(parsed_discount || 0, 0), 100);
         this.discount = disc;
         this.discountStr = "" + disc;
@@ -857,8 +857,8 @@ export class Orderline extends PosModel {
         var parsed_price = !isNaN(price)
             ? price
             : isNaN(parseFloat(price))
-            ? 0
-            : oParseFloat("" + price);
+                ? 0
+                : oParseFloat("" + price);
         this.price = round_di(parsed_price || 0, this.pos.dp["Product Price"]);
     }
     get_unit_price() {
@@ -881,7 +881,7 @@ export class Orderline extends PosModel {
         return (
             this.display_discount_policy() === "without_discount" &&
             this.env.utils.roundCurrency(this.get_unit_display_price()) <
-                this.env.utils.roundCurrency(this.get_taxed_lst_unit_price()) &&
+            this.env.utils.roundCurrency(this.get_taxed_lst_unit_price()) &&
             this.get_taxed_lst_unit_price()
         );
     }
@@ -1175,9 +1175,9 @@ export class Orderline extends PosModel {
             ? // free if the discount is 100
             _t("Free")
             : (this.comboLines && this.comboLines.length > 0)
-            ? // empty string if it is a combo parent line
-            ""
-            : this.env.utils.formatCurrency(this.get_display_price(), this.currency);
+                ? // empty string if it is a combo parent line
+                ""
+                : this.env.utils.formatCurrency(this.get_display_price(), this.currency);
     }
     getDisplayData() {
         return {
@@ -1431,7 +1431,7 @@ export class Order extends PosModel {
             for (const line of this.orderlines) {
                 line.comboLines = line.combo_line_ids
                     ?.filter((id) => linesById[id])
-                    .map((id) => linesById[id]); 
+                    .map((id) => linesById[id]);
                 const combo_parent_id = line.combo_parent_id?.[0] || line.combo_parent_id;
                 if (combo_parent_id) {
                     line.comboParent = linesById[combo_parent_id];
@@ -1871,9 +1871,9 @@ export class Order extends PosModel {
         return this.orderlines.length;
     }
     async pay() {
-        if (!this.canPay()) {
-            return;
-        }
+        // if (!this.canPay()) {
+        //     return;
+        // }
         if (
             this.orderlines.some(
                 (line) => line.get_product().tracking !== "none" && !line.has_valid_product_lot()
@@ -1996,7 +1996,7 @@ export class Order extends PosModel {
      */
     calculate_base_amount(tax_ids_array, lines) {
         // Consider price_include taxes use case
-        const has_taxes_included_in_price = tax_ids_array.filter( (tax_id) =>
+        const has_taxes_included_in_price = tax_ids_array.filter((tax_id) =>
             this.pos.taxes_by_id[tax_id].price_include ||
             this.pos.taxes_by_id[tax_id].children_tax_ids.length > 0 &&
             this.pos.taxes_by_id[tax_id].children_tax_ids.every(child_tax => child_tax.price_include)
@@ -2255,7 +2255,7 @@ export class Order extends PosModel {
                     comboParent,
                     comboLine: line.comboLine,
                     attribute_value_ids: line.attribute_value_ids,
-                    extras: {price_type: "manual"},
+                    extras: { price_type: "manual" },
                 }
             );
         }
@@ -2832,8 +2832,8 @@ export class Order extends PosModel {
         if (newPartner) {
             newPartnerFiscalPosition = newPartner.property_account_position_id
                 ? this.pos.fiscal_positions.find(
-                      (position) => position.id === newPartner.property_account_position_id[0]
-                  )
+                    (position) => position.id === newPartner.property_account_position_id[0]
+                )
                 : defaultFiscalPosition;
             newPartnerPricelist =
                 this.pos.pricelists.find(
