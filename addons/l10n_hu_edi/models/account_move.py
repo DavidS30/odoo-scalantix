@@ -11,7 +11,7 @@ from psycopg2.errors import LockNotAvailable
 from odoo import fields, models, api, _
 from odoo.http import request
 from odoo.exceptions import UserError, ValidationError
-from odoo.tools import formatLang, float_round, float_repr, cleanup_xml_node, groupby
+from odoo.tools import formatLang, float_compare, float_is_zero, float_round, float_repr, cleanup_xml_node, groupby
 from odoo.tools.misc import split_every
 from odoo.addons.base_iban.models.res_partner_bank import normalize_iban
 from odoo.addons.l10n_hu_edi.models.l10n_hu_edi_connection import format_bool, L10nHuEdiConnection, L10nHuEdiConnectionError
@@ -124,6 +124,16 @@ class AccountMove(models.Model):
                 raise ValidationError(_('Cannot reset to draft or cancel invoice %s because an electronic document was already sent to NAV!', move.name))
 
     # === Computes === #
+    @api.depends('delivery_date')
+    def _compute_invoice_currency_rate(self):
+        # In Hungary, the currency rate should be based on the delivery date.
+        super()._compute_invoice_currency_rate()
+
+    def _get_invoice_currency_rate_date(self):
+        self.ensure_one()
+        if self.country_code == 'HU' and self.delivery_date:
+            return self.delivery_date
+        return super()._get_invoice_currency_rate_date()
 
     @api.depends('l10n_hu_edi_messages')
     def _compute_message_html(self):
@@ -238,10 +248,7 @@ class AccountMove(models.Model):
             if self.l10n_hu_edi_state in ['confirmed', 'confirmed_warning']:
                 valid_actions.append('request_cancel')
             if not valid_actions:
-                # Placeholder to denote that the invoice was already processed with a NAV flow,
-                # useful e.g. for account_move_send's _need_invoice_document which gets called
-                # at various points in the flow, including after the invoice state has been changed
-                # to a final state.
+                # Placeholder to denote that the invoice was already processed with a NAV flow
                 valid_actions.append(True)
         return valid_actions
 
@@ -258,7 +265,7 @@ class AccountMove(models.Model):
         """ Given base invoices, get all invoices in the chain. """
         chain_invoices = self
         next_invoices = self
-        while (next_invoices := next_invoices.reversal_move_id | next_invoices.debit_note_ids):
+        while (next_invoices := next_invoices.reversal_move_ids | next_invoices.debit_note_ids):
             chain_invoices |= next_invoices
         return chain_invoices
 
@@ -436,7 +443,7 @@ class AccountMove(models.Model):
         }
 
         errors = {
-            check: {
+            f"l10n_hu_edi_{check}": {
                 'message': values['message'],
                 'action_text': values['action_text'],
                 'action': values['records']._get_records_action(name=values['action_text']),
@@ -446,7 +453,7 @@ class AccountMove(models.Model):
         }
 
         if companies_missing_credentials := self.company_id.filtered(lambda c: not c.l10n_hu_edi_server_mode):
-            errors['company_credentials_missing'] = {
+            errors['l10n_hu_edi_company_credentials_missing'] = {
                 'message': _('Please set NAV credentials in the Accounting Settings!'),
                 'action_text': _('Open Accounting Settings'),
                 'action': self.env.ref('account.action_account_config').with_company(companies_missing_credentials[0])._get_action_dict(),
@@ -599,9 +606,9 @@ class AccountMove(models.Model):
         for processing_result in results['processing_results']:
             invoice = self.filtered(lambda m: str(m.l10n_hu_edi_batch_upload_index) == processing_result['index'])
             if not invoice:
-                _logger.error(_('Could not match NAV transaction_code %s, index %s to an invoice in Odoo',
-                                self[0].l10n_hu_edi_transaction_code,
-                                processing_result['index']))
+                _logger.error(_('Could not match NAV transaction_code %(code)s, index %(index)s to an invoice in Odoo',
+                                code=self[0].l10n_hu_edi_transaction_code,
+                                index=processing_result['index']))
                 continue
 
             invoice._l10n_hu_edi_process_query_transaction_result(processing_result, results['annulment_status'])
@@ -888,7 +895,7 @@ class AccountMove(models.Model):
 
                     advance_invoices = line._get_downpayment_lines().mapped('move_id').filtered(lambda m: m.state == 'posted')
                     reconciled_moves = advance_invoices._get_reconciled_amls().move_id
-                    last_reconciled_payment = reconciled_moves.filtered(lambda m: m.payment_id or m.statement_line_id).sorted('date', reverse=True)[:1]
+                    last_reconciled_payment = reconciled_moves.filtered(lambda m: m.origin_payment_id or m.statement_line_id).sorted('date', reverse=True)[:1]
 
                     if last_reconciled_payment:
                         line_values.update({
@@ -899,7 +906,12 @@ class AccountMove(models.Model):
 
             if line.display_type == 'product':
                 vat_tax = line.tax_ids.filtered(lambda t: t.l10n_hu_tax_type)
-                price_unit_signed = sign * line.price_unit
+
+                if line.quantity == 0.0 or line.discount == 100.0:
+                    price_unit_signed = 0.0
+                else:
+                    price_unit_signed = sign * line.price_subtotal / (1 - line.discount / 100) / line.quantity
+
                 price_net_signed = self.currency_id.round(price_unit_signed * line.quantity * (1 - line.discount / 100.0))
                 discount_value_signed = self.currency_id.round(price_unit_signed * line.quantity - price_net_signed)
                 price_total_signed = sign * line.price_total
@@ -947,7 +959,7 @@ class AccountMove(models.Model):
                     'lineGrossAmountNormal': -line.amount_currency,
                     'lineGrossAmountNormalHUF': -amount_huf,
                 })
-
+            line_values['lineDescription'] = line_values['lineDescription'] or line.product_id.display_name
             invoice_values['lines_values'].append(line_values)
 
         is_company_huf = self.company_id.currency_id == currency_huf
@@ -1005,58 +1017,36 @@ class AccountMove(models.Model):
             """ Replace the values of keys_to_invert by their negative. """
             dictionary.update({
                 key: -value
-                for key, value in dictionary.items() if key in keys_to_invert
-            })
-            keys_to_reformat = {f'formatted_{x}': x for x in keys_to_invert}
-            dictionary.update({
-                key: formatLang(self.env, dictionary[keys_to_reformat[key]], currency_obj=self.company_id.currency_id)
-                for key, value in dictionary.items() if key in keys_to_reformat
+                for key, value in dictionary.items()
+                if key in keys_to_invert
             })
 
         self.ensure_one()
-
         tax_totals = self.tax_totals
-        if not isinstance(tax_totals, dict):
+        if not tax_totals:
             return tax_totals
 
-        tax_totals['display_tax_base'] = True
+        fields_to_reverse = (
+            'base_amount_currency', 'base_amount',
+            'display_base_amount_currency', 'display_base_amount',
+            'tax_amount_currency', 'tax_amount',
+            'total_amount_currency', 'total_amount',
+            'cash_rounding_base_amount_currency', 'cash_rounding_base_amount',
+        )
 
-        if 'refund' in self.move_type:
-            invert_dict(tax_totals, ['amount_total', 'amount_untaxed', 'rounding_amount', 'amount_total_rounded'])
-
+        if self.move_type in ('out_refund', 'in_refund'):
+            invert_dict(tax_totals, fields_to_reverse)
             for subtotal in tax_totals['subtotals']:
-                invert_dict(subtotal, ['amount'])
-
-            for tax_list in tax_totals['groups_by_subtotal'].values():
-                for tax in tax_list:
-                    keys_to_invert = ['tax_group_amount', 'tax_group_base_amount', 'tax_group_amount_company_currency', 'tax_group_base_amount_company_currency']
-                    invert_dict(tax, keys_to_invert)
+                invert_dict(subtotal, fields_to_reverse)
+                for tax_group in subtotal['tax_groups']:
+                    invert_dict(tax_group, fields_to_reverse)
 
         currency_huf = self.env.ref('base.HUF')
-        currency_rate = self._l10n_hu_get_currency_rate()
-
         tax_totals['total_vat_amount_in_huf'] = sum(
-            -line.balance if self.company_id.currency_id == currency_huf else currency_huf.round(-line.amount_currency * currency_rate)
-            for line in self.line_ids.filtered(lambda l: l.tax_line_id.l10n_hu_tax_type)
-        )
+            line.balance for line in self.line_ids.filtered(lambda l: l.tax_line_id.l10n_hu_tax_type)
+        ) * (1 if self.is_purchase_document() else -1)
         tax_totals['formatted_total_vat_amount_in_huf'] = formatLang(
             self.env, tax_totals['total_vat_amount_in_huf'], currency_obj=currency_huf
         )
 
         return tax_totals
-
-
-class AccountInvoiceLine(models.Model):
-    _inherit = 'account.move.line'
-
-    @api.depends('move_id.delivery_date')
-    def _compute_currency_rate(self):
-        super()._compute_currency_rate()
-        # In Hungary, the currency rate should be based on the delivery date.
-        for line in self.filtered(lambda l: l.move_id.country_code == 'HU' and l.currency_id):
-            line.currency_rate = self.env['res.currency']._get_conversion_rate(
-                from_currency=line.company_currency_id,
-                to_currency=line.currency_id,
-                company=line.company_id,
-                date=line.move_id.delivery_date or line.move_id.invoice_date or line.move_id.date or fields.Date.context_today(line),
-            )

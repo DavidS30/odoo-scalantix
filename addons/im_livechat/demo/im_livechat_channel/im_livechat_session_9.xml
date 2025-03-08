@@ -12,7 +12,8 @@
         <record id="im_livechat.livechat_channel_session_9_member_admin" model="discuss.channel.member">
             <field name="partner_id" ref="base.partner_admin"/>
             <field name="channel_id" ref="im_livechat.livechat_channel_session_9"/>
-            <field name="is_pinned">False</field>
+            <field name="unpin_dt" eval="DateTime.today()"/>
+            <field name="last_interest_dt" eval="DateTime.today() + relativedelta(months=-1)"/>
         </record>
         <record id="im_livechat.livechat_channel_session_9_guest" model="mail.guest">
             <field name="name">Visitor</field>
@@ -24,6 +25,7 @@
 
         <record id="livechat_channel_session_9_message_1" model="mail.message">
             <field name="author_guest_id" ref="im_livechat.livechat_channel_session_9_guest"/>
+            <field name="author_id"/>
             <field name="record_name">Visitor</field>
             <field name="date" eval="datetime.now() - timedelta(days=1)"/>
             <field name="create_date" eval="datetime.now() - timedelta(days=1)"/>
@@ -47,6 +49,7 @@
         </record>
         <record id="livechat_channel_session_9_message_3" model="mail.message">
             <field name="author_guest_id" ref="im_livechat.livechat_channel_session_9_guest"/>
+            <field name="author_id"/>
             <field name="record_name">Visitor</field>
             <field name="date" eval="datetime.now() - timedelta(days=1, seconds=-25)"/>
             <field name="create_date" eval="datetime.now() - timedelta(days=1, seconds=-25)"/>
@@ -70,6 +73,7 @@
         </record>
         <record id="livechat_channel_session_9_message_5" model="mail.message">
             <field name="author_guest_id" ref="im_livechat.livechat_channel_session_9_guest"/>
+            <field name="author_id"/>
             <field name="record_name">Visitor</field>
             <field name="date" eval="datetime.now() - timedelta(days=1, seconds=-42)"/>
             <field name="create_date" eval="datetime.now() - timedelta(days=1, seconds=-42)"/>
@@ -82,6 +86,7 @@
         </record>
         <record id="livechat_channel_session_9_message_6" model="mail.message">
             <field name="author_guest_id" ref="im_livechat.livechat_channel_session_9_guest"/>
+            <field name="author_id"/>
             <field name="record_name">Visitor</field>
             <field name="date" eval="datetime.now() - timedelta(days=1, seconds=-53)"/>
             <field name="create_date" eval="datetime.now() - timedelta(days=1, seconds=-53)"/>
@@ -96,6 +101,7 @@
             <field name="model">discuss.channel</field>
             <field name="res_id" ref="im_livechat.livechat_channel_session_9"/>
             <field name="author_guest_id" ref="im_livechat.livechat_channel_session_9_guest"/>
+            <field name="author_id"/>
             <field name="subtype_id" ref="mail.mt_note"/>
             <field name="message_type">notification</field>
             <field eval="datetime.now() - timedelta(days=1, seconds=-60)" name="date"/>

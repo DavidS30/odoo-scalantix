@@ -1,5 +1,3 @@
-/* @odoo-module */
-
 import { htmlToTextContentInline } from "@mail/utils/common/format";
 
 import { browser } from "@web/core/browser/browser";
@@ -26,25 +24,28 @@ export class OutOfFocusService {
         this.audio = undefined;
         this.multiTab = services.multi_tab;
         this.notificationService = services.notification;
+        this.closeFuncs = [];
     }
 
-    async notify(message, channel) {
+    async notify(message, thread) {
         const modelsHandleByPush = ["mail.thread", "discuss.channel"];
         if (
-            modelsHandleByPush.includes(message.model) &&
+            modelsHandleByPush.includes(message.thread?.model) &&
             (await this.hasServiceWorkInstalledAndPushSubscriptionActive())
         ) {
             return;
         }
         const author = message.author;
         let notificationTitle;
+        let icon = "/mail/static/src/img/odoobot_transparent.png";
         if (!author) {
             notificationTitle = _t("New message");
         } else {
-            if (channel.channel_type === "channel") {
+            icon = author.avatarUrl;
+            if (message.thread?.channel_type === "channel") {
                 notificationTitle = _t("%(author name)s from %(channel name)s", {
                     "author name": author.name,
-                    "channel name": channel.displayName,
+                    "channel name": message.thread.displayName,
                 });
             } else {
                 notificationTitle = author.name;
@@ -56,8 +57,10 @@ export class OutOfFocusService {
         );
         this.sendNotification({
             message: notificationContent,
+            sound: message.thread?.model === "discuss.channel",
             title: notificationTitle,
             type: "info",
+            icon,
         });
     }
 
@@ -85,22 +88,22 @@ export class OutOfFocusService {
      * @param {string} [param0.type] The type to be passed to the no
      * service when native notifications can't be sent.
      */
-    sendNotification({ message, title, type }) {
+    sendNotification({ message, sound = true, title, type, icon }) {
         if (!this.canSendNativeNotification) {
-            this.sendOdooNotification(message, { title, type });
+            this.sendOdooNotification(message, { sound, title, type });
             return;
         }
         if (!this.multiTab.isOnMainTab()) {
             return;
         }
         try {
-            this.sendNativeNotification(title, message);
+            this.sendNativeNotification(title, message, icon, { sound });
         } catch (error) {
             // Notification without Serviceworker in Chrome Android doesn't works anymore
             // So we fallback to the notification service in this case
             // https://bugs.chromium.org/p/chromium/issues/detail?id=481856
             if (error.message.includes("ServiceWorkerRegistration")) {
-                this.sendOdooNotification(message, { title, type });
+                this.sendOdooNotification(message, { sound, title, type });
             } else {
                 throw error;
             }
@@ -112,24 +115,33 @@ export class OutOfFocusService {
      * @param {Object} options
      */
     async sendOdooNotification(message, options) {
-        this.notificationService.add(message, options);
-        this._playSound();
+        const { sound } = options;
+        delete options.sound;
+        this.closeFuncs.push(this.notificationService.add(message, options));
+        if (this.closeFuncs.length > 3) {
+            this.closeFuncs.shift()();
+        }
+        if (sound) {
+            this._playSound();
+        }
     }
 
     /**
      * @param {string} title
      * @param {string} message
      */
-    sendNativeNotification(title, message) {
+    sendNativeNotification(title, message, icon, { sound = true } = {}) {
         const notification = new Notification(title, {
             body: message,
-            icon: "/mail/static/src/img/odoobot_transparent.png",
+            icon,
         });
         notification.addEventListener("click", ({ target: notification }) => {
             window.focus();
             notification.close();
         });
-        this._playSound();
+        if (sound) {
+            this._playSound();
+        }
     }
 
     async _playSound() {

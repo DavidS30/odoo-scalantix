@@ -2,6 +2,7 @@
 import importlib
 import io
 import re
+import unicodedata
 import sys
 from datetime import datetime
 from hashlib import md5
@@ -14,6 +15,7 @@ from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
+from odoo.tools.arabic_reshaper import reshape
 from odoo.tools.parse_version import parse_version
 from odoo.tools.misc import file_open
 
@@ -22,6 +24,24 @@ try:
     from fontTools.ttLib import TTFont
 except ImportError:
     TTFont = None
+
+# ----------------------------------------------------------
+# PyPDF2 hack
+# ensure that zlib does not throw error -5 when decompressing
+# because some pdf won't fit into allocated memory
+# https://docs.python.org/3/library/zlib.html#zlib.decompressobj
+# ----------------------------------------------------------
+try:
+    import zlib
+
+    def _decompress(data):
+        zobj = zlib.decompressobj()
+        return zobj.decompress(data)
+
+    import PyPDF2.filters  # needed after PyPDF2 2.0.0 and before 2.11.0
+    PyPDF2.filters.decompress = _decompress
+except ImportError:
+    pass  # no fix required
 
 
 # might be a good case for exception groups
@@ -38,7 +58,7 @@ else:
     raise ImportError("pypdf implementation not found") from error
 del error
 
-PdfReader, PdfWriter, filters, generic, errors, create_string_object =\
+PdfReaderBase, PdfWriter, filters, generic, errors, create_string_object =\
     pypdf.PdfReader, pypdf.PdfWriter, pypdf.filters, pypdf.generic, pypdf.errors, pypdf.create_string_object
 # because they got re-exported
 ArrayObject, BooleanObject, ByteStringObject, DecodedStreamObject, DictionaryObject, IndirectObject, NameObject, NumberObject =\
@@ -59,18 +79,17 @@ pypdf.filters.decompress = lambda data: decompressobj().decompress(data)
 
 
 # monkey patch to discard unused arguments as the old arguments were not discarded in the transitional class
+# This keep the old default value of the `strict` argument
+# https://github.com/py-pdf/pypdf/blob/1.26.0/PyPDF2/pdf.py#L1061
 # https://pypdf2.readthedocs.io/en/2.0.0/_modules/PyPDF2/_reader.html#PdfReader
-class PdfFileReader(PdfReader):
-    def __init__(self, *args, **kwargs):
-        if "strict" not in kwargs and len(args) < 2:
-            kwargs["strict"] = True  # maintain the default
-        kwargs = {k: v for k, v in kwargs.items() if k in ('strict', 'stream')}
-        super().__init__(*args, **kwargs)
+class PdfReader(PdfReaderBase):
+    def __init__(self, stream, strict=True, *args, **kwargs):
+        super().__init__(stream, strict)
 
 
-if 'PyPDF2' in sys.modules:
-    pypdf.PdfFileReader = PdfFileReader
-    pypdf.PdfFileWriter = PdfWriter
+# Ensure that PdfFileReader and PdfFileWriter are available in case it's still used somewhere
+PdfFileReader = pypdf.PdfFileReader = PdfReader
+pypdf.PdfFileWriter = PdfWriter
 
 _logger = getLogger(__name__)
 DEFAULT_PDF_DATETIME_FORMAT = "D:%Y%m%d%H%M%S+00'00'"
@@ -174,13 +193,6 @@ def fill_form_fields_pdf(writer, form_fields):
                     _logger.info("Fields couldn't be filled in this page.")
                     continue
 
-        for raw_annot in page.get('/Annots', []):
-            annot = raw_annot.getObject()
-            for field in form_fields:
-                # Mark filled fields as readonly to avoid the blue overlay:
-                if annot.get('/T') == field:
-                    annot.update({NameObject("/Ff"): NumberObject(1)})
-
 
 def rotate_pdf(pdf):
     ''' Rotate clockwise PDF (90°) into a new PDF.
@@ -232,6 +244,7 @@ def add_banner(pdf_stream, text=None, logo=False, thickness=2 * cm):
         width = float(abs(page.mediaBox.getWidth()))
         height = float(abs(page.mediaBox.getHeight()))
 
+        can.setPageSize((width, height))
         can.translate(width, height)
         can.rotate(-45)
 
@@ -271,6 +284,38 @@ def add_banner(pdf_stream, text=None, logo=False, thickness=2 * cm):
     new_pdf.write(output)
 
     return output
+
+
+def reshape_text(text):
+    """
+    Display the text based on his first character unicode name to choose Right-to-left or Left-to-right
+    This is just a hotfix to make things work
+    In the future the clean way be to use arabic-reshaper and python3-bidi libraries
+
+
+    Here we want to check the text is in a right-to-left language and if then, flip before returning it.
+    Depending on the language, the type should be Left-to-Right, Right-to-Left, or Right-to-Left Arabic
+    (Refer to this https://www.unicode.org/reports/tr9/#Bidirectional_Character_Types)
+    The base module ```unicodedata``` with his function ```bidirectional(str)``` helps us by taking a character in
+    argument and returns his type:
+    - 'L' for Left-to-Right character
+    - 'R' or 'AL' for Right-to-Left character
+
+    So we have to check if the first character of the text is of type 'R' or 'AL', and check that there is no
+    character in the rest of the text that is of type 'L'. Based on that we can confirm we have a fully Right-to-Left language,
+    then we can flip the text before returning it.
+    """
+    if not text:
+        return ''
+    maybe_rtl_letter = text.lstrip()[:1] or ' '
+    maybe_ltr_text = text[1:]
+    first_letter_is_rtl = unicodedata.bidirectional(maybe_rtl_letter) in ('AL', 'R')
+    no_letter_is_ltr = not any(unicodedata.bidirectional(letter) == 'L' for letter in maybe_ltr_text)
+    if first_letter_is_rtl and no_letter_is_ltr:
+        text = reshape(text)
+        text = text[::-1]
+
+    return text
 
 
 class OdooPdfFileReader(PdfFileReader):
@@ -419,7 +464,7 @@ class OdooPdfFileWriter(PdfFileWriter):
         # bytes, each of whose encoded byte values shall have a decimal value greater than 127 "
         self._header = b"%PDF-1.7\n"
         if submod == '._pypdf2_1':
-            self._header += b"\xDE\xAD\xBE\xEF"
+            self._header += b"%\xDE\xAD\xBE\xEF"
 
         # Add a document ID to the trailer. This is only needed when using encryption with regular PDF, but is required
         # when using PDF/A

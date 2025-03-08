@@ -25,17 +25,15 @@ class AccountMove(models.Model):
         return self.line_ids.filtered(lambda l: l.display_type != 'cogs')
 
     def copy_data(self, default=None):
-        # OVERRIDE
         # Don't keep anglo-saxon lines when copying a journal entry.
-        res = super().copy_data(default=default)
+        vals_list = super().copy_data(default=default)
 
         if not self._context.get('move_reverse_cancel'):
-            for copy_vals in res:
-                if 'line_ids' in copy_vals:
-                    copy_vals['line_ids'] = [line_vals for line_vals in copy_vals['line_ids']
+            for vals in vals_list:
+                if 'line_ids' in vals:
+                    vals['line_ids'] = [line_vals for line_vals in vals['line_ids']
                                              if line_vals[0] != 0 or line_vals[2].get('display_type') != 'cogs']
-
-        return res
+        return vals_list
 
     def _post(self, soft=True):
         # OVERRIDE
@@ -163,6 +161,7 @@ class AccountMove(models.Model):
                     'price_unit': -price_unit,
                     'amount_currency': amount_currency,
                     'account_id': credit_expense_account.id,
+                    'analytic_distribution': line.analytic_distribution,
                     'display_type': 'cogs',
                     'tax_ids': [],
                     'cogs_origin_id': line.id,
@@ -228,8 +227,12 @@ class AccountMove(models.Model):
                     )
                     invoice_aml = product_account_moves.filtered(lambda aml: aml not in correction_amls and aml.move_id == move)
                     stock_aml = product_account_moves - correction_amls - invoice_aml
-                    # Reconcile.
-                    if correction_amls:
+
+                    # Reconcile:
+                    # In case there is a move with correcting lines that has not been posted
+                    # (e.g., it's dated for some time in the future) we should defer any
+                    # reconciliation with exchange difference.
+                    if correction_amls or 'draft' in move.line_ids.sudo().stock_valuation_layer_ids.account_move_id.mapped('state'):
                         if sum(correction_amls.mapped('balance')) > 0 or all(aml.is_same_currency for aml in correction_amls):
                             no_exchange_reconcile_plan += [product_account_moves]
                         else:
@@ -260,20 +263,19 @@ class AccountMoveLine(models.Model):
     def _compute_account_id(self):
         super()._compute_account_id()
         input_lines = self.filtered(lambda line: (
-            line._can_use_stock_accounts()
+            line._eligible_for_cogs()
             and line.move_id.company_id.anglo_saxon_accounting
             and line.move_id.is_purchase_document()
         ))
         for line in input_lines:
-            line = line.with_company(line.move_id.journal_id.company_id)
             fiscal_position = line.move_id.fiscal_position_id
-            accounts = line.product_id.product_tmpl_id.get_product_accounts(fiscal_pos=fiscal_position)
+            accounts = line.with_company(line.company_id).product_id.product_tmpl_id.get_product_accounts(fiscal_pos=fiscal_position)
             if accounts['stock_input']:
                 line.account_id = accounts['stock_input']
 
     def _eligible_for_cogs(self):
         self.ensure_one()
-        return self.product_id.type == 'product' and self.product_id.valuation == 'real_time'
+        return self.product_id.is_storable and self.product_id.valuation == 'real_time'
 
     def _get_gross_unit_price(self):
         if float_is_zero(self.quantity, precision_rounding=self.product_uom_id.rounding):
@@ -293,9 +295,6 @@ class AccountMoveLine(models.Model):
 
     def _get_valued_in_moves(self):
         return self.env['stock.move']
-
-    def _can_use_stock_accounts(self):
-        return self.product_id.type == 'product' and self.product_id.categ_id.property_valuation == 'real_time'
 
     def _stock_account_get_anglo_saxon_price_unit(self):
         self.ensure_one()

@@ -6,7 +6,7 @@ from markupsafe import Markup
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from odoo.osv.expression import AND
-from odoo.tools.float_utils import float_is_zero
+from odoo.tools import float_is_zero, format_list
 
 class StockPickingBatch(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -17,6 +17,7 @@ class StockPickingBatch(models.Model):
     name = fields.Char(
         string='Batch Transfer', default='New',
         copy=False, required=True, readonly=True)
+    description = fields.Char('Description')
     user_id = fields.Many2one(
         'res.users', string='Responsible', tracking=True, check_company=True)
     company_id = fields.Many2one(
@@ -37,7 +38,7 @@ class StockPickingBatch(models.Model):
         'stock.move', string="Stock moves", compute='_compute_move_ids')
     move_line_ids = fields.One2many(
         'stock.move.line', string='Stock move lines',
-        compute='_compute_move_line_ids', inverse='_set_move_line_ids')
+        compute='_compute_move_line_ids', inverse='_set_move_line_ids', search='_search_move_line_ids')
     state = fields.Selection([
         ('draft', 'Draft'),
         ('in_progress', 'In progress'),
@@ -48,6 +49,8 @@ class StockPickingBatch(models.Model):
     picking_type_id = fields.Many2one(
         'stock.picking.type', 'Operation Type', check_company=True, copy=False,
         index=True)
+    warehouse_id = fields.Many2one(
+        'stock.warehouse', related='picking_type_id.warehouse_id')
     picking_type_code = fields.Selection(
         related='picking_type_id.code')
     scheduled_date = fields.Datetime(
@@ -57,20 +60,43 @@ class StockPickingBatch(models.Model):
               - If not manually changed and transfers are added/removed/updated then this will be their earliest scheduled date
                 but this scheduled date will not be set for all transfers in batch.""")
     is_wave = fields.Boolean('This batch is a wave')
-    # To remove in master
-    show_set_qty_button = fields.Boolean(compute='_compute_show_qty_button')
-    show_clear_qty_button = fields.Boolean(compute='_compute_show_qty_button')
     show_lots_text = fields.Boolean(compute='_compute_show_lots_text')
+    estimated_shipping_weight = fields.Float(
+        "shipping_weight", compute='_compute_estimated_shipping_capacity', digits='Product Unit of Measure')
+    estimated_shipping_volume = fields.Float(
+        "shipping_volume", compute='_compute_estimated_shipping_capacity', digits='Product Unit of Measure')
+    properties = fields.Properties('Properties', definition='picking_type_id.batch_properties_definition', copy=True)
 
-    @api.depends()
-    def _compute_show_qty_button(self):
-        self.show_set_qty_button = False
-        self.show_clear_qty_button = False
+    @api.depends('description')
+    @api.depends_context('add_to_existing_batch')
+    def _compute_display_name(self):
+        if not self.env.context.get('add_to_existing_batch'):
+            return super()._compute_display_name()
+        for batch in self:
+            batch.display_name = f"{batch.name}: {batch.description}" if batch.description else batch.name
 
     @api.depends('picking_type_id')
     def _compute_show_lots_text(self):
         for batch in self:
             batch.show_lots_text = batch.picking_ids and batch.picking_ids[0].show_lots_text
+
+    def _compute_estimated_shipping_capacity(self):
+        for batch in self:
+            estimated_shipping_weight = 0
+            estimated_shipping_volume = 0
+            # packs
+            for pack in self.move_line_ids.result_package_id:
+                p_type = pack.package_type_id
+                estimated_shipping_weight += pack.shipping_weight
+                if p_type:
+                    estimated_shipping_weight += p_type.base_weight or 0
+                    estimated_shipping_volume += (p_type.packaging_length * p_type.width * p_type.height) / 1000.0**3
+            # move without packs
+            for move in self.picking_ids.move_ids_without_package:
+                estimated_shipping_weight += move.product_id.weight * move.product_qty
+                estimated_shipping_volume += move.product_id.volume * move.product_qty
+            batch.estimated_shipping_weight = estimated_shipping_weight
+            batch.estimated_shipping_volume = estimated_shipping_volume
 
     @api.depends('company_id', 'picking_type_id', 'state')
     def _compute_allowed_picking_ids(self):
@@ -100,10 +126,13 @@ class StockPickingBatch(models.Model):
         for batch in self:
             batch.move_line_ids = batch.picking_ids.move_line_ids
 
+    def _search_move_line_ids(self, operator, value):
+        return [('picking_ids.move_line_ids',operator,value)]
+
     @api.depends('state', 'move_ids', 'picking_type_id')
     def _compute_show_allocation(self):
         self.show_allocation = False
-        if not self.user_has_groups('stock.group_reception_report'):
+        if not self.env.user.has_group('stock.group_reception_report'):
             return
         for batch in self:
             batch.show_allocation = batch.picking_ids._get_show_allocation(batch.picking_type_id)
@@ -165,7 +194,7 @@ class StockPickingBatch(models.Model):
             if batch_without_picking_type:
                 picking = self.picking_ids and self.picking_ids[0]
                 batch_without_picking_type.picking_type_id = picking.picking_type_id.id
-        if vals.get('user_id'):
+        if 'user_id' in vals:
             self.picking_ids.assign_batch_user(vals['user_id'])
         return res
 
@@ -210,10 +239,18 @@ class StockPickingBatch(models.Model):
         empty_waiting_pickings = self.mapped('picking_ids').filtered(lambda p: (p.state in ('waiting', 'confirmed') and has_no_quantity(p)) or (p.state == 'assigned' and is_empty(p)))
         pickings = pickings - empty_waiting_pickings
 
-        empty_pickings = set()
+        empty_pickings = pickings.filtered(has_no_quantity)
+
+        # Run sanity_check as a batch and ignore the one in button_validate() since it is done here.
+        pickings._sanity_check(separate_pickings=False)
+        # Skip sanity_check in pickings button_validate() & remove 'waiting' pickings from the batch
+        context = {'skip_sanity_check': True, 'pickings_to_detach': empty_waiting_pickings.ids}
+        if len(empty_pickings) != len(pickings):
+            # If some pickings are at least partially done, other pickings (empty & waiting) will be removed from batch without being cancelled in case of no backorder
+            pickings = pickings - empty_pickings
+            context['pickings_to_detach'] = context['pickings_to_detach'] + empty_pickings.ids
+
         for picking in pickings:
-            if has_no_quantity(picking):
-                empty_pickings.add(picking.id)
             picking.message_post(
                 body=Markup("<b>%s:</b> %s <a href=#id=%s&view_type=form&model=stock.picking.batch>%s</a>") % (
                     _("Transferred by"),
@@ -221,17 +258,7 @@ class StockPickingBatch(models.Model):
                     picking.batch_id.id,
                     picking.batch_id.name))
 
-        # Run sanity_check as a batch and ignore the one in button_validate() since it is done here.
-        pickings._sanity_check(separate_pickings=False)
-        # Skip sanity_check in pickings button_validate() & remove 'waiting' pickings from the batch
-        context = {'skip_sanity_check': True, 'pickings_to_detach': empty_waiting_pickings.ids}
-        if len(empty_pickings) == len(pickings):
-            return pickings.with_context(**context).button_validate()
-        else:
-            # If some pickings are at least partially done, other pickings (empty & waiting) will be removed from batch without being cancelled in case of no backorder
-            pickings = pickings - self.env['stock.picking'].browse(empty_pickings)
-            context['pickings_to_detach'] = context['pickings_to_detach'] + list(empty_pickings)
-            return pickings.with_context(skip_immediate=True, **context).button_validate()
+        return pickings.with_context(**context).button_validate()
 
     def action_assign(self):
         self.ensure_one()
@@ -258,7 +285,7 @@ class StockPickingBatch(models.Model):
         return action
 
     def action_open_label_layout(self):
-        if self.user_has_groups('stock.group_production_lot') and self.move_line_ids.lot_id:
+        if self.env.user.has_group('stock.group_production_lot') and self.move_line_ids.lot_id:
             view = self.env.ref('stock.picking_label_type_form')
             return {
                 'name': _('Choose Type of Labels To Print'),
@@ -291,9 +318,11 @@ class StockPickingBatch(models.Model):
             if not batch.picking_ids <= batch.allowed_picking_ids:
                 erroneous_pickings = batch.picking_ids - batch.allowed_picking_ids
                 raise UserError(_(
-                    "The following transfers cannot be added to batch transfer %s. "
+                    "The following transfers cannot be added to batch transfer %(batch)s. "
                     "Please check their states and operation types.\n\n"
-                    "Incompatibilities: %s", batch.name, ', '.join(erroneous_pickings.mapped('name'))))
+                    "Incompatibilities: %(incompatible_transfers)s",
+                    batch=batch.name,
+                    incompatible_transfers=format_list(self.env, erroneous_pickings.mapped('name'))))
 
     def _track_subtype(self, init_values):
         if 'state' in init_values:
@@ -308,4 +337,29 @@ class StockPickingBatch(models.Model):
             res = res and (len(self.move_ids) + len(picking.move_ids) <= self.picking_type_id.batch_max_lines)
         if self.picking_type_id.batch_max_pickings:
             res = res and (len(self.picking_ids) + 1 <= self.picking_type_id.batch_max_pickings)
+        return res
+
+    def _is_line_auto_mergeable(self, num_of_moves=False, num_of_pickings=False, weight=False):
+        """ Verifies if a line can be safely inserted into the wave without violating auto_batch_constrains.
+        """
+        self.ensure_one()
+        res = True
+        if num_of_moves:
+            res = res and self._are_moves_auto_mergeable(num_of_moves)
+        if num_of_pickings:
+            res = res and self._are_pickings_auto_mergeable(num_of_pickings)
+        return res
+
+    def _are_moves_auto_mergeable(self, num_of_moves):
+        self.ensure_one()
+        res = True
+        if self.picking_type_id.batch_max_lines:
+            res = res and (len(self.move_ids) + num_of_moves <= self.picking_type_id.batch_max_lines)
+        return res
+
+    def _are_pickings_auto_mergeable(self, num_of_pickings):
+        self.ensure_one()
+        res = True
+        if self.picking_type_id.batch_max_pickings:
+            res = res and (len(self.picking_ids) + num_of_pickings <= self.picking_type_id.batch_max_pickings)
         return res

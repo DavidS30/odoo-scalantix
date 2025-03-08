@@ -60,11 +60,15 @@ const GalleryWidget = publicWidget.Widget.extend({
         };
 
         const milliseconds = this.el.dataset.interval || false;
-        this.$modal = $(renderToElement('website.gallery.slideshow.lightbox', {
+        const lightboxTemplate = this.$target[0].dataset.vcss === "002" ?
+            "website.gallery.s_image_gallery_mirror.lightbox" :
+            "website.gallery.slideshow.lightbox";
+        this.$modal = $(renderToElement(lightboxTemplate, {
             images: imageEls,
             index: currentImageIndex,
             dim: dimensions,
             interval: milliseconds || 0,
+            ride: !milliseconds ? "false" : "carousel",
             id: uniqueId("slideshow_"),
         }));
         this.__onModalKeydown = this._onModalKeydown.bind(this);
@@ -160,6 +164,9 @@ const GallerySliderWidget = publicWidget.Widget.extend({
         this.$carousel.on('slide.bs.carousel.gallery_slider', function () {
             setTimeout(function () {
                 var $item = self.$carousel.find('.carousel-inner .carousel-item-prev, .carousel-inner .carousel-item-next');
+                if (!$item.length) {
+                    return;
+                }
                 var index = $item.index();
                 $lis.removeClass('active')
                     .filter('[data-bs-slide-to="' + index + '"]')

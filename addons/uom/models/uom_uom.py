@@ -83,7 +83,7 @@ class UoM(models.Model):
     ]
 
     def _check_category_reference_uniqueness(self):
-        categ_res = self.read_group(
+        categ_res = self.with_context(active_test=False).read_group(
             [("category_id", "in", self.category_id.ids)],
             ["category_id", "uom_type"],
             ["category_id", "uom_type"],
@@ -223,8 +223,8 @@ class UoM(models.Model):
         if self != to_unit and self.category_id.id != to_unit.category_id.id:
             if raise_if_failure:
                 raise UserError(_(
-                    'The unit of measure %s defined on the order line doesn\'t belong to the same category as the unit of measure %s defined on the product. Please correct the unit of measure defined on the order line or on the product, they should belong to the same category.',
-                    self.name, to_unit.name))
+                    'The unit of measure %(unit)s defined on the order line doesn\'t belong to the same category as the unit of measure %(product_unit)s defined on the product. Please correct the unit of measure defined on the order line or on the product. They should belong to the same category.',
+                    unit=self.name, product_unit=to_unit.name))
             else:
                 return qty
 

@@ -10,8 +10,9 @@ from odoo.addons.l10n_fr_facturx_chorus_pro.models.account_edi_xml_ubl_bis3 impo
 class TestChorusProXml(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref='fr'):
-        super().setUpClass(chart_template_ref=chart_template_ref)
+    @AccountTestInvoicingCommon.setup_country('fr')
+    def setUpClass(cls):
+        super().setUpClass()
         cls.company = cls.company_data['company']
         cls.company.siret = "02546465000024"
         chorus_eas, chorus_endpoint = CHORUS_PRO_PEPPOL_ID.split(":")

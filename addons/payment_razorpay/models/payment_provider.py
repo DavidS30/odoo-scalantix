@@ -6,7 +6,6 @@ import logging
 import pprint
 
 import requests
-from werkzeug.urls import url_join
 
 from odoo import _, fields, models
 from odoo.exceptions import ValidationError
@@ -50,7 +49,7 @@ class PaymentProvider(models.Model):
             'support_tokenization': True,
         })
 
-    # === BUSINESS METHODS ===#
+    # === BUSINESS METHODS - PAYMENT FLOW === #
 
     def _get_supported_currencies(self):
         """ Override of `payment` to return the supported currencies. """
@@ -75,13 +74,30 @@ class PaymentProvider(models.Model):
         """
         self.ensure_one()
 
-        url = url_join('https://api.razorpay.com/v1/', endpoint)
-        auth = (self.razorpay_key_id, self.razorpay_key_secret)
+        # TODO: Make api_version a kwarg in master.
+        api_version = self.env.context.get('razorpay_api_version', 'v1')
+        url = f'https://api.razorpay.com/{api_version}/{endpoint}'
+        headers = None
+        if access_token := self._razorpay_get_access_token():
+            headers = {'Authorization': f'Bearer {access_token}'}
+        auth = (self.razorpay_key_id, self.razorpay_key_secret) if self.razorpay_key_id else None
         try:
             if method == 'GET':
-                response = requests.get(url, params=payload, auth=auth, timeout=10)
+                response = requests.get(
+                    url,
+                    params=payload,
+                    headers=headers,
+                    auth=auth,
+                    timeout=10,
+                )
             else:
-                response = requests.post(url, json=payload, auth=auth, timeout=10)
+                response = requests.post(
+                    url,
+                    json=payload,
+                    headers=headers,
+                    auth=auth,
+                    timeout=10,
+                )
             try:
                 response.raise_for_status()
             except requests.exceptions.HTTPError:
@@ -99,34 +115,27 @@ class PaymentProvider(models.Model):
             )
         return response.json()
 
-    def _razorpay_calculate_signature(self, data, is_redirect=True):
+    def _razorpay_calculate_signature(self, data):
         """ Compute the signature for the request's data according to the Razorpay documentation.
 
-        See https://razorpay.com/docs/webhooks/validate-test#validate-webhooks and
-        https://razorpay.com/docs/payments/payment-gateway/web-integration/hosted/build-integration.
+        See https://razorpay.com/docs/webhooks/validate-test#validate-webhooks.
 
-        :param dict|bytes data: The data to sign.
-        :param bool is_redirect: Whether the data should be treated as redirect data or as coming
-                                 from a webhook notification.
+        :param bytes data: The data to sign.
         :return: The calculated signature.
         :rtype: str
         """
-        if is_redirect:
-            secret = self.razorpay_key_secret
-            signing_string = f'{data["razorpay_order_id"]}|{data["razorpay_payment_id"]}'
-            return hmac.new(
-                secret.encode(), msg=signing_string.encode(), digestmod=hashlib.sha256
-            ).hexdigest()
-        else:  # Notification data.
-            secret = self.razorpay_webhook_secret
-            return hmac.new(secret.encode(), msg=data, digestmod=hashlib.sha256).hexdigest()
+        secret = self.razorpay_webhook_secret
+        if not secret:
+            _logger.warning("Missing webhook secret; aborting signature calculation.")
+            return None
+        return hmac.new(secret.encode(), msg=data, digestmod=hashlib.sha256).hexdigest()
 
     def _get_default_payment_method_codes(self):
         """ Override of `payment` to return the default payment method codes. """
         default_codes = super()._get_default_payment_method_codes()
         if self.code != 'razorpay':
             return default_codes
-        return const.DEFAULT_PAYMENT_METHODS_CODES
+        return const.DEFAULT_PAYMENT_METHOD_CODES
 
     def _get_validation_amount(self):
         """ Override of `payment` to return the amount for Razorpay validation operations.
@@ -139,3 +148,13 @@ class PaymentProvider(models.Model):
             return res
 
         return 1.0
+
+    # === BUSINESS METHODS - OAUTH === #
+
+    def _razorpay_get_public_token(self):  # TODO: remove in master
+        self.ensure_one()
+        return None
+
+    def _razorpay_get_access_token(self):  # TODO: remove in master
+        self.ensure_one()
+        return None

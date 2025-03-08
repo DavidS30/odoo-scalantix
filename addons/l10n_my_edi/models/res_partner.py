@@ -40,6 +40,7 @@ class ResPartner(models.Model):
         help="The identification type and number used by the MyTax/MyInvois system to identify the user.\nNote: For MyPR and MyKAS to use NRIC scheme",
     )
     l10n_my_identification_number = fields.Char(string="ID Number")
+    l10n_my_identification_number_placeholder = fields.Char(compute="_compute_l10n_my_identification_number_placeholder")
 
     # --------------------------------
     # Compute, inverse, search methods
@@ -53,11 +54,29 @@ class ResPartner(models.Model):
     @api.depends_context('company', 'l10n_my_identification_number')
     def _compute_l10n_my_edi_display_tin_warning(self):
         """ We want to display the tin warning for companies registered to use MyInvois. """
-        proxy_user = self.env.company.l10n_my_edi_proxy_user_id
+        # We need to sudo here, as all users having access to partners may not have the rights to access the proxy users.
+        proxy_user = self.env.company.sudo().l10n_my_edi_proxy_user_id
         is_edi_used = proxy_user and proxy_user.proxy_type == 'l10n_my_edi'
         for partner in self:
             # Users with no business number can't be validated using the api
             partner.l10n_my_edi_display_tin_warning = is_edi_used and partner.l10n_my_identification_number
+
+    @api.depends('l10n_my_identification_type')
+    def _compute_l10n_my_identification_number_placeholder(self):
+        """ Computes a dynamic placeholder that depends on the selected type to help the user inputs their data.
+        The placeholders have been taken from the MyInvois doc.
+        """
+        for partner in self:
+            placeholder = 'N/A'
+            if partner.l10n_my_identification_type == 'NRIC':
+                placeholder = '830503-11-4923'
+            elif partner.l10n_my_identification_type == 'BRN':
+                placeholder = '202201234565'
+            elif partner.l10n_my_identification_type == 'PASSPORT':
+                placeholder = 'A00000000'
+            elif partner.l10n_my_identification_type == 'ARMY':
+                placeholder = '830805-13-4983'
+            partner.l10n_my_identification_number_placeholder = placeholder
 
     # --------------
     # Action methods
@@ -66,16 +85,17 @@ class ResPartner(models.Model):
     def action_validate_tin(self):
         """ Calling this action will reach our EDI proxy in order to validate the TIN against the provided identification information. """
         self.ensure_one()
-        if not self.vat or not self.l10n_my_identification_type or not self.l10n_my_identification_number:
+        if not self._l10n_my_edi_get_tin_for_myinvois() or not self.l10n_my_identification_type or not self.l10n_my_identification_number:
             raise UserError(_('In order to validate the TIN, you must provide the Identification type and number.'))
 
-        proxy_user = self.env.company.l10n_my_edi_proxy_user_id
+        # Sudo to allow a user without access to the proxy user to validate the ID if needed.
+        proxy_user = self.env.company.sudo().l10n_my_edi_proxy_user_id
         if not proxy_user:
             raise UserError(_("Please register for the E-Invoicing service in the settings first."))
 
         response = proxy_user._l10n_my_edi_contact_proxy('api/l10n_my_edi/1/validate_tin', params={
             'identification_values': {
-                'tin': self.vat,
+                'tin': self._l10n_my_edi_get_tin_for_myinvois(),
                 'id_type': self.l10n_my_identification_type,
                 'id_val': self.l10n_my_identification_number,
             }
@@ -85,9 +105,18 @@ class ResPartner(models.Model):
             ref = response['error']['reference']
             # No need to rollback, we don't want to be blocking on that.
             if ref == 'document_tin_not_found':
-                self._message_log(body=_('MyInvois was not able to match the TIN with the provided identification number.'))
+                self._message_log(body=_('MyInvois was not able to match the TIN with the provided identification number.\nThis may happen when using generic TIN and will not prevent you from invoicing.'))
                 self.l10n_my_tin_validation_state = 'invalid'
             else:
                 self._message_log(body=_('An unexpected error occurred while validating the TIN. Please try again later.'))
         else:
             self.l10n_my_tin_validation_state = 'valid' if response.get('success') else 'invalid'
+
+    def _l10n_my_edi_get_tin_for_myinvois(self):
+        """ Helper to return the VAT number relevant to the situation. """
+        self.ensure_one()
+        return self.vat
+
+    @api.model
+    def _commercial_fields(self):
+        return super()._commercial_fields() + ['l10n_my_identification_type', 'l10n_my_identification_number']

@@ -8,7 +8,7 @@ class AccountAccount(models.Model):
     def write(self, vals):
         if (
             'code' in vals
-            and 'DE' in self.company_id.account_fiscal_country_id.mapped('code')
+            and 'DE' in self.company_ids.account_fiscal_country_id.mapped('code')
             and any(a.code != vals['code'] for a in self)
         ):
             if self.env['account.move.line'].search_count([('account_id', 'in', self.ids)], limit=1):

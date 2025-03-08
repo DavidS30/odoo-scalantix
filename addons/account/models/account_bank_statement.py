@@ -35,7 +35,7 @@ class AccountBankStatement(models.Model):
     # keeping this order is important because the validity of the statements are based on their order
     first_line_index = fields.Char(
         comodel_name='account.bank.statement.line',
-        compute='_compute_date_index', store=True, index=True,
+        compute='_compute_date_index', store=True,
     )
 
     balance_start = fields.Monetary(
@@ -74,7 +74,6 @@ class AccountBankStatement(models.Model):
         comodel_name='account.bank.statement.line',
         inverse_name='statement_id',
         string='Statement lines',
-        required=True,
     )
 
     # A statement assumed to be complete when the sum of encoded lines is equal to the difference between start and
@@ -109,6 +108,12 @@ class AccountBankStatement(models.Model):
                      indexname='account_bank_statement_journal_id_date_desc_id_desc_idx',
                      tablename='account_bank_statement',
                      expressions=['journal_id', 'date DESC', 'id DESC'])
+        create_index(
+            self.env.cr,
+            indexname='account_bank_statement_first_line_index_idx',
+            tablename='account_bank_statement',
+            expressions=['journal_id', 'first_line_index'],
+        )
 
     # -------------------------------------------------------------------------
     # COMPUTE METHODS
@@ -117,12 +122,16 @@ class AccountBankStatement(models.Model):
     @api.depends('create_date')
     def _compute_name(self):
         for stmt in self:
-            stmt.name = _("%s Statement %s", stmt.journal_id.code, stmt.date)
+            name = ''
+            if stmt.journal_id:
+                name = stmt.journal_id.code + ' '
+            stmt.name = name +_("Statement %(date)s", date=stmt.date or fields.Date.to_date(stmt.create_date))
 
     @api.depends('line_ids.internal_index', 'line_ids.state')
     def _compute_date_index(self):
         for stmt in self:
-            sorted_lines = stmt.line_ids.sorted('internal_index')
+            # When we create lines manually from the form view, they don't have any `internal_index` set yet.
+            sorted_lines = stmt.line_ids.filtered("internal_index").sorted('internal_index')
             stmt.first_line_index = sorted_lines[:1].internal_index
             stmt.date = sorted_lines.filtered(lambda l: l.state == 'posted')[-1:].date
 
@@ -302,15 +311,17 @@ class AccountBankStatement(models.Model):
             lines = self.env['account.bank.statement.line'].browse(active_ids).sorted()
             if len(lines.journal_id) > 1:
                 raise UserError(_("A statement should only contain lines from the same journal."))
-            # Check that the selected lines are contiguous
+            # Check that the selected lines are contiguous (there might be canceled lines between the indexes and these should be ignored from the check)
             indexes = lines.mapped('internal_index')
-            count_lines_between = self.env['account.bank.statement.line'].search_count([
+            lines_between = self.env['account.bank.statement.line'].search([
                 ('internal_index', '>=', min(indexes)),
                 ('internal_index', '<=', max(indexes)),
                 ('journal_id', '=', lines.journal_id.id),
             ])
-            if len(lines) != count_lines_between:
+            canceled_lines = lines_between.filtered(lambda l: l.state == 'cancel')
+            if len(lines) != len(lines_between - canceled_lines):
                 raise UserError(_("Unable to create a statement due to missing transactions. You may want to reorder the transactions before proceeding."))
+            lines |= canceled_lines
 
         if lines:
             defaults['line_ids'] = [Command.set(lines.ids)]

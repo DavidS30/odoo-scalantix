@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import re
@@ -20,12 +19,12 @@ class WebsiteRoute(models.Model):
     path = fields.Char('Route')
 
     @api.model
-    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
-        query = super()._name_search(name, domain, operator, limit, order)
-        if not query:
+    def _search_display_name(self, operator, value):
+        # in case we don't have results, refresh before returning the domain
+        domain = super()._search_display_name(operator, value)
+        if not self.search_count(domain, limit=1):
             self._refresh()
-            return super()._name_search(name, domain, operator, limit, order)
-        return query
+        return domain
 
     def _refresh(self):
         _logger.debug("Refreshing website.route")
@@ -97,6 +96,18 @@ class WebsiteRewrite(models.Model):
                 for param in re.findall('/<.*?>', rewrite.url_to):
                     if param not in rewrite.url_from:
                         raise ValidationError(_('"URL to" cannot contain parameter %s which is not used in "URL from".', param))
+
+                if rewrite.url_to == '/':
+                    raise ValidationError(_('"URL to" cannot be set to "/". To change the homepage content, use the "Homepage URL" field in the website settings or the page properties on any custom page.'))
+
+                if any(
+                    rule for rule in self.env['ir.http'].routing_map().iter_rules()
+                    # Odoo routes are normally always defined without trailing
+                    # slashes + strict_slashes=False, but there are exceptions.
+                    if rule.rule.rstrip('/') == rewrite.url_to.rstrip('/')
+                ):
+                    raise ValidationError(_('"URL to" cannot be set to an existing page.'))
+
                 try:
                     converters = self.env['ir.http']._get_converters()
                     routing_map = werkzeug.routing.Map(strict_slashes=False, converters=converters)

@@ -106,7 +106,7 @@ class TestSaleCouponMultiCompany(TestSaleCouponCommon):
                 })
             ],
             'company_id': branch_a.id,
-            'partner_id': self.steve.id
+            'partner_id': self.partner.id
             }
         )
 

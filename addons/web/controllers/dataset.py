@@ -2,11 +2,12 @@
 
 import logging
 import warnings
+from werkzeug.exceptions import NotFound
 
 from odoo import http
 from odoo.api import call_kw
 from odoo.http import request
-from odoo.models import check_method_name
+from odoo.service.model import get_public_method
 from .utils import clean_action
 
 
@@ -15,17 +16,30 @@ _logger = logging.getLogger(__name__)
 
 class DataSet(http.Controller):
 
-    def _call_kw(self, model, method, args, kwargs):
-        check_method_name(method)
+    def _call_kw_readonly(self):
+        params = request.get_json_data()['params']
+        try:
+            model_class = request.registry[params['model']]
+        except KeyError as e:
+            raise NotFound() from e
+        method_name = params['method']
+        for cls in model_class.mro():
+            method = getattr(cls, method_name, None)
+            if method is not None and hasattr(method, '_readonly'):
+                return method._readonly
+        return False
+
+    @http.route(['/web/dataset/call_kw', '/web/dataset/call_kw/<path:path>'], type='json', auth="user", readonly=_call_kw_readonly)
+    def call_kw(self, model, method, args, kwargs, path=None):
+        Model = request.env[model]
+        get_public_method(Model, method)
         return call_kw(request.env[model], method, args, kwargs)
 
-    @http.route(['/web/dataset/call_kw', '/web/dataset/call_kw/<path:path>'], type='json', auth="user")
-    def call_kw(self, model, method, args, kwargs, path=None):
-        return self._call_kw(model, method, args, kwargs)
-
-    @http.route('/web/dataset/call_button', type='json', auth="user")
-    def call_button(self, model, method, args, kwargs):
-        action = self._call_kw(model, method, args, kwargs)
+    @http.route(['/web/dataset/call_button', '/web/dataset/call_button/<path:path>'], type='json', auth="user", readonly=_call_kw_readonly)
+    def call_button(self, model, method, args, kwargs, path=None):
+        Model = request.env[model]
+        get_public_method(Model, method)
+        action = call_kw(request.env[model], method, args, kwargs)
         if isinstance(action, dict) and action.get('type') != '':
             return clean_action(action, env=request.env)
         return False

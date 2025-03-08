@@ -5,6 +5,7 @@ import json
 import logging
 import lxml
 import os
+import pathlib
 import requests
 import sys
 import zipfile
@@ -20,7 +21,6 @@ from odoo.osv.expression import is_leaf
 from odoo.release import major_version
 from odoo.tools import convert_csv_import, convert_sql_import, convert_xml_import, exception_to_unicode
 from odoo.tools import file_open, file_open_temporary_directory, ormcache
-from odoo.tools.translate import get_po_paths_env, TranslationImporter
 
 _logger = logging.getLogger(__name__)
 
@@ -112,6 +112,11 @@ class IrModule(models.Model):
             mod = self.create(dict(name=module, state='installed', imported=True, **values))
             mode = 'init'
 
+        exclude_list = set()
+        base_dir = pathlib.Path(path)
+        for pattern in terp.get('cloc_exclude', []):
+            exclude_list.update(str(p.relative_to(base_dir)) for p in base_dir.glob(pattern) if p.is_file())
+
         kind_of_files = ['data', 'init_xml', 'update_xml']
         if with_demo:
             kind_of_files.append('demo')
@@ -134,6 +139,18 @@ class IrModule(models.Model):
                         convert_sql_import(self.env, fp)
                     elif ext == '.xml':
                         convert_xml_import(self.env, module, fp, idref, mode, noupdate)
+                        if filename in exclude_list:
+                            for key, value in idref.items():
+                                xml_id = f"{module}.{key}" if '.' not in key else key
+                                name = xml_id.replace('.', '_')
+                                if self.env.ref(f"__cloc_exclude__.{name}", raise_if_not_found=False):
+                                    continue
+                                self.env['ir.model.data'].create([{
+                                    'name': name,
+                                    'model': self.env['ir.model.data']._xmlid_lookup(xml_id)[0],
+                                    'module': "__cloc_exclude__",
+                                    'res_id': value,
+                                }])
 
         path_static = opj(path, 'static')
         IrAttachment = self.env['ir.attachment']
@@ -169,6 +186,13 @@ class IrModule(models.Model):
                             'module': module,
                             'res_id': attachment.id,
                         })
+                        if str(pathlib.Path(full_path).relative_to(base_dir)) in exclude_list:
+                            self.env['ir.model.data'].create({
+                                'name': f"cloc_exclude_attachment_{url_path}".replace('.', '_').replace(' ', '_'),
+                                'model': 'ir.attachment',
+                                'module': "__cloc_exclude__",
+                                'res_id': attachment.id,
+                            })
 
         IrAsset = self.env['ir.asset']
         assets_vals = []
@@ -209,16 +233,20 @@ class IrModule(models.Model):
             'res_id': asset.id,
         } for asset in created_assets])
 
-        translation_importer = TranslationImporter(self.env.cr, verbose=False)
-        for lang_ in self.env['res.lang'].get_installed():
-            lang = lang_[0]
-            is_lang_imported = False
-            for po_path in get_po_paths_env(module, lang, env=self.env):
-                translation_importer.load_file(po_path, lang)
-                is_lang_imported = True
-            if lang != 'en_US' and not is_lang_imported:
-                _logger.info('module %s: no translation for language %s', module, lang)
-        translation_importer.save(overwrite=True)
+        self.env['ir.module.module']._load_module_terms(
+            [module],
+            [lang for lang, _name in self.env['res.lang'].get_installed()],
+            overwrite=True,
+            imported_module=True,
+        )
+
+        if ('knowledge.article' in self.env
+            and (article_record := self.env.ref(f"{module}.welcome_article", raise_if_not_found=False))
+            and article_record._name == 'knowledge.article'
+            and self.env.ref(f"{module}.welcome_article_body", raise_if_not_found=False)
+        ):
+            body = self.env['ir.qweb']._render(f"{module}.welcome_article_body", lang=self.env.user.lang)
+            article_record.write({'body': body})
 
         mod._update_from_terp(terp)
         _logger.info("Successfully imported module '%s'", module)
@@ -338,7 +366,7 @@ class IrModule(models.Model):
     def web_read(self, specification):
         fields = list(specification.keys())
         module_type = self.env.context.get('module_type', 'official')
-        if module_type != 'official':
+        if module_type == 'industries':
             modules_list = self._get_modules_from_apps(fields, module_type, self.env.context.get('module_name'))
             return modules_list
         else:
@@ -441,7 +469,7 @@ class IrModule(models.Model):
         except requests.exceptions.HTTPError:
             raise UserError(_('The module %s cannot be downloaded') % module_name)
         except requests.exceptions.ConnectionError:
-            raise UserError(_('Connection to %s failed, the module %s cannot be downloaded.', APPS_URL, module_name))
+            raise UserError(_('Connection to %(url)s failed, the module %(module)s cannot be downloaded.', url=APPS_URL, module=module_name))
 
     @api.model
     def _get_missing_dependencies(self, zip_data):

@@ -1,5 +1,3 @@
-/* @odoo-module */
-
 import { Record } from "@mail/core/common/record";
 
 import { _t } from "@web/core/l10n/translation";
@@ -32,11 +30,11 @@ export class Notification extends Record {
         inverse: "notifications",
         /** @this {import("models").Notification} */
         compute() {
-            const thread = this.message?.originThread;
-            if (!this.message?.author?.eq(this._store.self)) {
+            const thread = this.message?.thread;
+            if (!this.message?.isSelfAuthored) {
                 return;
             }
-            const failure = Object.values(this._store.Failure.records).find((f) => {
+            const failure = Object.values(this.store.Failure.records).find((f) => {
                 return (
                     f.resModel === thread?.model &&
                     f.type === this.notification_type &&
@@ -45,8 +43,7 @@ export class Notification extends Record {
             });
             return this.isFailure
                 ? {
-                      id: failure ? failure.id : this._store.Failure.nextId.value++,
-                      resId: thread?.id,
+                      id: failure ? failure.id : this.store.Failure.nextId.value++,
                   }
                 : false;
         },
@@ -106,7 +103,7 @@ export class Notification extends Record {
             case "ready":
                 return _t("Ready");
             case "canceled":
-                return _t("Canceled");
+                return _t("Cancelled");
         }
         return "";
     }

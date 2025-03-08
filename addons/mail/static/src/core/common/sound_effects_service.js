@@ -1,7 +1,6 @@
-/* @odoo-module */
-
 import { browser } from "@web/core/browser/browser";
 import { registry } from "@web/core/registry";
+import { url } from "@web/core/utils/urls";
 
 export class SoundEffects {
     /**
@@ -16,9 +15,9 @@ export class SoundEffects {
             "member-leave": { defaultVolume: 0.5, path: "/mail/static/src/audio/channel_01_out" },
             mute: { defaultVolume: 0.2, path: "/mail/static/src/audio/mute_1" },
             "new-message": { path: "/mail/static/src/audio/dm_02" },
-            "push-to-talk-on": { defaultVolume: 0.05, path: "/mail/static/src/audio/ptt_push_1" },
+            "push-to-talk-on": { defaultVolume: 0.02, path: "/mail/static/src/audio/ptt_push_1" },
             "push-to-talk-off": {
-                defaultVolume: 0.05,
+                defaultVolume: 0.02,
                 path: "/mail/static/src/audio/ptt_release_1",
             },
             "screen-sharing": { defaultVolume: 0.5, path: "/mail/static/src/audio/share_02" },
@@ -45,7 +44,7 @@ export class SoundEffects {
         if (!soundEffect.audio) {
             const audio = new browser.Audio();
             const ext = audio.canPlayType("audio/ogg; codecs=vorbis") ? ".ogg" : ".mp3";
-            audio.src = soundEffect.path + ext;
+            audio.src = url(soundEffect.path + ext);
             soundEffect.audio = audio;
         }
         if (!soundEffect.audio.paused) {

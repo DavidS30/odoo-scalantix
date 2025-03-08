@@ -25,7 +25,7 @@ class StockMove(models.Model):
 
     @api.model
     def _prepare_merge_negative_moves_excluded_distinct_fields(self):
-        excluded_fields = super()._prepare_merge_negative_moves_excluded_distinct_fields() + ['created_purchase_line_id']
+        excluded_fields = super()._prepare_merge_negative_moves_excluded_distinct_fields() + ['created_purchase_line_ids']
         if self.env['ir.config_parameter'].sudo().get_param('purchase_stock.merge_different_procurement'):
             excluded_fields += ['procure_method']
         return excluded_fields
@@ -55,9 +55,11 @@ class StockMove(models.Model):
             invoiced_layer = line.sudo().invoice_lines.stock_valuation_layer_ids
             # value on valuation layer is in company's currency, while value on invoice line is in order's currency
             receipt_value = 0
-            if move_layer:
-                receipt_value += sum(move_layer.mapped(lambda l: l.currency_id._convert(
-                    l.value, order.currency_id, order.company_id, l.create_date, round=False)))
+            for layer in move_layer:
+                if not layer._should_impact_price_unit_receipt_value():
+                    continue
+                receipt_value += layer.currency_id._convert(
+                    layer.value, order.currency_id, order.company_id, layer.create_date, round=False)
             if invoiced_layer:
                 receipt_value += sum(invoiced_layer.mapped(lambda l: l.currency_id._convert(
                     l.value, order.currency_id, order.company_id, l.create_date, round=False)))
@@ -69,8 +71,12 @@ class StockMove(models.Model):
                 # Adjust unit price to account for discounts before adding taxes.
                 adjusted_unit_price = invoice_line.price_unit * (1 - (invoice_line.discount / 100)) if invoice_line.discount else invoice_line.price_unit
                 if invoice_line.tax_ids:
-                    invoice_line_value = invoice_line.tax_ids.with_context(round=False).compute_all(
-                        adjusted_unit_price, currency=invoice_line.currency_id, quantity=invoice_line.quantity)['total_void']
+                    invoice_line_value = invoice_line.tax_ids.compute_all(
+                        adjusted_unit_price,
+                        currency=invoice_line.currency_id,
+                        quantity=invoice_line.quantity,
+                        rounding_method="round_globally",
+                    )['total_void']
                 else:
                     invoice_line_value = adjusted_unit_price * invoice_line.quantity
                 total_invoiced_value += invoice_line.currency_id._convert(
@@ -94,9 +100,15 @@ class StockMove(models.Model):
             # in assigned state. However, the move date is the scheduled date until move is
             # done, then date of actual move processing. See:
             # https://github.com/odoo/odoo/blob/2f789b6863407e63f90b3a2d4cc3be09815f7002/addons/stock/models/stock_move.py#L36
+            convert_date = fields.Date.context_today(self)
+            # use currency rate at bill date when invoice before receipt
+            if float_compare(line.qty_invoiced, received_qty, precision_rounding=line.product_uom.rounding) > 0:
+                convert_date = max(line.sudo().invoice_lines.move_id.filtered(lambda m: m.state == 'posted').mapped('invoice_date'), default=convert_date)
             price_unit = order.currency_id._convert(
-                price_unit, order.company_id.currency_id, order.company_id, fields.Date.context_today(self), round=False)
-        return price_unit
+                price_unit, order.company_id.currency_id, order.company_id, convert_date, round=False)
+        if self.product_id.lot_valuated:
+            return dict.fromkeys(self.lot_ids, price_unit)
+        return {self.env['stock.lot']: price_unit}
 
     def _generate_valuation_lines_data(self, partner_id, qty, debit_value, credit_value, debit_account_id, credit_account_id, svl_id, description):
         """ Overridden from stock_account to support amount_currency on valuation lines generated from po
@@ -196,12 +208,6 @@ class StockMove(models.Model):
 
         return am_vals_list
 
-    def _prepare_extra_move_vals(self, qty):
-        vals = super(StockMove, self)._prepare_extra_move_vals(qty)
-        vals['purchase_line_id'] = self.purchase_line_id.id
-        vals['created_purchase_line_ids'] = [Command.set(self.created_purchase_line_ids.ids)]
-        return vals
-
     def _prepare_move_split_vals(self, uom_qty):
         vals = super(StockMove, self)._prepare_move_split_vals(uom_qty)
         vals['purchase_line_id'] = self.purchase_line_id.id
@@ -255,7 +261,7 @@ class StockMove(models.Model):
 
     def _is_purchase_return(self):
         self.ensure_one()
-        return self.location_dest_id.usage == "supplier" or self.location_dest_id == self.env.ref('stock.stock_location_inter_wh', raise_if_not_found=False)
+        return self.location_dest_id.usage == "supplier" or (self.origin_returned_move_id and self.location_dest_id == self.env.ref('stock.stock_location_inter_company', raise_if_not_found=False))
 
     def _get_all_related_aml(self):
         # The back and for between account_move and account_move_line is necessary to catch the

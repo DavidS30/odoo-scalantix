@@ -31,9 +31,9 @@ export class MassMailingWysiwyg extends Wysiwyg {
         super.toggleLinkTools({
             ...options,
             // Always open the dialog when the sidebar is folded.
-            forceDialog: options.forceDialog || this.snippetsMenu.folded
+            forceDialog: options.forceDialog || this.state.snippetsMenuFolded,
         });
-        if (this.snippetsMenu.folded) {
+        if (this.state.snippetsMenuFolded) {
             // Hide toolbar and avoid it being re-displayed after getDeepRange.
             this.odooEditor.document.getSelection().collapseToEnd();
         }
@@ -46,7 +46,7 @@ export class MassMailingWysiwyg extends Wysiwyg {
      * @param {Boolean} fold
      */
     setSnippetsMenuFolded(fold = true) {
-        this.snippetsMenu.setFolded(fold);
+        this.state.snippetsMenuFolded = fold;
         this.toolbarEl = fold ? this.mainToolbarEl : this.snippetsMenuToolbarEl;
         // At startup, the `SnippetMenu` set its toolbar before the
         // `mainToolbarEl` had the chance to be configured. So we configure it
@@ -68,6 +68,53 @@ export class MassMailingWysiwyg extends Wysiwyg {
         this.odooEditor.autohideToolbar = !!fold;
         this.odooEditor.toolbarHide();
         this.mainToolbarEl.classList.toggle('d-none', !fold);
+        // Update the toolbar props as some elements might now need to be
+        // visible.
+        this._setToolbarProps();
+    }
+
+    /**
+     * Add or remove a class on the iframe body depending on the snippets menu
+     * folding state, in order to add/remove enough blank space for it.
+     *
+     * @override
+     */
+    handleSnippetsDisplay() {
+        super.handleSnippetsDisplay();
+        const iframe = this.$iframe?.[0];
+        if (!iframe || !iframe.isConnected) {
+            return;
+        }
+        const body = iframe.contentWindow.document.body;
+        body.classList.toggle(
+            "o_mass_mailing_iframe_body_with_snippets_sidebar",
+            this.state.showSnippetsMenu && !this.state.snippetsMenuFolded
+        );
+    }
+
+    /**
+     * Apply style changes necessary to display the wysiwyg in fullscreen.
+     * The scrolling element used when dragging snippets must be changed
+     * because the form view scrollbar should not be used in fullscreen.
+     *
+     * @override
+     * @param {Boolean} isFullscreen
+     */
+    onToggleFullscreen(isFullscreen) {
+        super.onToggleFullscreen(isFullscreen);
+        const iframe = this.$iframe?.[0];
+        if (iframe && iframe.isConnected) {
+            iframe.parentElement.classList.toggle(
+                "o_mass_mailing_iframe_ancestor_fullscreen",
+                isFullscreen
+            );
+            const body = iframe.contentWindow.document.body;
+            const scrollingElement = isFullscreen ? body : iframe;
+            body.classList.toggle("o_mass_mailing_iframe_body_fullscreen", isFullscreen);
+            this.snippetsMenuBus.trigger("UPDATE_SCROLLING_ELEMENT", {
+                scrollingElement,
+            });
+        }
     }
 
     /**
@@ -77,7 +124,7 @@ export class MassMailingWysiwyg extends Wysiwyg {
         super.openMediaDialog(...arguments);
         // Opening the dialog in the outer document does not trigger the selectionChange
         // (that would normally hide the toolbar) in the iframe.
-        if (this.snippetsMenu.folded) {
+        if (this.state.snippetsMenuFolded) {
             this.odooEditor.toolbarHide();
         }
     }
@@ -89,13 +136,20 @@ export class MassMailingWysiwyg extends Wysiwyg {
     /**
      * @override
      */
-    async _createSnippetsMenuInstance(options={}) {
-        await loadBundle('web_editor.assets_legacy_wysiwyg');
-        const { MassMailingSnippetsMenu }  = await odoo.loader.modules.get('@mass_mailing/js/snippets.editor');
-        return new MassMailingSnippetsMenu(this, Object.assign({
-            wysiwyg: this,
-            selectorEditableArea: '.o_editable',
-        }, options));
+    async getSnippetsMenuClass() {
+        await loadBundle('mass_mailing.assets_snippets_menu');
+        const { MassMailingSnippetsMenu } = await odoo.loader.modules.get('@mass_mailing/js/snippets.editor');
+        return MassMailingSnippetsMenu;
+    }
+    /**
+     * @override
+     */
+    async _insertSnippetMenu() {
+        const res = await super._insertSnippetMenu();
+        // Hide the snippetsMenu at first, other code will handle
+        // if it should be shown or not.
+        this.state.snippetsMenuFolded = true;
+        return res;
     }
     /**
      * @override
@@ -122,6 +176,14 @@ export class MassMailingWysiwyg extends Wysiwyg {
     /**
      * @override
      */
+    _loadIframe() {
+        const promise = super._loadIframe();
+        this.$iframe[0].setAttribute("scrolling", "no");
+        return promise;
+    }
+    /**
+     * @override
+     */
      _updateEditorUI(e) {
         super._updateEditorUI(...arguments);
         // Hide the create-link button if the selection is within a
@@ -140,7 +202,7 @@ export class MassMailingWysiwyg extends Wysiwyg {
      */
     _getEditorOptions() {
         const options = super._getEditorOptions(...arguments);
-        const finalOptions = { autoActivateContentEditable: false, ...options };
+        const finalOptions = { ...options, autoActivateContentEditable: false, allowCommandVideo: false };
         return finalOptions;
     }
 }

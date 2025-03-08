@@ -10,7 +10,6 @@ import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_d
 
 import { Component, markup, useState } from "@odoo/owl";
 
-const waitTime = 60000;
 
 class PeppolSettingsButtons extends Component {
     static props = {
@@ -22,8 +21,11 @@ class PeppolSettingsButtons extends Component {
         super.setup();
         this.dialogService = useService("dialog");
         this.notification = useService("notification");
+        // we have to pass this via context from python
+        // because the wizard has to be reopened whenever a button is clicked
         this.state = useState({
-            isSmsButtonDisabled: false,
+            isSmsButtonDisabled: this.props.record.context.disable_sms_verification || false,  // TODO remove in master
+            isSettingsView: this.props.record.resModel === 'res.config.settings',
         });
     }
 
@@ -32,50 +34,46 @@ class PeppolSettingsButtons extends Component {
     }
 
     get migrationPrepared() {
-        return this.props.record.data.account_peppol_proxy_state === "active" && Boolean(this.props.record.data.account_peppol_migration_key);
+        return this.props.record.data.account_peppol_proxy_state === "receiver" && Boolean(this.props.record.data.account_peppol_migration_key);
     }
 
     get ediMode() {
-        return this.props.record.data.account_peppol_edi_mode;
+        return this.props.record.data.edi_mode || this.props.record.data.account_peppol_edi_mode;
     }
 
     get modeConstraint() {
-        return this.props.record.data.account_peppol_mode_constraint;
+        return this.props.record.data.mode_constraint;
     }
 
-    get createUserButtonLabel() {
+    get smpRegistration() {
+        return this.props.record.data.smp_registration;
+    }
+
+    get createButtonLabel() {
         const modes = {
-            demo: _t("Validate registration (Demo)"),
-            test: _t("Validate registration (Test)"),
-            prod: _t("Validate registration"),
+            demo: _t("Activate Peppol (Demo)"),
+            test: _t("Activate Peppol (Test)"),
+            prod: _t("Activate Peppol"),
         }
-        return modes[this.ediMode] || _t("Validate registration");
+        return modes[this.ediMode];
     }
 
     get deregisterUserButtonLabel() {
-        const modes = {
-            demo: _t("Switch to Live"),
+        if (['not_registered', 'in_verification'].includes(this.proxyState)) {
+            return _t("Discard");
         }
-        return this.modeConstraint !== "demo" && modes[this.ediMode] || _t("Deregister from Peppol");
+        return _t("Remove from Peppol");
     }
 
-    async _callConfigMethod(methodName, save = false) {
-        if (save) {
-            await this._save();
-        }
+    async _callConfigMethod(methodName) {
         this.env.onClickViewButton({
             clickParams: {
                 name: methodName,
                 type: "object",
-                noSaveDialog: true,
             },
             getResParams: () =>
                 pick(this.env.model.root, "context", "evalContext", "resModel", "resId", "resIds"),
         });
-    }
-
-    async _save () {
-        this.env.model.root.save({ reload: false });
     }
 
     showConfirmation(warning, methodName) {
@@ -93,18 +91,10 @@ class PeppolSettingsButtons extends Component {
         });
     }
 
-    migrate() {
-        this.showConfirmation(
-            "This will migrate your Peppol registration away from Odoo. A migration key will be generated. \
-            If the other service does not support migration, consider deregistering instead.",
-            "button_migrate_peppol_registration"
-        )
-    }
-
     deregister() {
-        if (this.ediMode === 'demo') {
+        if (this.ediMode === 'demo' || !['sender', 'smp_registration', 'receiver'].includes(this.proxyState)) {
             this._callConfigMethod("button_deregister_peppol_participant");
-        } else {
+        } else if (['sender', 'smp_registration', 'receiver'].includes(this.proxyState)) {
             this.showConfirmation(
                 "This will delete your Peppol registration.",
                 "button_deregister_peppol_participant"
@@ -126,18 +116,15 @@ class PeppolSettingsButtons extends Component {
     async checkCode() {
         // avoid making users click save on the settings
         // and then clicking the confirm button to check the code
-        await this._callConfigMethod("button_check_peppol_verification_code", true);
+        await this._callConfigMethod("button_peppol_sender_registration");
     }
 
     async sendCode() {
-        this.state.isSmsButtonDisabled = true;
-        // don't allow spamming the button
-        setTimeout(() => this.state.isSmsButtonDisabled = false, waitTime);
-        await this._callConfigMethod("button_send_peppol_verification_code", true);
+        await this._callConfigMethod("button_send_peppol_verification_code");
     }
 
-    async createUser() {
-        await this._callConfigMethod("button_create_peppol_proxy_user", true);
+    async createReceiver() {
+        await this._callConfigMethod("button_peppol_smp_registration");
     }
 }
 

@@ -4,12 +4,12 @@
 import ast
 import base64
 import datetime
-import logging
+import json
 
-from odoo import _, api, fields, models, tools, Command
+from odoo import _, api, fields, models, Command, tools
 from odoo.exceptions import UserError, ValidationError
 from odoo.osv import expression
-from odoo.tools import is_html_empty
+from odoo.tools.mail import is_html_empty, email_normalize, email_split_and_format
 from odoo.addons.mail.tools.parser import parse_res_ids
 
 
@@ -184,6 +184,8 @@ class MailComposer(models.TransientModel):
              "In mass mail mode: if sent, send emails after that date. "
              "This date is considered as being in UTC timezone.")
     use_exclusion_list = fields.Boolean('Check Exclusion List', default=True)
+    # template generation
+    template_name = fields.Char('Template Name')
 
     @api.constrains('res_ids')
     def _check_res_ids(self):
@@ -325,8 +327,11 @@ class MailComposer(models.TransientModel):
                 composer.email_from = self.env.user.email_formatted
             # removing template or void from -> fallback on current user as default
             elif not composer.template_id or not composer.email_from:
-                composer.email_from = self.env.user.email_formatted
-                updated_author_id = self.env.user.partner_id.id
+                if self.env.context.get('default_email_from'):
+                    composer.email_from = self.env.context['default_email_from']
+                else:
+                    composer.email_from = self.env.user.email_formatted
+                    updated_author_id = self.env.user.partner_id.id
 
             # Update author. When being in rendered mode: link with rendered
             # email_from or fallback on current user if email does not match.
@@ -390,7 +395,7 @@ class MailComposer(models.TransientModel):
             if composer.parent_id and composer.composition_mode == 'comment':
                 composer.res_ids = f"{[composer.parent_id.res_id]}"
             else:
-                active_res_ids = parse_res_ids(self.env.context.get('active_ids'))
+                active_res_ids = parse_res_ids(self.env.context.get('active_ids'), self.env)
                 # beware, field is limited in storage, usage of active_ids in context still required
                 if active_res_ids and len(active_res_ids) <= 500:
                     composer.res_ids = f"{self.env.context['active_ids']}"
@@ -653,6 +658,32 @@ class MailComposer(models.TransientModel):
     # ACTIONS
     # ------------------------------------------------------------
 
+    def action_schedule_message(self, scheduled_date=False):
+        # currently only allowed in mono-comment mode
+        if any(wizard.composition_mode != 'comment' or wizard.composition_batch for wizard in self):
+            raise UserError(_("A message can only be scheduled in monocomment mode"))
+        create_values = []
+        for wizard in self:
+            res_id = wizard._evaluate_res_ids()[0]
+            post_values = self._prepare_mail_values([res_id])[res_id]
+            post_scheduled_date = post_values.pop('scheduled_date')
+            create_values.append({
+                'attachment_ids': post_values.pop('attachment_ids'),
+                'author_id': post_values.pop('author_id'),
+                'body': post_values.pop('body'),
+                'is_note': wizard.subtype_is_log,
+                'model': wizard.model,
+                'partner_ids': post_values.pop('partner_ids'),
+                'res_id': res_id,
+                'scheduled_date': scheduled_date or post_scheduled_date,
+                'subject': post_values.pop('subject'),
+                'notification_parameters': json.dumps(post_values),  # last to not include popped post_values
+            })
+
+        self.env['mail.scheduled.message'].create(create_values)
+
+        return {'type': 'ir.actions.act_window_close'}
+
     def action_send_mail(self):
         """ Used for action button that do not accept arguments. """
         self._action_send_mail(auto_commit=False)
@@ -765,15 +796,13 @@ class MailComposer(models.TransientModel):
             `create_mail_template` is called when saving the new wizard. """
 
         self.ensure_one()
-        saved_subject = self.subject
-        self.subject = False
         return {
             'type': 'ir.actions.act_window',
             'view_mode': 'form',
             'view_id': self.env.ref('mail.mail_compose_message_view_form_template_save').id,
-            'name': _('Create a new Mail Template'),
+            'name': _('Create a Mail Template'),
             'res_model': 'mail.compose.message',
-            'context': {'dialog_size': 'medium', 'mail_composer_saved_subject': saved_subject},
+            'context': {'dialog_size': 'medium'},
             'target': 'new',
             'res_id': self.id,
         }
@@ -785,7 +814,7 @@ class MailComposer(models.TransientModel):
             raise UserError(_('Template creation from composer requires a valid model.'))
         model_id = self.env['ir.model']._get_id(self.model)
         values = {
-            'name': self.subject,
+            'name': self.template_name or self.subject,
             'subject': self.subject,
             'body_html': self.body,
             'model_id': model_id,
@@ -809,7 +838,6 @@ class MailComposer(models.TransientModel):
         """ Restore old subject when canceling the 'save as template' action
             as it was erased to let user give a more custom input. """
         self.ensure_one()
-        self.subject = self.env.context.get('mail_composer_saved_subject')
         return _reopen(self, self.id, self.model, context={**self.env.context, 'dialog_size': 'large'})
 
     # ------------------------------------------------------------
@@ -886,6 +914,17 @@ class MailComposer(models.TransientModel):
 
         if email_mode:
             mail_values_all = self._process_mail_values_state(mail_values_all)
+            # based on previous values, compute message ID / references
+            for res_id, mail_values in mail_values_all.items():
+                # generate message_id directly; instead of letting mail_message create
+                # method doing it. Then use it to craft references, allowing to keep
+                # a trace of message_id even when email providers override it.
+                # Note that if 'auto_delete' is set and if 'auto_delete_keep_log' is False,
+                # mail.message is removed and parent finding based on messageID
+                # may be broken, tough life
+                message_id = self.env['mail.message']._get_message_id(mail_values)
+                mail_values['message_id'] = message_id
+                mail_values['references'] = message_id
         return mail_values_all
 
     def _prepare_mail_values_static(self):
@@ -1005,13 +1044,14 @@ class MailComposer(models.TransientModel):
         if self.template_id:
             template_values = self._generate_template_for_composer(
                 res_ids,
-                ('attachment_ids',
+                ['attachment_ids',
                  'email_to',
                  'email_cc',
                  'partner_ids',
                  'report_template_ids',
                  'scheduled_date',
-                )
+                ],
+                find_or_create_partners=self.env.context.get("mail_composer_force_partners", True),
             )
             for res_id in res_ids:
                 # remove attachments from template values as they should not be rendered
@@ -1043,10 +1083,7 @@ class MailComposer(models.TransientModel):
 
             # attachments. Copy attachment_ids (each has its own copies), and decode
             # attachments as required by _process_attachments_for_post
-            attachment_ids = [
-                attachment.copy({'res_model': self._name, 'res_id': self.id}).id
-                for attachment in self.attachment_ids
-            ]
+            attachment_ids = self.attachment_ids.copy({'res_model': self._name, 'res_id': self.id}).ids
             attachment_ids.reverse()
             decoded_attachments = [
                 (name, base64.b64decode(enc_cont))
@@ -1186,14 +1223,6 @@ class MailComposer(models.TransientModel):
 
         for record_id, mail_values in mail_values_dict.items():
             recipients = recipients_info[record_id]
-            # when having more than 1 recipient: we cannot really decide when a single
-            # email is linked to several to -> skip that part. Mass mailing should
-            # anyway always have a single recipient per record as this is default behavior.
-            if len(recipients['mail_to']) > 1:
-                continue
-
-            mail_to = recipients['mail_to'][0] if recipients['mail_to'] else ''
-            mail_to_normalized = recipients['mail_to_normalized'][0] if recipients['mail_to_normalized'] else ''
 
             # prevent sending to blocked addresses that were included by mistake
             # blacklisted or optout or duplicate -> cancel
@@ -1202,31 +1231,35 @@ class MailComposer(models.TransientModel):
                 mail_values['failure_type'] = 'mail_bl'
                 # Do not post the mail into the recipient's chatter
                 mail_values['is_notification'] = False
-            elif optout_emails and mail_to in optout_emails:
-                mail_values['state'] = 'cancel'
-                mail_values['failure_type'] = 'mail_optout'
-            elif mail_to in done_emails:
-                mail_values['state'] = 'cancel'
-                mail_values['failure_type'] = 'mail_dup'
-            # void of falsy values -> error
-            elif not mail_to:
+            # void or falsy values -> error
+            elif not any(recipients['mail_to']):
                 mail_values['state'] = 'cancel'
                 mail_values['failure_type'] = 'mail_email_missing'
-            elif not mail_to_normalized:
+            elif not any(recipients['mail_to_normalized']):
                 mail_values['state'] = 'cancel'
                 mail_values['failure_type'] = 'mail_email_invalid'
-            elif mail_to in sent_emails_mapping:
-                # If the number of attachments on the mail exactly matches the number of attachments on the composer
-                # we assume the attachments are copies of the ones attached to the composer and thus are the same
-                if len(self.attachment_ids) == len(mail_values.get('attachment_ids', [])) and\
-                   any(sent_mail.get('subject') == mail_values.get('subject') and
-                       sent_mail.get('body') == mail_values.get('body') for sent_mail in sent_emails_mapping[mail_to]):
-                    mail_values['state'] = 'cancel'
-                    mail_values['failure_type'] = 'mail_dup'
-                else:
-                    sent_emails_mapping[mail_to].append(mail_values)
+            elif optout_emails and all(
+                mail_to in optout_emails for mail_to in recipients['mail_to_normalized']
+            ):
+                mail_values['state'] = 'cancel'
+                mail_values['failure_type'] = 'mail_optout'
+            elif done_emails and all(
+                mail_to in done_emails for mail_to in recipients['mail_to_normalized']
+            ):
+                mail_values['state'] = 'cancel'
+                mail_values['failure_type'] = 'mail_dup'
+            elif (len(self.attachment_ids) == len(mail_values.get('attachment_ids', []))
+                  and all(mail_to in sent_emails_mapping
+                          for mail_to in recipients['mail_to_normalized'])
+                  and any(sent_mail.get('subject') == mail_values.get('subject')
+                          and sent_mail.get('body') == mail_values.get('body')
+                          for mail_to in recipients['mail_to_normalized']
+                          for sent_mail in sent_emails_mapping[mail_to])):
+                mail_values['state'] = 'cancel'
+                mail_values['failure_type'] = 'mail_dup'
             else:
-                sent_emails_mapping[mail_to] = [mail_values]
+                for mail_to in recipients['mail_to_normalized']:
+                    sent_emails_mapping.setdefault(mail_to, []).append(mail_values)
 
         done_emails += sent_emails_mapping.keys()
 
@@ -1332,7 +1365,7 @@ class MailComposer(models.TransientModel):
         for record_id, mail_values in mail_values_dict.items():
             # add email from email_to; if unrecognized email in email_to keep
             # it as used for further processing
-            mail_to = tools.email_split_and_format(mail_values.get('email_to'))
+            mail_to = email_split_and_format(mail_values.get('email_to'))
             if not mail_to and mail_values.get('email_to'):
                 mail_to.append(mail_values['email_to'])
             # add email from recipients (res.partner)
@@ -1347,9 +1380,9 @@ class MailComposer(models.TransientModel):
             recipients_info[record_id] = {
                 'mail_to': mail_to,
                 'mail_to_normalized': [
-                    tools.email_normalize(mail, strict=False)
+                    email_normalize(mail, strict=False)
                     for mail in mail_to
-                    if tools.email_normalize(mail, strict=False)
+                    if email_normalize(mail, strict=False)
                 ]
             }
         return recipients_info
@@ -1378,7 +1411,7 @@ class MailComposer(models.TransientModel):
             )
         except (ValueError, AssertionError) as e:
             raise ValidationError(
-                _("Invalid domain %(domain)r (type %(domain_type)s)",
+                _("Invalid domain “%(domain)s” (type “%(domain_type)s”)",
                     domain=self.res_domain,
                     domain_type=type(self.res_domain))
             ) from e
@@ -1402,7 +1435,8 @@ class MailComposer(models.TransientModel):
         return parse_res_ids(
             self.env.context.get('composer_force_res_ids') or
             self.res_ids or
-            self.env.context.get('active_ids')
+            self.env.context.get('active_ids'),
+            self.env,
         ) or []
 
     def _set_value_from_template(self, template_fname, composer_fname=False):

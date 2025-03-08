@@ -4,15 +4,14 @@
 # 
 # Translators:
 # Wil Odoo, 2024
-# Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0+e\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-22 15:54+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2024\n"
+"POT-Creation-Date: 2024-09-26 08:56+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Ukrainian (https://app.transifex.com/odoo/teams/41243/uk/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -21,18 +20,8 @@ msgstr ""
 "Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n % 10 == 1 && n % 100 != 11 ? 0 : n % 1 == 0 && n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1 : n % 1 == 0 && (n % 10 ==0 || (n % 10 >=5 && n % 10 <=9) || (n % 100 >=11 && n % 100 <=14 )) ? 2: 3);\n"
 
 #. module: payment_razorpay
-#: model_terms:ir.ui.view,arch_db:payment_razorpay.payment_provider_form_razorpay
-msgid ""
-"<i class=\"oi oi-fw o_button_icon oi-arrow-right\"/>\n"
-"                        Enable recurring payments on Razorpay"
-msgstr ""
-"<i class=\"oi oi-fw o_button_icon oi-arrow-right\"/>\n"
-"                        Увімкніть регулярні платежі на Razorpay"
-
-#. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid ""
 "An error occurred during the processing of your payment. Please try again."
 msgstr "Виникла помилка під час оброблення вашого платежу. Спробуйте ще раз."
@@ -45,9 +34,13 @@ msgstr "Код"
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_provider.py:0
-#, python-format
 msgid "Could not establish the connection to the API."
 msgstr "Не вдалося встановити з’єднання з API."
+
+#. module: payment_razorpay
+#: model_terms:ir.ui.view,arch_db:payment_razorpay.payment_provider_form_razorpay
+msgid "Enable recurring payments on Razorpay"
+msgstr ""
 
 #. module: payment_razorpay
 #: model_terms:ir.ui.view,arch_db:payment_razorpay.payment_provider_form_razorpay
@@ -62,7 +55,6 @@ msgstr "Секретний ключ"
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "No transaction found matching reference %s."
 msgstr "Не знайдено жодної транзакції, що відповідає референсу %s."
 
@@ -72,6 +64,11 @@ msgid "Payment Provider"
 msgstr "Провайдер платежу"
 
 #. module: payment_razorpay
+#: model:ir.model,name:payment_razorpay.model_payment_token
+msgid "Payment Token"
+msgstr "Токен оплати"
+
+#. module: payment_razorpay
 #: model:ir.model,name:payment_razorpay.model_payment_transaction
 msgid "Payment Transaction"
 msgstr "Платіжна операція"
@@ -79,7 +76,6 @@ msgstr "Платіжна операція"
 #. module: payment_razorpay
 #. odoo-javascript
 #: code:addons/payment_razorpay/static/src/js/payment_form.js:0
-#, python-format
 msgid "Payment processing failed"
 msgstr "Обробка платежу не вдалася"
 
@@ -106,42 +102,36 @@ msgstr "Секрет Webhook Razorpay"
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_provider.py:0
-#, python-format
 msgid "Razorpay gave us the following information: '%s'"
 msgstr "Razorpay надав нам таку інформацію: '%s'"
 
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "Received data with invalid status: %s"
 msgstr "Отримані дані з недійсним статусом: %s"
 
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "Received data with missing entity id."
 msgstr "Отримано дані з відсутнім id об’єкта."
 
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "Received data with missing reference."
 msgstr "Дані отримані без референса."
 
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "Received data with missing status."
 msgstr "Отримані дані з відсутнім статусом."
 
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "Received incomplete refund data."
 msgstr "Отримано неповні дані про відшкодування."
 
@@ -155,14 +145,12 @@ msgstr ""
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "The phone number is invalid."
 msgstr "Номер телефону недійсний."
 
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "The phone number is missing."
 msgstr "Відсутній номер телефону."
 
@@ -174,14 +162,12 @@ msgstr "Технічний код цього провайдера платежу
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "The transaction is not linked to a token."
 msgstr "Транзакція не зв'язана з токеном."
 
 #. module: payment_razorpay
 #. odoo-python
 #: code:addons/payment_razorpay/models/payment_transaction.py:0
-#, python-format
 msgid "Transactions processed by Razorpay can't be manually voided from Odoo."
 msgstr "Транзакції, оброблені Razorpay, не можна вручну анулювати в Odoo."
 
@@ -189,3 +175,11 @@ msgstr "Транзакції, оброблені Razorpay, не можна вр�
 #: model_terms:ir.ui.view,arch_db:payment_razorpay.payment_provider_form_razorpay
 msgid "Webhook Secret"
 msgstr "Секрет Webhook"
+
+#. module: payment_razorpay
+#. odoo-python
+#: code:addons/payment_razorpay/models/payment_token.py:0
+msgid ""
+"You can not pay amounts greater than %(currency_symbol)s %(max_amount)s with"
+" this payment method"
+msgstr ""

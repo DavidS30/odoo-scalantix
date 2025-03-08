@@ -37,7 +37,7 @@ class AccountMove(models.Model):
         if self.state == 'draft' or not self.invoice_date or self.move_type not in ('out_invoice', 'out_refund'):
             return res
 
-        current_invoice_amls = self.invoice_line_ids.filtered(lambda aml: aml.display_type == 'product' and aml.product_id and aml.product_id.type in ('consu', 'product') and aml.quantity)
+        current_invoice_amls = self.invoice_line_ids.filtered(lambda aml: aml.display_type == 'product' and aml.product_id and aml.product_id.type == 'consu' and aml.quantity)
         all_invoices_amls = current_invoice_amls.sale_line_ids.invoice_lines.filtered(lambda aml: aml.move_id.state == 'posted').sorted(lambda aml: (aml.date, aml.move_name, aml.id))
         index = all_invoices_amls.ids.index(current_invoice_amls[:1].id) if current_invoice_amls[:1] in all_invoices_amls else 0
         previous_amls = all_invoices_amls[:index]
@@ -173,6 +173,7 @@ class AccountMoveLine(models.Model):
                 ('product_id', '=', self.product_id.id),
                 ('balance', '>', 0),
             ])
+            posted_cogs = posted_cogs.filtered(lambda l: so_line in l.cogs_origin_id.sale_line_ids)
             qty_invoiced = 0
             product_uom = self.product_id.uom_id
             for line in posted_cogs:

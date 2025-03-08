@@ -3,7 +3,7 @@
 
 {
     'name' : 'Analytic Accounting',
-    'version': '1.1',
+    'version': '1.2',
     'category': 'Accounting/Accounting',
     'depends' : ['base', 'mail', 'uom'],
     'description': """
@@ -31,8 +31,12 @@ that have no counterpart in the general financial accounts.
             'analytic/static/src/components/**/*',
             'analytic/static/src/services/**/*',
         ],
+        'web.assets_unit_tests': [
+            'analytic/static/tests/**/*',
+            ('remove', 'analytic/static/tests/analytic_distribution_tests.js'),
+        ],
         'web.qunit_suite_tests': [
-            'analytic/static/tests/*.js',
+            'analytic/static/tests/analytic_distribution_tests.js',
         ],
     },
     'installable': True,

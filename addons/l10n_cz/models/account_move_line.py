@@ -5,6 +5,7 @@ from odoo import models, fields
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
 
+    # TODO: remove in master
     def _get_rate_date(self):
         # EXTENDS 'account'
         self.ensure_one()

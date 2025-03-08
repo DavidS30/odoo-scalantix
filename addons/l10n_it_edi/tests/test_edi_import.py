@@ -9,6 +9,9 @@ from odoo import fields, sql_db, tools, Command
 from odoo.tests import new_test_user, tagged
 from odoo.addons.l10n_it_edi.tests.common import TestItEdi
 
+import logging
+_logger = logging.getLogger(__name__)
+
 
 @tagged('post_install_l10n', 'post_install', '-at_install')
 class TestItEdiImport(TestItEdi):
@@ -41,6 +44,14 @@ class TestItEdiImport(TestItEdi):
     # -----------------------------
     # Vendor bills
     # -----------------------------
+
+    def test_receive_invalid_xml(self):
+        xml_decode = self.env['ir.attachment']._decode_edi_l10n_it_edi
+        with tools.mute_logger("odoo.addons.l10n_it_edi.models.ir_attachment"):
+            self.assertEqual([], xml_decode("none.xml", None))
+            self.assertEqual([], xml_decode("empty.xml", ""))
+            self.assertEqual([], xml_decode("invalid.xml", "invalid"))
+            self.assertEqual([], xml_decode("invalid2.xml", "<invalid/>"))
 
     def test_receive_vendor_bill(self):
         """ Test a sample e-invoice file from
@@ -77,7 +88,6 @@ class TestItEdiImport(TestItEdi):
         https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2/IT01234567890_FPR01.xml
         """
         self._assert_import_invoice('IT01234567890_FPR01.xml.p7m', [{
-            'name': 'BILL/2014/12/0001',
             'ref': '01234567890',
             'invoice_date': fields.Date.from_string('2014-12-18'),
             'amount_untaxed': 5.0,
@@ -88,17 +98,49 @@ class TestItEdiImport(TestItEdi):
             }],
         }])
 
+    def test_receive_wrongly_signed_vendor_bill(self):
+        """
+            Some of the invoices (i.e. those from Servizio Elettrico Nazionale, the
+            ex-monopoly-of-energy company) have custom signatures that rely on an old
+            OpenSSL implementation that breaks the current one that sees them as malformed,
+            so we cannot read those files. Also, we couldn't find an alternative way to use
+            OpenSSL to just get the same result without getting the error.
+
+            A new fallback method has been added that reads the ASN1 file structure and
+            takes the encoded pkcs7-data tag content out of it, regardless of the
+            signature.
+
+            Being a non-optimized pure Python implementation, it takes about 2x the time
+            than the regular method, so it's better used as a fallback. We didn't use an
+            existing library not to further pollute the dependencies space.
+
+            task-3502910
+        """
+        with freeze_time('2019-01-01'):
+            self._assert_import_invoice('IT09633951000_NpFwF.xml.p7m', [{
+                'ref': '333333333333333',
+                'invoice_date': fields.Date.from_string('2023-09-08'),
+                'amount_untaxed': 57.54,
+                'amount_tax': 3.95,
+            }])
+
     def test_receive_bill_sequence(self):
         """ Ensure that the received bill gets assigned the right sequence. """
         def mock_commit(self):
             pass
 
-        invoices = self.env['account.move'].with_company(self.company).search([('name', '=', 'BILL/2019/01/0001')])
-        self.assertEqual(len(invoices), 0)
+        super_create = self.env.registry['account.move'].create
+        created_moves = []
+
+        def mock_create(self, vals_list):
+            moves = super_create(self, vals_list)
+            created_moves.extend(moves)
+            return moves
 
         filename = 'IT01234567890_FPR02.xml'
         with (patch.object(self.proxy_user.__class__, '_decrypt_data', return_value=self.fake_test_content),
               patch.object(sql_db.Cursor, "commit", mock_commit),
+              patch.object(self.env.registry['account.move'], 'create', mock_create),
               freeze_time('2019-01-01')):
             self.env['account.move'].with_company(self.company)._l10n_it_edi_process_downloads({
                 '999999999': {
@@ -108,9 +150,7 @@ class TestItEdiImport(TestItEdi):
                 }},
                 self.proxy_user,
             )
-
-        invoices = self.env['account.move'].with_company(self.company).search([('name', '=', 'BILL/2019/01/0001')])
-        self.assertEqual(len(invoices), 1)
+            self.assertEqual(len(created_moves), 1)
 
     def test_cron_receives_bill_from_another_company(self):
         """ Ensure that when from one of your company, you bill the other, the
@@ -168,7 +208,7 @@ class TestItEdiImport(TestItEdi):
             'proxy_type': 'l10n_it_edi',
             'id_client': str(uuid.uuid4()),
             'edi_identification': ProxyUser._get_proxy_identification(self.company, 'l10n_it_edi'),
-            'private_key': str(uuid.uuid4()),
+            'private_key_id': self.private_key_id.id,
         })
 
         filename = 'IT01234567890_FPR02.xml'
@@ -247,7 +287,7 @@ class TestItEdiImport(TestItEdi):
             </xpath>
 
             <xpath expr="//FatturaElettronicaBody/DatiBeniServizi/DettaglioLinee[1]/PrezzoTotale" position="replace">
-                <PrezzoTotale>1.50</PrezzoTotale>
+                <PrezzoTotale>1.50000000</PrezzoTotale>
             </xpath>
         """
 

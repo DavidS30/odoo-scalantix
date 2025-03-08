@@ -7,7 +7,11 @@ from odoo.tests import tagged
 class TestEdiEwaybillJson(TestEdiJson):
 
     def test_edi_json(self):
-        (self.invoice + self.invoice_full_discount + self.invoice_zero_qty).write({
+        self.env['account.move'].browse((
+            self.invoice.id,
+            self.invoice_full_discount.id,
+            self.invoice_zero_qty.id,
+        )).write({
             "l10n_in_type_id": self.env.ref("l10n_in_edi_ewaybill.type_tax_invoice_sub_type_supply"),
             "l10n_in_distance": 20,
             "l10n_in_mode": "1",
@@ -24,28 +28,28 @@ class TestEdiEwaybillJson(TestEdiJson):
             "transMode": "1",
             "vehicleNo": "GJ11AA1234",
             "vehicleType": "R",
-            "docNo": "INV/2019/00001",
+            "docNo": "INV/18-19/0001",
             "docDate": "01/01/2019",
-            "fromGstin": "36AABCT1332L011",
-            "fromTrdName": "company_1_data",
-            "fromAddr1": "Block no. 401",
-            "fromAddr2": "Street 2",
-            "fromPlace": "City 1",
-            "fromPincode": 500001,
-            "fromStateCode": 36,
-            "actFromStateCode": 36,
-            "toGstin": "36BBBFF5679L8ZR",
-            "toTrdName": "partner_a",
-            "toAddr1": "Block no. 401",
-            "toAddr2": "Street 2",
-            "toPlace": "City 2",
-            "toPincode": 500001,
-            "actToStateCode": 36,
-            "toStateCode": 36,
+            "fromGstin": "24AAGCC7144L6ZE",
+            "fromTrdName": "Default Company",
+            "fromAddr1": "Khodiyar Chowk",
+            "fromAddr2": "Sala Number 3",
+            "fromPlace": "Amreli",
+            "fromPincode": 365220,
+            "fromStateCode": 24,
+            "actFromStateCode": 24,
+            "toGstin": "24ABCPM8965E1ZE",
+            "toTrdName": "Partner Intra State",
+            "toAddr1": "Karansinhji Rd",
+            "toAddr2": "Karanpara",
+            "toPlace": "Rajkot",
+            "toPincode": 360001,
+            "actToStateCode": 24,
+            "toStateCode": 24,
             "itemList": [
             {
               "productName": "product_a",
-              "hsnCode": "01111",
+              "hsnCode": "111111",
               "productDesc": "product_a",
               "quantity": 1.0,
               "qtyUnit": "UNT",
@@ -55,7 +59,7 @@ class TestEdiEwaybillJson(TestEdiJson):
             },
             {
               "productName": "product_with_cess",
-              "hsnCode": "02222",
+              "hsnCode": "333333",
               "productDesc": "product_with_cess",
               "quantity": 1.0,
               "qtyUnit": "UNT",
@@ -79,10 +83,10 @@ class TestEdiEwaybillJson(TestEdiJson):
         #=================================== Full discount test =====================================
         json_value = self.env["account.edi.format"]._l10n_in_edi_ewaybill_generate_json(self.invoice_full_discount)
         expected.update({
-            "docNo": "INV/2019/00002",
+            "docNo": "INV/18-19/0002",
             "itemList": [{
-                "productName": "product_a", "hsnCode": "01111", "productDesc": "product_a", "quantity": 1.0,
-                "qtyUnit": "UNT", "taxableAmount": 0.0, "cgstRate": 0.0, "sgstRate": 0.0
+                "productName": "product_a", "hsnCode": "111111", "productDesc": "product_a", "quantity": 1.0,
+                "qtyUnit": "UNT", "taxableAmount": 0.0, "cgstRate": 0.0, "sgstRate": 0.0, 'igstRate': 0.0,
             }],
             "totalValue": 0.0,
             "cgstValue": 0.0,
@@ -98,10 +102,10 @@ class TestEdiEwaybillJson(TestEdiJson):
         #=================================== Zero quantity test =============================================
         json_value = self.env["account.edi.format"]._l10n_in_edi_ewaybill_generate_json(self.invoice_zero_qty)
         expected.update({
-            "docNo": "INV/2019/00003",
+            "docNo": "INV/18-19/0003",
             "itemList": [{
-                "productName": "product_a", "hsnCode": "01111", "productDesc": "product_a", "quantity": 0.0,
-                "qtyUnit": "UNT", "taxableAmount": 0.0, "cgstRate": 0.0, "sgstRate": 0.0
+                "productName": "product_a", "hsnCode": "111111", "productDesc": "product_a", "quantity": 0.0,
+                "qtyUnit": "UNT", "taxableAmount": 0.0, "cgstRate": 0.0, "sgstRate": 0.0, 'igstRate': 0.0,
             }],
             "totalValue": 0.0,
             "cgstValue": 0.0,

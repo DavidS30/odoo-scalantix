@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import {
     append,
     combineAttributes,
@@ -12,13 +10,14 @@ import { toStringExpression, BUTTON_CLICK_PARAMS } from "./utils";
 /**
  * @typedef Compiler
  * @property {string} selector
- * @property {string} [class]
  * @property {(el: Element, params: Record<string, any>) => Element} fn
+ * @property {string} [class]
+ * @property {boolean} [doNotCopyAttributes]
  */
 
 import { xml } from "@odoo/owl";
 
-const BUTTON_STRING_PROPS = ["string", "size", "title", "icon", "id"];
+const BUTTON_STRING_PROPS = ["string", "size", "title", "icon", "id", "disabled"];
 const INTERP_REGEXP = /(\{\{|#\{)(.*?)(\}{1,2})/g;
 
 /**

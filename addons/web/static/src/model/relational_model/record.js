@@ -1,8 +1,5 @@
-/* @odoo-module */
-
 import { markRaw, markup, toRaw } from "@odoo/owl";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
-import { Domain } from "@web/core/domain";
 import { serializeDate, serializeDateTime } from "@web/core/l10n/dates";
 import { _t } from "@web/core/l10n/translation";
 import { x2ManyCommands } from "@web/core/orm_service";
@@ -10,13 +7,13 @@ import { evaluateBooleanExpr } from "@web/core/py_js/py";
 import { escape } from "@web/core/utils/strings";
 import { DataPoint } from "./datapoint";
 import {
-    FetchRecordError,
     createPropertyActiveField,
     getBasicEvalContext,
     getFieldContext,
     getFieldsSpec,
     parseServerValue,
 } from "./utils";
+import { FetchRecordError } from "./errors";
 
 export class Record extends DataPoint {
     static type = "Record";
@@ -34,6 +31,7 @@ export class Record extends DataPoint {
         this._manuallyAdded = options.manuallyAdded === true;
         this._onUpdate = options.onUpdate || (() => {});
         this._parentRecord = options.parentRecord;
+        this.canSaveOnUpdate = !options.parentRecord;
         this._virtualId = options.virtualId || false;
         this._isEvalContextReady = false;
 
@@ -181,10 +179,11 @@ export class Record extends DataPoint {
         });
     }
 
-    discard() {
+    async discard() {
         if (this.model._closeUrgentSaveNotification) {
             this.model._closeUrgentSaveNotification();
         }
+        await this.model._askChanges();
         return this.model.mutex.exec(() => this._discard());
     }
 
@@ -192,19 +191,16 @@ export class Record extends DataPoint {
         return this.model.mutex.exec(async () => {
             const kwargs = { context: this.context };
             const index = this.resIds.indexOf(this.resId);
-            const resId = await this.model.orm.call(this.resModel, "copy", [this.resId], kwargs);
+            const [resId] = await this.model.orm.call(
+                this.resModel,
+                "copy",
+                [[this.resId]],
+                kwargs
+            );
             const resIds = this.resIds.slice();
             resIds.splice(index + 1, 0, resId);
             await this.model.load({ resId, resIds, mode: "edit" });
         });
-    }
-
-    /**
-     * @param {string} fieldName
-     */
-    getFieldDomain(fieldName) {
-        const { domain } = this.fields[fieldName];
-        return domain ? new Domain(domain).toList(this.evalContext) : [];
     }
 
     async isDirty() {
@@ -236,9 +232,9 @@ export class Record extends DataPoint {
         return this._setInvalidField(fieldName);
     }
 
-    resetFieldValidity(fieldName) {
+    async resetFieldValidity(fieldName) {
         this.dirty = true;
-        this._invalidFields.delete(fieldName);
+        return this._resetFieldValidity(fieldName);
     }
 
     switchMode(mode) {
@@ -257,11 +253,11 @@ export class Record extends DataPoint {
 
     update(changes, { save } = {}) {
         if (this.model._urgentSave) {
-            return this._update(changes, { save: false }); // save is already scheduled
+            return this._update(changes);
         }
         return this.model.mutex.exec(async () => {
             await this._update(changes, { withoutOnchange: save });
-            if (save) {
+            if (save && this.canSaveOnUpdate) {
                 return this._save();
             }
         });
@@ -294,16 +290,12 @@ export class Record extends DataPoint {
 
     _applyChanges(changes, serverChanges = {}) {
         // We need to generate the undo function before applying the changes
-        const fieldNameChanges = [...Object.keys({ ...changes, ...serverChanges })];
         const initialTextValues = { ...this._textValues };
         const initialChanges = { ...this._changes };
         const initialData = { ...toRaw(this.data) };
-        const invalidFields = toRaw(this._invalidFields);
-        const invalidFieldNames = fieldNameChanges.filter((fieldName) =>
-            invalidFields.has(fieldName)
-        );
+        const invalidFields = [...toRaw(this._invalidFields)];
         const undoChanges = () => {
-            for (const fieldName of invalidFieldNames) {
+            for (const fieldName of invalidFields) {
                 this.setInvalidField(fieldName);
             }
             Object.assign(this.data, initialData);
@@ -333,7 +325,11 @@ export class Record extends DataPoint {
         Object.assign(this._textValues, this._getTextValues(serverChanges));
 
         this._setEvalContext();
-        this._removeInvalidFields(fieldNameChanges);
+
+        // mark changed fields as valid if they were not, and re-evaluate required attributes
+        // for all fields, as some of them might still be unset but become valid with those changes
+        this._removeInvalidFields(Object.keys({ ...changes, ...serverChanges }));
+        this._checkValidity({ removeInvalidOnly: true });
         return undoChanges;
     }
 
@@ -366,8 +362,8 @@ export class Record extends DataPoint {
         this._setEvalContext();
     }
 
-    _checkValidity({ silent, displayNotification } = {}) {
-        const unsetRequiredFields = [];
+    _checkValidity({ silent, displayNotification, removeInvalidOnly } = {}) {
+        const unsetRequiredFields = new Set();
         for (const fieldName in this.activeFields) {
             const fieldType = this.fields[fieldName].type;
             if (this._isInvisible(fieldName) || this.fields[fieldName].relatedPropertyField) {
@@ -381,7 +377,7 @@ export class Record extends DataPoint {
                     continue;
                 case "html":
                     if (this._isRequired(fieldName) && this.data[fieldName].length === 0) {
-                        unsetRequiredFields.push(fieldName);
+                        unsetRequiredFields.add(fieldName);
                     }
                     break;
                 case "one2many":
@@ -389,9 +385,11 @@ export class Record extends DataPoint {
                     const list = this.data[fieldName];
                     if (
                         (this._isRequired(fieldName) && !list.count) ||
-                        !list.records.every((r) => !r.dirty || r._checkValidity({ silent }))
+                        !list.records.every(
+                            (r) => !r.dirty || r._checkValidity({ silent, removeInvalidOnly })
+                        )
                     ) {
-                        unsetRequiredFields.push(fieldName);
+                        unsetRequiredFields.add(fieldName);
                     }
                     break;
                 }
@@ -406,7 +404,7 @@ export class Record extends DataPoint {
                                 propertyDefinition.string.length
                         );
                         if (!ok) {
-                            unsetRequiredFields.push(fieldName);
+                            unsetRequiredFields.add(fieldName);
                         }
                     }
                     break;
@@ -416,28 +414,37 @@ export class Record extends DataPoint {
                         this._isRequired(fieldName) &&
                         (!this.data[fieldName] || !Object.keys(this.data[fieldName]).length)
                     ) {
-                        unsetRequiredFields.push(fieldName);
+                        unsetRequiredFields.add(fieldName);
                     }
                     break;
                 }
                 default:
                     if (!this.data[fieldName] && this._isRequired(fieldName)) {
-                        unsetRequiredFields.push(fieldName);
+                        unsetRequiredFields.add(fieldName);
                     }
             }
         }
 
         if (silent) {
-            return !unsetRequiredFields.length;
+            return !unsetRequiredFields.size;
         }
 
-        for (const fieldName of Array.from(this._unsetRequiredFields)) {
-            this._invalidFields.delete(fieldName);
-        }
-        this._unsetRequiredFields.clear();
-        for (const fieldName of unsetRequiredFields) {
-            this._unsetRequiredFields.add(fieldName);
-            this._setInvalidField(fieldName);
+        if (removeInvalidOnly) {
+            for (const fieldName of Array.from(this._unsetRequiredFields)) {
+                if (!unsetRequiredFields.has(fieldName)) {
+                    this._unsetRequiredFields.delete(fieldName);
+                    this._invalidFields.delete(fieldName);
+                }
+            }
+        } else {
+            for (const fieldName of Array.from(this._unsetRequiredFields)) {
+                this._invalidFields.delete(fieldName);
+            }
+            this._unsetRequiredFields.clear();
+            for (const fieldName of unsetRequiredFields) {
+                this._unsetRequiredFields.add(fieldName);
+                this._setInvalidField(fieldName);
+            }
         }
         const isValid = !this._invalidFields.size;
         if (!isValid && displayNotification) {
@@ -453,6 +460,40 @@ export class Record extends DataPoint {
             );
         }
         return isValid;
+    }
+
+    /**
+     * Given a possibily incomplete value for a many2one field (i.e. a pair [id, display_name] but
+     * with id and/or display_name being undefined), return the complete value as follows:
+     *  - if a display_name is given but no id, perform a name_create to get an id
+     *  - if an id is given but display_name is undefined, call web_read to get the display_name
+     *  - if both id and display_name are given, return the value as is
+     *  - in any other cases, return false
+     *
+     * @param {Array | false} value a (possibly incomplete) pair [id, display_name] or false
+     * @param {string} fieldName
+     * @param {string} resModel
+     * @returns the completed pair [id, display_name] or false
+     */
+    async _completeMany2OneValue(value, fieldName, resModel) {
+        const resId = value[0];
+        const displayName = value[1];
+        if (!resId && !displayName) {
+            return false;
+        }
+        const context = getFieldContext(this, fieldName);
+        if (!resId && displayName !== undefined) {
+            return this.model.orm.call(resModel, "name_create", [displayName], { context });
+        }
+        if (resId && displayName === undefined) {
+            const kwargs = {
+                context,
+                specification: { display_name: {} },
+            };
+            const records = await this.model.orm.webRead(resModel, [resId], kwargs);
+            return [resId, records[0].display_name];
+        }
+        return value;
     }
 
     _computeDataContext() {
@@ -555,6 +596,8 @@ export class Record extends DataPoint {
             return value && value.length ? value : false;
         } else if (fieldType === "many2one") {
             return value ? value[0] : false;
+        } else if (fieldType === "many2one_reference") {
+            return value ? value.resId : 0;
         } else if (fieldType === "reference") {
             return value && value.resModel && value.resId
                 ? `${value.resModel},${value.resId}`
@@ -790,106 +833,67 @@ export class Record extends DataPoint {
         return parsedValues;
     }
 
-    async _preprocessReferenceChanges(changes) {
-        const proms = [];
-        for (const [fieldName, value] of Object.entries(changes)) {
-            if (this.fields[fieldName].type !== "reference") {
-                continue;
-            }
-            if (!value) {
-                changes[fieldName] = false;
-                continue;
-            }
-            const id = value.resId;
-            const displayName = value.displayName;
-            if (!id && !displayName) {
-                changes[fieldName] = false;
-                continue;
-            }
-            const context = getFieldContext(this, fieldName);
-
-            if (!id && displayName !== undefined) {
-                proms.push(
-                    this.model.orm
-                        .call(value.resModel, "name_create", [displayName], {
-                            context,
-                        })
-                        .then((result) => {
-                            changes[fieldName] = result
-                                ? {
-                                      resModel: value.resModel,
-                                      resId: result[0],
-                                      displayName,
-                                  }
-                                : false;
-                        })
-                );
-            } else if (id && displayName === undefined) {
-                const kwargs = {
-                    context,
-                    specification: { display_name: {} },
-                };
-                proms.push(
-                    this.model.orm.webRead(value.resModel, [id], kwargs).then((records) => {
-                        changes[fieldName] = {
-                            resModel: value.resModel,
-                            resId: id,
-                            displayName: records[0].display_name,
-                        };
-                    })
-                );
-            } else {
-                changes[fieldName] = value;
-            }
-        }
+    async _preprocessMany2oneChanges(changes) {
+        const proms = Object.entries(changes)
+            .filter(([fieldName]) => this.fields[fieldName].type === "many2one")
+            .map(async ([fieldName, value]) => {
+                if (!value) {
+                    changes[fieldName] = false;
+                } else if (!this.activeFields[fieldName]) {
+                    changes[fieldName] = value;
+                } else {
+                    const relation = this.fields[fieldName].relation;
+                    return this._completeMany2OneValue(value, fieldName, relation).then((v) => {
+                        changes[fieldName] = v;
+                    });
+                }
+            });
         return Promise.all(proms);
     }
 
-    async _preprocessMany2oneChanges(changes) {
-        const proms = [];
-        for (const [fieldName, value] of Object.entries(changes)) {
-            if (this.fields[fieldName].type !== "many2one") {
-                continue;
-            }
-            if (!value) {
-                changes[fieldName] = false;
-                continue;
-            }
-            const [id, displayName] = value;
-            const activeField = this.activeFields[fieldName];
+    async _preprocessMany2OneReferenceChanges(changes) {
+        const proms = Object.entries(changes)
+            .filter(([fieldName]) => this.fields[fieldName].type === "many2one_reference")
+            .map(async ([fieldName, value]) => {
+                if (!value) {
+                    changes[fieldName] = false;
+                } else if (typeof value === "number") {
+                    // Many2OneReferenceInteger field only manipulates the id
+                    changes[fieldName] = { resId: value };
+                } else {
+                    const relation = this.data[this.fields[fieldName].model_field];
+                    return this._completeMany2OneValue(
+                        [value.resId, value.displayName],
+                        fieldName,
+                        relation
+                    ).then((v) => {
+                        changes[fieldName] = { resId: v[0], displayName: v[1] };
+                    });
+                }
+            });
+        return Promise.all(proms);
+    }
 
-            if (!activeField) {
-                changes[fieldName] = value;
-                continue;
-            }
-
-            const relation = this.fields[fieldName].relation;
-            const context = getFieldContext(this, fieldName);
-
-            if (!id && displayName !== undefined) {
-                proms.push(
-                    this.model.orm
-                        .call(relation, "name_create", [displayName], {
-                            context,
-                        })
-                        .then((result) => {
-                            changes[fieldName] = result;
-                        })
-                );
-            } else if (id && displayName === undefined) {
-                const kwargs = {
-                    context,
-                    specification: { display_name: {} },
-                };
-                proms.push(
-                    this.model.orm.webRead(relation, [id], kwargs).then((records) => {
-                        changes[fieldName] = [records[0].id, records[0].display_name || ""];
-                    })
-                );
-            } else {
-                changes[fieldName] = value;
-            }
-        }
+    async _preprocessReferenceChanges(changes) {
+        const proms = Object.entries(changes)
+            .filter(([fieldName]) => this.fields[fieldName].type === "reference")
+            .map(async ([fieldName, value]) => {
+                if (!value) {
+                    changes[fieldName] = false;
+                } else {
+                    return this._completeMany2OneValue(
+                        [value.resId, value.displayName],
+                        fieldName,
+                        value.resModel
+                    ).then((v) => {
+                        changes[fieldName] = {
+                            resId: v[0],
+                            resModel: value.resModel,
+                            displayName: v[1],
+                        };
+                    });
+                }
+            });
         return Promise.all(proms);
     }
 
@@ -999,7 +1003,11 @@ export class Record extends DataPoint {
         if (!creation && !Object.keys(changes).length) {
             return true;
         }
-        if (this.model._urgentSave && this.model.useSendBeaconToSaveUrgently) {
+        if (
+            this.model._urgentSave &&
+            this.model.useSendBeaconToSaveUrgently &&
+            !this.model.env.inDialog
+        ) {
             // We are trying to save urgently because the user is closing the page. To
             // ensure that the save succeeds, we can't do a classic rpc, as these requests
             // can be cancelled (payload too heavy, network too slow, computer too fast...).
@@ -1016,7 +1024,10 @@ export class Record extends DataPoint {
             const data = { jsonrpc: "2.0", method: "call", params };
             const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
             const succeeded = navigator.sendBeacon(route, blob);
-            if (!succeeded) {
+            if (succeeded) {
+                this._changes = markRaw({});
+                this.dirty = false;
+            } else {
                 this.model._closeUrgentSaveNotification = this.model.notification.add(
                     markup(
                         _t(
@@ -1063,7 +1074,7 @@ export class Record extends DataPoint {
             throw e;
         }
         if (reload && !records.length) {
-            throw new FetchRecordError(nextId || this.resId);
+            throw new FetchRecordError([nextId || this.resId]);
         }
         if (creation) {
             const resId = records[0].id;
@@ -1127,7 +1138,12 @@ export class Record extends DataPoint {
         if (canProceed === false) {
             return;
         }
-        if (this.selected && this.model.multiEdit && !this._invalidFields.has(fieldName)) {
+        if (
+            this.selected &&
+            this.model.multiEdit &&
+            this.model.root._recordToDiscard !== this &&
+            !this._invalidFields.has(fieldName)
+        ) {
             await this.model.dialog.add(AlertDialog, {
                 body: _t("No valid record to save"),
                 confirm: async () => {
@@ -1137,6 +1153,10 @@ export class Record extends DataPoint {
             });
         }
         this._invalidFields.add(fieldName);
+    }
+
+    _resetFieldValidity(fieldName) {
+        this._invalidFields.delete(fieldName);
     }
 
     _switchMode(mode) {
@@ -1167,6 +1187,9 @@ export class Record extends DataPoint {
             this.selected = selected;
         } else {
             this.selected = !this.selected;
+        }
+        if (!this.selected && this.model.root.isDomainSelected) {
+            this.model.root._selectDomain(false);
         }
     }
 
@@ -1209,6 +1232,7 @@ export class Record extends DataPoint {
         this.dirty = true;
         const prom = Promise.all([
             this._preprocessMany2oneChanges(changes),
+            this._preprocessMany2OneReferenceChanges(changes),
             this._preprocessReferenceChanges(changes),
             this._preprocessX2manyChanges(changes),
             this._preprocessPropertiesChanges(changes),

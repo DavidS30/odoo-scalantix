@@ -1,7 +1,6 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 from . import common
-from odoo.tests import tagged
-from odoo.tests.common import Form
+from odoo.tests import Form, tagged
 
 
 @tagged('post_install_l10n', '-at_install', 'post_install')
@@ -28,7 +27,7 @@ class TestManual(common.TestAr):
         self.assertEqual(invoice.l10n_latam_document_type_id, self.document_type['invoice_a'], 'selected document type should be Factura A')
         self._post(invoice)
         self.assertEqual(invoice.state, 'posted', 'invoice has not been validate in Odoo')
-        self.assertEqual(invoice.name, 'FA-A %05d-00000002' % self.journal.l10n_ar_afip_pos_number, 'Invoice number is wrong')
+        self.assertEqual(invoice.name, 'FA-A %05d-00000001' % self.journal.l10n_ar_afip_pos_number, 'Invoice number is wrong')
 
     def test_02_fiscal_position(self):
         # ADHOC SA > IVA Responsable Inscripto > Without Fiscal Positon

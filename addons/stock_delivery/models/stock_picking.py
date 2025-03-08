@@ -1,81 +1,15 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from collections import defaultdict
+from datetime import date
 from markupsafe import Markup
 import json
 
-from odoo import _, api, fields, models
+from odoo import _, api, fields, models, SUPERUSER_ID
 from odoo.exceptions import UserError
-from odoo.tools.sql import column_exists, create_column
 
 
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
-
-    def _auto_init(self):
-        if not column_exists(self.env.cr, "stock_picking", "weight"):
-            # In order to speed up module installation when dealing with hefty data
-            # We create the column weight manually, but the computation will be skipped
-            # Therefore we do the computation in a query by getting weight sum from stock moves
-            create_column(self.env.cr, "stock_picking", "weight", "numeric")
-            self.env.cr.execute("""
-                WITH computed_weight AS (
-                    SELECT SUM(weight) AS weight_sum, picking_id
-                    FROM stock_move
-                    WHERE picking_id IS NOT NULL
-                    GROUP BY picking_id
-                )
-                UPDATE stock_picking
-                SET weight = weight_sum
-                FROM computed_weight
-                WHERE stock_picking.id = computed_weight.picking_id;
-            """)
-        return super()._auto_init()
-
-    @api.depends('move_line_ids', 'move_line_ids.result_package_id')
-    def _compute_packages(self):
-        counts = dict(self.env['stock.move.line']._read_group(
-           domain=[
-              ('picking_id', 'in', self.ids),
-              ('result_package_id', '!=', False)],
-              groupby=['picking_id'],
-              aggregates=['__count'],
-        ))
-        self.fetch(['move_line_ids'])
-        self.move_line_ids.fetch(['result_package_id'])
-        for picking in self:
-            packs = set()
-            if counts.get(picking, 0):
-                for move_line in picking.move_line_ids:
-                    if move_line.result_package_id:
-                        packs.add(move_line.result_package_id.id)
-            picking.package_ids = list(packs)
-
-    @api.depends('move_line_ids', 'move_line_ids.result_package_id', 'move_line_ids.product_uom_id', 'move_line_ids.quantity')
-    def _compute_bulk_weight(self):
-        picking_weights = defaultdict(float)
-        res_groups = self.env['stock.move.line']._read_group(
-            [('picking_id', 'in', self.ids), ('product_id', '!=', False), ('result_package_id', '=', False)],
-            ['picking_id', 'product_id', 'product_uom_id', 'quantity'],
-            ['__count'],
-        )
-        for picking, product, product_uom, quantity, count in res_groups:
-            picking_weights[picking.id] += (
-                count
-                * product_uom._compute_quantity(quantity, product.uom_id)
-                * product.weight
-            )
-        for picking in self:
-            picking.weight_bulk = picking_weights[picking.id]
-
-    @api.depends('move_line_ids.result_package_id', 'move_line_ids.result_package_id.shipping_weight', 'weight_bulk')
-    def _compute_shipping_weight(self):
-        for picking in self:
-            # if shipping weight is not assigned => default to calculated product weight
-            picking.shipping_weight = (
-                picking.weight_bulk +
-                sum(pack.shipping_weight or pack.weight for pack in picking.package_ids.sudo())
-            )
 
     def _get_default_weight_uom(self):
         return self.env['product.template']._get_weight_uom_name_from_ir_config_parameter()
@@ -91,10 +25,6 @@ class StockPicking(models.Model):
     carrier_tracking_ref = fields.Char(string='Tracking Reference', copy=False)
     carrier_tracking_url = fields.Char(string='Tracking URL', compute='_compute_carrier_tracking_url')
     weight_uom_name = fields.Char(string='Weight unit of measure label', compute='_compute_weight_uom_name', readonly=True, default=_get_default_weight_uom)
-    package_ids = fields.Many2many('stock.quant.package', compute='_compute_packages', string='Packages')
-    weight_bulk = fields.Float('Bulk Weight', compute='_compute_bulk_weight', help="Total weight of products which are not in a package.")
-    shipping_weight = fields.Float("Weight for Shipping", compute='_compute_shipping_weight',
-        help="Total weight of packages and products not in a package. Packages with no shipping weight specified will default to their products' total weight. This is the weight used to compute the cost of the shipping.")
     is_return_picking = fields.Boolean(compute='_compute_return_picking')
     return_label_ids = fields.One2many('ir.attachment', compute='_compute_return_label')
     destination_country_code = fields.Char(related='partner_id.country_id.code', string="Destination Country")
@@ -131,11 +61,42 @@ class StockPicking(models.Model):
         for picking in self:
             picking.weight = sum(move.weight for move in picking.move_ids if move.state != 'cancel')
 
+    def _carrier_exception_note(self, exception):
+        self.ensure_one()
+        line_1 = _("Exception occurred with respect to carrier on the transfer")
+        line_2 = _("Manual actions might be needed.")
+        line_3 = _("Exception:")
+        return Markup('<div> {line_1} <a href="#" data-oe-model="stock.picking" data-oe-id="{picking_id}"> {picking_name}</a>. {line_2}<div class="mt16"><p>{line_3} {exception}</p></div></div>').format(line_1=line_1, line_2=line_2, line_3=line_3, picking_id=self.id, picking_name=self.name, exception=exception)
+
     def _send_confirmation_email(self):
+        # The carrier's API processes validity checks and parcels generation one picking at a time.
+        # However, since a UserError of any of the picking will cause a rollback of the entire batch
+        # on Odoo's side and since pickings that were already processed on the carrier's side must
+        # stay validated, UserErrors might need to be replaced by activity warnings.
+
+        processed_carrier_picking = False
+
         for pick in self:
-            if pick.carrier_id and pick.carrier_id.integration_level == 'rate_and_ship' and pick.picking_type_code != 'incoming' and not pick.carrier_tracking_ref and pick.picking_type_id.print_label:
-                pick.sudo().send_to_shipper()
-            pick._check_carrier_details_compliance()
+            try:
+                if pick.carrier_id and pick.carrier_id.integration_level == 'rate_and_ship' and pick.picking_type_code != 'incoming' and not pick.carrier_tracking_ref and pick.picking_type_id.print_label:
+                    pick.sudo().send_to_shipper()
+                pick._check_carrier_details_compliance()
+                if pick.carrier_id:
+                    processed_carrier_picking = True
+            except (UserError) as e:
+                if processed_carrier_picking:
+                    # We can not raise a UserError at this point
+                    exception_message = str(e)
+                    pick.message_post(body=exception_message, message_type='notification')
+                    pick.sudo().activity_schedule(
+                        'mail.mail_activity_data_warning',
+                        date.today(),
+                        note=pick._carrier_exception_note(exception_message),
+                        user_id=pick.user_id.id or self.env.user.id or SUPERUSER_ID,
+                        )
+                else:
+                    raise e
+
         return super(StockPicking, self)._send_confirmation_email()
 
     def _pre_put_in_pack_hook(self, move_line_ids):
@@ -189,7 +150,7 @@ class StockPicking(models.Model):
             amount_without_delivery = self.sale_id._compute_amount_total_without_delivery()
             if self.carrier_id._compute_currency(self.sale_id, amount_without_delivery, 'pricelist_to_company') >= self.carrier_id.amount:
                 res['exact_price'] = 0.0
-        self.carrier_price = self.carrier_id._apply_margins(res['exact_price'])
+        self.carrier_price = self.carrier_id.with_context(order=self.sale_id)._apply_margins(res['exact_price'])
         if res['tracking_number']:
             related_pickings = self.env['stock.picking'] if self.carrier_tracking_ref and res['tracking_number'] in self.carrier_tracking_ref else self
             accessed_moves = previous_moves = self.move_ids.move_orig_ids

@@ -3,16 +3,16 @@
 # 	* hr_holidays_attendance
 # 
 # Translators:
-# Wil Odoo, 2023
-# Jolien De Paepe, 2023
+# Wil Odoo, 2024
+# Erwin van der Ploeg <erwin@odooexperts.nl>, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0+e\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Jolien De Paepe, 2023\n"
+"POT-Creation-Date: 2025-02-06 14:58+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Erwin van der Ploeg <erwin@odooexperts.nl>, 2025\n"
 "Language-Team: Dutch (https://app.transifex.com/odoo/teams/41243/nl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -23,7 +23,6 @@ msgstr ""
 #. module: hr_holidays_attendance
 #. odoo-python
 #: code:addons/hr_holidays_attendance/models/hr_leave_type.py:0
-#, python-format
 msgid "%s hours available"
 msgstr "%s uren beschikbaar"
 
@@ -45,7 +44,6 @@ msgstr "Aanwezigheid"
 #. module: hr_holidays_attendance
 #. odoo-javascript
 #: code:addons/hr_holidays_attendance/static/src/xml/time_off_calendar.xml:0
-#, python-format
 msgid "Available"
 msgstr "Beschikbaar"
 
@@ -55,19 +53,8 @@ msgid "Calendar"
 msgstr "Agenda"
 
 #. module: hr_holidays_attendance
-#: model:ir.model,name:hr_holidays_attendance.model_res_company
-msgid "Companies"
-msgstr "Bedrijven"
-
-#. module: hr_holidays_attendance
-#: model:ir.model.fields,field_description:hr_holidays_attendance.field_hr_leave_allocation__hr_attendance_overtime
-msgid "Count Extra Hours"
-msgstr "Aantal extra uren"
-
-#. module: hr_holidays_attendance
 #. odoo-javascript
 #: code:addons/hr_holidays_attendance/static/src/xml/time_off_calendar.xml:0
-#, python-format
 msgid "Days"
 msgstr "Dagen"
 
@@ -93,7 +80,6 @@ msgstr "Extra uren"
 #. module: hr_holidays_attendance
 #: model_terms:ir.ui.view,arch_db:hr_holidays_attendance.hr_attendance_holidays_hr_leave_allocation_view_form_inherit
 #: model_terms:ir.ui.view,arch_db:hr_holidays_attendance.hr_leave_view_form
-#: model_terms:ir.ui.view,arch_db:hr_holidays_attendance.hr_leave_view_form_overtime
 msgid "Extra Hours Available"
 msgstr "Extra uren beschikbaar"
 
@@ -105,27 +91,19 @@ msgstr "Frequentie per uur"
 #. module: hr_holidays_attendance
 #. odoo-javascript
 #: code:addons/hr_holidays_attendance/static/src/xml/time_off_calendar.xml:0
-#, python-format
 msgid "Hours"
 msgstr "Uren"
 
 #. module: hr_holidays_attendance
-#: model:ir.model.fields,field_description:hr_holidays_attendance.field_hr_leave_type__hr_attendance_overtime
-msgid "Hr Attendance Overtime"
-msgstr "HR Aanwezigheid Overwerk"
-
-#. module: hr_holidays_attendance
 #: model:ir.model.fields,help:hr_holidays_attendance.field_hr_leave_accrual_level__frequency_hourly_source
 msgid ""
-"If the source is set to Calendar, the amount of worked hours will be "
-"computed from employee calendar and time off (if the plan is based on worked"
-" time). Otherwise, the amount of worked hours will be based on Attendance "
-"records."
+"If the source is set to \"Calendar\", the amount of worked hours will be "
+"computed based on the Employee's working schedule. Otherwise, the amount of "
+"worked hours will be based on Attendance records."
 msgstr ""
-"Als de bron is ingesteld op Kalender, wordt het aantal gewerkte uren "
-"berekend op basis van de kalender en het verlof van de werknemer (als het "
-"plan is gebaseerd op gewerkte tijd). Anders wordt het aantal gewerkte uren "
-"gebaseerd op de Aanwezigheidsrecords."
+"Als de bron is ingesteld op \"Kalender\", wordt het aantal gewerkte uren "
+"berekend op basis van de werknemer's werkrooster. Anders wordt het aantal "
+"gewerkte uren gebaseerd op de Aanwezigheidsrecords."
 
 #. module: hr_holidays_attendance
 #: model:ir.actions.act_window,name:hr_holidays_attendance.hr_leave_allocation_overtime_action
@@ -141,6 +119,16 @@ msgid ""
 msgstr ""
 "Zodra een verlof van dit type is goedgekeurd, worden extra aanwezigheidsuren"
 " afgetrokken."
+
+#. module: hr_holidays_attendance
+#. odoo-python
+#: code:addons/hr_holidays_attendance/models/hr_leave_allocation.py:0
+msgid ""
+"Only an Officer or Administrator is allowed to edit the allocation duration "
+"in this status."
+msgstr ""
+"Alleen een functionaris of beheerder mag de toewijzingsduur in deze status "
+"bewerken."
 
 #. module: hr_holidays_attendance
 #: model:ir.model.fields,field_description:hr_holidays_attendance.field_hr_leave__overtime_deductible
@@ -166,7 +154,6 @@ msgstr "Bron"
 #. module: hr_holidays_attendance
 #. odoo-python
 #: code:addons/hr_holidays_attendance/models/hr_leave_allocation.py:0
-#, python-format
 msgid ""
 "The employee does not have enough extra hours to extend this allocation."
 msgstr ""
@@ -176,7 +163,6 @@ msgstr ""
 #. module: hr_holidays_attendance
 #. odoo-python
 #: code:addons/hr_holidays_attendance/models/hr_leave.py:0
-#, python-format
 msgid "The employee does not have enough extra hours to extend this leave."
 msgstr ""
 "De werknemer heeft niet voldoende extra uren om dit verlof te verlengen."
@@ -184,8 +170,6 @@ msgstr ""
 #. module: hr_holidays_attendance
 #. odoo-python
 #: code:addons/hr_holidays_attendance/models/hr_leave.py:0
-#: code:addons/hr_holidays_attendance/models/hr_leave.py:0
-#, python-format
 msgid "The employee does not have enough extra hours to request this leave."
 msgstr ""
 "De werknemer heeft niet genoeg extra uren om dit verlof aan te vragen."
@@ -193,7 +177,6 @@ msgstr ""
 #. module: hr_holidays_attendance
 #. odoo-python
 #: code:addons/hr_holidays_attendance/models/hr_leave_allocation.py:0
-#, python-format
 msgid ""
 "The employee does not have enough overtime hours to request this leave."
 msgstr "De werknemer heeft niet genoeg overuren om dit verlof aan te vragen."
@@ -227,7 +210,5 @@ msgstr "Gebruiker"
 #. module: hr_holidays_attendance
 #. odoo-python
 #: code:addons/hr_holidays_attendance/models/hr_leave.py:0
-#: code:addons/hr_holidays_attendance/models/hr_leave.py:0
-#, python-format
 msgid "You do not have enough extra hours to request this leave"
 msgstr "Je hebt niet genoeg extra uren om dit verlof aan te vragen"

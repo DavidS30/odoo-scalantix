@@ -1,9 +1,9 @@
-/* @odoo-module */
-
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { _t } from "@web/core/l10n/translation";
+import { unique } from "@web/core/utils/arrays";
 import { DataPoint } from "./datapoint";
 import { Record } from "./record";
+import { resequence } from "./utils";
 
 const DEFAULT_HANDLE_FIELD = "sequence";
 
@@ -45,6 +45,10 @@ export class DynamicList extends DataPoint {
      */
     get editedRecord() {
         return this.records.find((record) => record.isInEdition);
+    }
+
+    get isRecordCountTrustable() {
+        return true;
     }
 
     get limit() {
@@ -112,34 +116,40 @@ export class DynamicList extends DataPoint {
         } else {
             resIds = this.records.map((r) => r.resId);
         }
-        return resIds;
+        return unique(resIds);
     }
 
     async leaveEditMode({ discard } = {}) {
-        if (this.editedRecord) {
+        let editedRecord = this.editedRecord;
+        if (editedRecord) {
             let canProceed = true;
             if (discard) {
-                await this.editedRecord.discard();
-                if (this.editedRecord && this.editedRecord.isNew) {
-                    this._removeRecords([this.editedRecord.id]);
+                this._recordToDiscard = editedRecord;
+                await editedRecord.discard();
+                this._recordToDiscard = null;
+                editedRecord = this.editedRecord;
+                if (editedRecord && editedRecord.isNew) {
+                    this._removeRecords([editedRecord.id]);
                 }
             } else {
                 if (!this.model._urgentSave) {
-                    await this.editedRecord.checkValidity();
-                    if (!this.editedRecord) {
+                    await editedRecord.checkValidity();
+                    editedRecord = this.editedRecord;
+                    if (!editedRecord) {
                         return true;
                     }
                 }
-                if (this.editedRecord.isNew && !this.editedRecord.dirty) {
-                    this._removeRecords([this.editedRecord.id]);
+                if (editedRecord.isNew && !editedRecord.dirty) {
+                    this._removeRecords([editedRecord.id]);
                 } else {
-                    canProceed = await this.editedRecord.save();
+                    canProceed = await editedRecord.save();
                 }
             }
 
-            if (canProceed && this.editedRecord) {
+            editedRecord = this.editedRecord;
+            if (canProceed && editedRecord) {
                 this.model._updateConfig(
-                    this.editedRecord.config,
+                    editedRecord.config,
                     { mode: "readonly" },
                     { reload: false }
                 );
@@ -183,18 +193,7 @@ export class DynamicList extends DataPoint {
     }
 
     toggleSelection() {
-        return this.model.mutex.exec(() => {
-            if (this.selection.length === this.records.length) {
-                this.records.forEach((record) => {
-                    record._toggleSelection(false);
-                });
-                this.isDomainSelected = false;
-            } else {
-                this.records.forEach((record) => {
-                    record._toggleSelection(true);
-                });
-            }
-        });
+        return this.model.mutex.exec(() => this._toggleSelection());
     }
 
     unarchive(isSelected) {
@@ -208,12 +207,12 @@ export class DynamicList extends DataPoint {
     async _duplicateRecords(records) {
         let resIds;
         if (records.length) {
-            resIds = records.map((r) => r.resId);
+            resIds = unique(records.map((r) => r.resId));
         } else {
             resIds = await this.getResIds(true);
         }
 
-        const duplicated = await this.model.orm.call(this.resModel, "copy_multi", [resIds], {
+        const duplicated = await this.model.orm.call(this.resModel, "copy", [resIds], {
             context: this.context,
         });
         if (resIds.length > duplicated.length) {
@@ -227,7 +226,7 @@ export class DynamicList extends DataPoint {
     async _deleteRecords(records) {
         let resIds;
         if (records.length) {
-            resIds = records.map((r) => r.resId);
+            resIds = unique(records.map((r) => r.resId));
         } else {
             resIds = await this.getResIds(true);
             records = this.records.filter((r) => resIds.includes(r.resId));
@@ -244,14 +243,12 @@ export class DynamicList extends DataPoint {
             resIds.length < this.count
         ) {
             const msg = _t(
-                `Only the first %s records have been deleted (out of %s selected)`,
-                resIds.length,
-                this.count
+                "Only the first %(count)s records have been deleted (out of %(total)s selected)",
+                { count: resIds.length, total: this.count }
             );
             this.model.notification.add(msg, { title: _t("Warning") });
         }
-        this._removeRecords(records.map((r) => r.id));
-        await this._load(this.offset, this.limit, this.orderBy, this.domain);
+        await this.model.load();
         return unlinked;
     }
 
@@ -264,7 +261,7 @@ export class DynamicList extends DataPoint {
 
     async _multiSave(record) {
         const changes = record._getChanges();
-        if (!Object.keys(changes).length) {
+        if (!Object.keys(changes).length || record === this._recordToDiscard) {
             return;
         }
         const validSelection = this.selection.filter((record) => {
@@ -289,7 +286,7 @@ export class DynamicList extends DataPoint {
             });
             return false;
         } else {
-            const resIds = validSelection.map((r) => r.resId);
+            const resIds = unique(validSelection.map((r) => r.resId));
             const context = this.context;
             try {
                 await this.model.orm.write(this.resModel, resIds, changes, { context });
@@ -317,91 +314,28 @@ export class DynamicList extends DataPoint {
         }
         const handleField = this.resModel === resModel ? this.handleField : DEFAULT_HANDLE_FIELD;
         const order = this.orderBy.find((o) => o.name === handleField);
-        const asc = !order || order.asc;
-
-        // Find indices
-        const fromIndex = originalList.findIndex((d) => d.id === movedId);
-        let toIndex = 0;
-        if (targetId !== null) {
-            const targetIndex = originalList.findIndex((d) => d.id === targetId);
-            toIndex = fromIndex > targetIndex ? targetIndex + 1 : targetIndex;
-        }
-
         const getSequence = (dp) => dp && this._getDPFieldValue(dp, handleField);
-
-        // Determine which records/groups need to be modified
-        const firstIndex = Math.min(fromIndex, toIndex);
-        const lastIndex = Math.max(fromIndex, toIndex) + 1;
-        let reorderAll = originalList.some(
-            (dp) => this._getDPFieldValue(dp, handleField) === undefined
-        );
-        if (!reorderAll) {
-            let lastSequence = (asc ? -1 : 1) * Infinity;
-            for (let index = 0; index < originalList.length; index++) {
-                const sequence = getSequence(originalList[index]);
-                if ((asc && lastSequence >= sequence) || (!asc && lastSequence <= sequence)) {
-                    reorderAll = true;
-                    break;
-                }
-                lastSequence = sequence;
-            }
-        }
-
-        // Save the original list in case of error
-        const originalOrder = [...originalList];
-        // Perform the resequence in the list of records/groups
-        const [dp] = originalList.splice(fromIndex, 1);
-        originalList.splice(toIndex, 0, dp);
-
-        // Creates the list of records/groups to modify
-        let toReorder = originalList;
-        if (!reorderAll) {
-            toReorder = toReorder.slice(firstIndex, lastIndex).filter((r) => r.id !== movedId);
-            if (fromIndex < toIndex) {
-                toReorder.push(dp);
-            } else {
-                toReorder.unshift(dp);
-            }
-        }
-        if (!asc) {
-            toReorder.reverse();
-        }
-
-        const resIds = toReorder.map((d) => this._getDPresId(d)).filter((id) => id && !isNaN(id));
-        const sequences = toReorder.map(getSequence);
-        const offset = sequences.length && Math.min(...sequences);
-
-        // Try to write new sequences on the affected records/groups
-        const params = {
-            model: resModel,
-            ids: resIds,
+        const getResId = (dp) => this._getDPresId(dp);
+        const resequencedRecords = await resequence({
+            records: originalList,
+            resModel,
+            movedId,
+            targetId,
+            fieldName: handleField,
+            asc: order?.asc,
             context: this.context,
-            field: handleField,
-        };
-        if (offset) {
-            params.offset = offset;
-        }
-        // Attempt to resequence the records/groups on the server
-        try {
-            const wasResequenced = await this.model.rpc("/web/dataset/resequence", params);
-            if (!wasResequenced) {
-                return;
-            }
-        } catch (error) {
-            // If the server fails to resequence, rollback the original list
-            originalList.splice(0, originalList.length, ...originalOrder);
-            throw error;
-        }
-
-        // Read the actual values set by the server and update the records/groups
-        const kwargs = { context: this.context };
-        const result = await this.model.orm.read(resModel, resIds, [handleField], kwargs);
-        for (const dpData of result) {
-            const dp = originalList.find((d) => this._getDPresId(d) === dpData.id);
-            if (dp instanceof Record) {
-                dp._applyValues(dpData);
-            } else {
-                dp[handleField] = dpData[handleField];
+            orm: this.model.orm,
+            getSequence,
+            getResId,
+        });
+        if (resequencedRecords) {
+            for (const dpData of resequencedRecords) {
+                const dp = originalList.find((d) => getResId(d) === dpData.id);
+                if (dp instanceof Record) {
+                    dp._applyValues(dpData);
+                } else {
+                    dp[handleField] = dpData[handleField];
+                }
             }
         }
     }
@@ -421,9 +355,11 @@ export class DynamicList extends DataPoint {
             resIds.length < this.count
         ) {
             const msg = _t(
-                "Of the %s records selected, only the first %s have been archived/unarchived.",
-                resIds.length,
-                this.count
+                "Of the %(selectedRecord)s selected records, only the first %(firstRecords)s have been archived/unarchived.",
+                {
+                    selectedRecords: resIds.length,
+                    firstRecords: this.count,
+                }
             );
             this.model.notification.add(msg, { title: _t("Warning") });
         }
@@ -434,6 +370,19 @@ export class DynamicList extends DataPoint {
             });
         } else {
             return reload();
+        }
+    }
+
+    async _toggleSelection() {
+        if (this.selection.length === this.records.length) {
+            this.records.forEach((record) => {
+                record._toggleSelection(false);
+            });
+            this._selectDomain(false);
+        } else {
+            this.records.forEach((record) => {
+                record._toggleSelection(true);
+            });
         }
     }
 }

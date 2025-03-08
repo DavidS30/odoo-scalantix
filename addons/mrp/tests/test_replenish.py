@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from datetime import datetime, timedelta
 from freezegun import freeze_time
+from json import loads
 
 from odoo.tests import Form
 from odoo.addons.mrp.tests.common import TestMrpCommon
-from odoo import fields
+from odoo import Command, fields
 
 
 
@@ -48,7 +50,7 @@ class TestMrpReplenish(TestMrpCommon):
         route_manufacture.rule_ids.delay = 2
         product_1 = self.env['product.product'].create({
             'name': 'Cake',
-            'type': 'product',
+            'is_storable': True,
             'route_ids': [(6, 0, [route_manufacture.id])]
         })
 
@@ -109,8 +111,7 @@ class TestMrpReplenish(TestMrpCommon):
         basic_mo.picking_ids.button_validate()
         self.assertEqual(basic_mo.move_raw_ids.mapped('state'), ['assigned', 'assigned'])
 
-        scrap_wizard_dict = basic_mo.button_scrap()
-        scrap_form = Form(self.env[scrap_wizard_dict['res_model']].with_context(scrap_wizard_dict['context']))
+        scrap_form = Form.from_action(self.env, basic_mo.button_scrap())
         scrap_form.product_id = product_to_scrap
         scrap_form.should_replenish = True
         self.assertEqual(scrap_form.location_id, warehouse.pbm_loc_id)
@@ -120,3 +121,33 @@ class TestMrpReplenish(TestMrpCommon):
         replenish_picking = basic_mo.picking_ids.filtered(lambda x: x.state == 'assigned')
         replenish_picking.button_validate()
         self.assertEqual(basic_mo.move_raw_ids.mapped('state'), ['assigned', 'assigned'])
+
+    def test_global_visibility_days_affect_lead_time_manufacture_rule(self):
+        """ Ensure global visibility days will only be captured one time in an orderpoint's
+        lead_days/json_lead_days.
+        """
+        wh = self.env.user._get_default_warehouse_id()
+        wh.manufacture_steps = 'pbm'
+        finished_product = self.product_4
+        finished_product.route_ids = [(6, 0, self.env['stock.route'].search([('name', '=', 'Manufacture')], limit=1).ids)]
+        self.env['ir.config_parameter'].set_param('stock.visibility_days', '365')
+
+        orderpoint = self.env['stock.warehouse.orderpoint'].create({'product_id': finished_product.id})
+        out_picking = self.env['stock.picking'].create({
+            'picking_type_id': self.env.ref('stock.picking_type_out').id,
+            'location_id': wh.lot_stock_id.id,
+            'location_dest_id': self.env.ref('stock.stock_location_customers').id,
+            'move_ids': [Command.create({
+                'name': 'TGVDALTMR out move',
+                'product_id': finished_product.id,
+                'product_uom_qty': 2,
+                'location_id': wh.lot_stock_id.id,
+                'location_dest_id': self.env.ref('stock.stock_location_customers').id,
+            })],
+        })
+        out_picking.with_context(global_visibility_days=365).action_assign()
+        r = orderpoint.action_stock_replenishment_info()
+        repl_info = self.env[r['res_model']].browse(r['res_id'])
+        lead_days_date = datetime.strptime(
+            loads(repl_info.json_lead_days)['lead_days_date'], '%m/%d/%Y').date()
+        self.assertEqual(lead_days_date, fields.Date.today() + timedelta(days=365))

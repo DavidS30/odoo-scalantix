@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from odoo import Command
 from odoo.addons.l10n_account_edi_ubl_cii_tests.tests.common import TestUBLCommon
 from odoo.tests import tagged
 import base64
@@ -8,8 +9,9 @@ import base64
 class TestUBLDE(TestUBLCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref="de_skr03"):
-        super().setUpClass(chart_template_ref=chart_template_ref)
+    @TestUBLCommon.setup_country("de")
+    def setUpClass(cls):
+        super().setUpClass()
 
         cls.partner_1 = cls.env['res.partner'].create({
             'name': "partner_1",
@@ -22,6 +24,7 @@ class TestUBLDE(TestUBLCommon):
             'country_id': cls.env.ref('base.de').id,
             'bank_ids': [(0, 0, {'acc_number': 'DE48500105176424548921'})],
             'ref': 'ref_partner_1',
+            'invoice_edi_format': 'xrechnung',
         })
 
         cls.partner_2 = cls.env['res.partner'].create({
@@ -33,6 +36,7 @@ class TestUBLDE(TestUBLCommon):
             'country_id': cls.env.ref('base.de').id,
             'bank_ids': [(0, 0, {'acc_number': 'DE50500105175653254743'})],
             'ref': 'ref_partner_2',
+            'invoice_edi_format': 'xrechnung',
         })
 
         cls.tax_19 = cls.env['account.tax'].create({
@@ -52,17 +56,12 @@ class TestUBLDE(TestUBLCommon):
         })
 
     @classmethod
-    def setup_company_data(cls, company_name, chart_template):
-        # OVERRIDE
-        # to force the company to be german + add phone and email
-        res = super().setup_company_data(
-            company_name,
-            chart_template=chart_template,
-            country_id=cls.env.ref("base.de").id,
+    def setup_independent_company(cls, **kwargs):
+        return super().setup_independent_company(
             phone="+49(0) 30 227-0",
             email="test@xrechnung@com",
+            **kwargs,
         )
-        return res
 
     def _detach_attachment(self, attachment):
         # attachments are protected from being edited because of the audit trail
@@ -136,6 +135,46 @@ class TestUBLDE(TestUBLCommon):
         self.assertEqual(attachment.name[-10:], "ubl_de.xml")
         self._assert_imported_invoice_from_etree(invoice, attachment)
 
+    def test_export_import_invoice_without_vat_and_peppol_endpoint(self):
+        self.partner_2.write({
+            'vat': False,
+            'peppol_endpoint': False,
+            'email': 'partner_2@test.test',
+        })
+        invoice = self._generate_move(
+            self.partner_1,
+            self.partner_2,
+            move_type='out_invoice',
+            invoice_line_ids=[
+                {
+                    'product_id': self.product_a.id,
+                    'quantity': 1.0,
+                    'price_unit': 100.0,
+                    'tax_ids': [Command.set(self.tax_19.ids)],
+                },
+            ],
+        )
+        attachment = self._assert_invoice_attachment(
+            invoice.ubl_cii_xml_id,
+            xpaths=f'''
+                <xpath expr="./*[local-name()='ID']" position="replace">
+                    <ID>___ignore___</ID>
+                </xpath>
+                <xpath expr=".//*[local-name()='InvoiceLine'][1]/*[local-name()='ID']" position="replace">
+                    <ID>___ignore___</ID>
+                </xpath>
+                <xpath expr=".//*[local-name()='PaymentMeans']/*[local-name()='PaymentID']" position="replace">
+                    <PaymentID>___ignore___</PaymentID>
+                </xpath>
+                <xpath expr=".//*[local-name()='AdditionalDocumentReference']/*[local-name()='Attachment']/*[local-name()='EmbeddedDocumentBinaryObject']" position="attributes">
+                    <attribute name="mimeCode">application/pdf</attribute>
+                    <attribute name="filename">{invoice.invoice_pdf_report_id.name}</attribute>
+                </xpath>
+            ''',
+            expected_file_path='from_odoo/xrechnung_ubl_out_invoice_without_vat.xml',
+        )
+        self._assert_imported_invoice_from_etree(invoice, attachment)
+
     def test_export_import_refund(self):
         refund = self._generate_move(
             self.partner_1,
@@ -199,9 +238,16 @@ class TestUBLDE(TestUBLCommon):
     ####################################################
 
     def test_import_invoice_xml(self):
-        self._assert_imported_invoice_from_file(subfolder='tests/test_files/from_odoo',
-            filename='xrechnung_ubl_out_invoice.xml', amount_total=3083.58, amount_tax=401.58,
-            list_line_subtotals=[1782, 1000, -100], currency_id=self.currency_data['currency'].id)
+        self._assert_imported_invoice_from_file(
+            subfolder='tests/test_files/from_odoo',
+            filename='xrechnung_ubl_out_invoice.xml',
+            invoice_vals={
+                'currency_id': self.other_currency.id,
+                'amount_total': 3083.58,
+                'amount_tax': 401.58,
+                'invoice_lines': [{'price_subtotal': x} for x in (1782, 1000, -100)],
+            },
+        )
 
     def test_import_export_invoice_xml(self):
         """

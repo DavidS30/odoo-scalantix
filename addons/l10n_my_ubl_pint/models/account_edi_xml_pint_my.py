@@ -12,11 +12,6 @@ class AccountEdiXmlUBLPINTMY(models.AbstractModel):
     * PINT MY Official documentation: https://docs.peppol.eu/poac/my/pint-my
     """
 
-    def _get_customization_ids(self):
-        vals = super()._get_customization_ids()
-        vals['pint_my'] = 'urn:peppol:pint:billing-1@my-1'
-        return vals
-
     def _export_invoice_filename(self, invoice):
         # EXTENDS account_edi_ubl_cii
         return f"{invoice.name.replace('/', '_')}_pint_my.xml"
@@ -65,7 +60,7 @@ class AccountEdiXmlUBLPINTMY(models.AbstractModel):
 
         return tax_scheme_vals_list
 
-    def _get_tax_unece_codes(self, invoice, tax):
+    def _get_tax_unece_codes(self, customer, supplier, tax):
         """
         In malaysia, only the following codes can be used: T, E, O
         https://docs.peppol.eu/poac/my/pint-my/bis/#_tax_category_code
@@ -80,7 +75,6 @@ class AccountEdiXmlUBLPINTMY(models.AbstractModel):
         # service tax or tourism tax in the e-Invoice.
         # In this case, the tax category code should be 'O' (Outside scope of tax).
         # For now, we do not properly support Tourism tax (TTx) due to a lack of clarity on the subject.
-        supplier = invoice.company_id.partner_id.commercial_partner_id
         if not supplier.sst_registration_number:
             codes['tax_category_code'] = 'O'
         elif tax.amount != 0:

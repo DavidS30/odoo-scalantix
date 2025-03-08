@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import base64
@@ -6,19 +5,23 @@ import json
 
 from markupsafe import Markup
 from psycopg2 import IntegrityError
+import re
 from werkzeug.exceptions import BadRequest
 
-from odoo import http, SUPERUSER_ID, _, _lt
+from odoo import http, SUPERUSER_ID
 from odoo.addons.base.models.ir_qweb_fields import nl2br, nl2br_enclose
 from odoo.http import request
 from odoo.tools import plaintext2html
 from odoo.exceptions import AccessDenied, ValidationError, UserError
 from odoo.tools.misc import hmac, consteq
+from odoo.tools.translate import _, LazyTranslate
+
+_lt = LazyTranslate(__name__)
 
 
 class WebsiteForm(http.Controller):
 
-    @http.route('/website/form', type='http', auth="public", methods=['POST'], multilang=False)
+    @http.route('/website/form', type='http', auth="public", methods=['POST'], multilang=False, readonly=True)
     def website_form_empty(self, **kwargs):
         # This is a workaround to don't add language prefix to <form action="/website/form/" ...>
         return ""
@@ -127,6 +130,13 @@ class WebsiteForm(http.Controller):
     def many2many(self, field_label, field_input, *args):
         return [(args[0] if args else (6, 0)) + (self.one2many(field_label, field_input),)]
 
+    def tags(self, field_label, field_input):
+        # Unescape ',' and '\'
+        return [
+            tag.replace('\\,', ',').replace('\\/', '\\')
+            for tag in re.split(r'(?<!\\),', field_input)
+        ]
+
     _input_filters = {
         'char': identity,
         'text': identity,
@@ -142,6 +152,8 @@ class WebsiteForm(http.Controller):
         'float': floating,
         'binary': binary,
         'monetary': floating,
+        # Properties
+        'tags': tags,
     }
 
     # Extract all data sent by the form and sort its on several properties
@@ -155,11 +167,14 @@ class WebsiteForm(http.Controller):
             'meta': '',         # Add metadata if enabled
         }
 
-        authorized_fields = model.with_user(SUPERUSER_ID)._get_form_writable_fields()
+        authorized_fields = model.with_user(SUPERUSER_ID)._get_form_writable_fields(values)
         error_fields = []
         custom_fields = []
 
         for field_name, field_value in values.items():
+            # First decode the field_name encoded at the client side.
+            field_name = re.sub('&quot;', '"', field_name)
+
             # If the value of the field if a file
             if hasattr(field_value, 'filename'):
                 # Undo file upload field name indexing
@@ -179,8 +194,23 @@ class WebsiteForm(http.Controller):
             # If it's a known field
             elif field_name in authorized_fields:
                 try:
-                    input_filter = self._input_filters[authorized_fields[field_name]['type']]
-                    data['record'][field_name] = input_filter(self, field_name, field_value)
+                    if '_property' in authorized_fields[field_name]:
+                        # Collect all properties for a given property field in
+                        # a list.
+                        field_data = authorized_fields[field_name]
+                        properties_field_name = field_data['_property']['field']
+                        del field_data['_property']
+                        properties = data['record'].setdefault(properties_field_name, [])
+                        property_type = authorized_fields[field_name]['type']
+                        # For properties, many2many is stored as an array of
+                        # integers like one2many
+                        filter_type = 'one2many' if property_type == 'many2many' else property_type
+                        input_filter = self._input_filters[filter_type]
+                        field_data['value'] = input_filter(self, field_name, field_value)
+                        properties.append(field_data)
+                    else:
+                        input_filter = self._input_filters[authorized_fields[field_name]['type']]
+                        data['record'][field_name] = input_filter(self, field_name, field_value)
                 except ValueError:
                     error_fields.append(field_name)
 
@@ -224,14 +254,19 @@ class WebsiteForm(http.Controller):
 
         return data
 
+    # TODO: Remove in master
+    def _should_log_authenticate_message(self, record):
+        return True
+
     def insert_record(self, request, model, values, custom, meta=None):
         model_name = model.sudo().model
         if model_name == 'mail.mail':
-            email_from = _('"%s form submission" <%s>') % (request.env.company.name, request.env.company.email)
+            email_from = _('"%(company)s form submission" <%(email)s>', company=request.env.company.name, email=request.env.company.email)
             values.update({'reply_to': values.get('email_from'), 'email_from': email_from})
         record = request.env[model_name].with_user(SUPERUSER_ID).with_context(
             mail_create_nosubscribe=True,
         ).create(values)
+
         if custom or meta:
             _custom_label = "%s\n___________\n\n" % _("Other Information:")  # Title for custom fields
             if model_name == 'mail.mail':

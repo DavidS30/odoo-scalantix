@@ -3,24 +3,26 @@
 # 	* event_crm
 # 
 # Translators:
-# Fishfur A Banter <fishfurbanter@gmail.com>, 2023
-# דודי מלכה <Dudimalka6@gmail.com>, 2023
-# Lilach Gilliam <lilach@apprcase.com>, 2023
-# Yihya Hugirat <hugirat@gmail.com>, 2023
-# ExcaliberX <excaliberx@gmail.com>, 2023
-# ZVI BLONDER <ZVIBLONDER@gmail.com>, 2023
-# Martin Trigaux, 2023
-# Lilach Gilliam <lilach.gilliam@gmail.com>, 2023
-# Netta Waizer, 2023
+# MichaelHadar, 2024
+# Lilach Gilliam <lilach@apprcase.com>, 2024
+# דודי מלכה <Dudimalka6@gmail.com>, 2024
+# Fishfur A Banter <fishfurbanter@gmail.com>, 2024
+# Yihya Hugirat <hugirat@gmail.com>, 2024
+# Martin Trigaux, 2024
 # yael terner, 2024
+# ExcaliberX <excaliberx@gmail.com>, 2024
+# Lilach Gilliam <lilach.gilliam@gmail.com>, 2024
+# Netta Waizer, 2024
+# ZVI BLONDER <ZVIBLONDER@gmail.com>, 2024
+# or balmas, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: yael terner, 2024\n"
+"POT-Creation-Date: 2024-09-26 08:55+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: or balmas, 2025\n"
 "Language-Team: Hebrew (https://app.transifex.com/odoo/teams/41243/he/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -42,7 +44,6 @@ msgstr "# הרשמות"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_registration.py:0
-#, python-format
 msgid "(updated)"
 msgstr "(עודכן)"
 
@@ -53,7 +54,6 @@ msgstr "<span class=\"o_stat_text\">משתתפים</span>"
 
 #. module: event_crm
 #: model_terms:ir.ui.view,arch_db:event_crm.event_registration_view_form
-#: model_terms:ir.ui.view,arch_db:event_crm.event_view_form
 msgid "<span class=\"o_stat_text\"> Leads</span>"
 msgstr "<span class=\"o_stat_text\"> לידים </span>"
 
@@ -99,6 +99,12 @@ msgid "Automatically assign the created leads to this Salesperson."
 msgstr "הקצה אוטומטית את הלידים שנוצרו לאיש מכירות זה."
 
 #. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Aww! No Leads created, check your Lead Generation Rules and try again."
+msgstr ""
+
+#. module: event_crm
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__company_id
 msgid "Company"
 msgstr "חברה"
@@ -111,7 +117,7 @@ msgstr "מונה עבור ההרשמות המקושרות לליד זה"
 #. module: event_crm
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__lead_creation_basis
 msgid "Create"
-msgstr "צור"
+msgstr "יצירה"
 
 #. module: event_crm
 #: model_terms:ir.actions.act_window,help:event_crm.event_lead_rule_action
@@ -152,20 +158,27 @@ msgid "Default lead type when this rule is applied."
 msgstr "סוג הליד המוגדר כברירת מחדל כאשר כלל זה מיושם."
 
 #. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__display_name
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__display_name
 msgid "Display Name"
 msgstr "שם לתצוגה"
 
 #. module: event_crm
 #: model:ir.model,name:event_crm.model_event_event
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__event_id
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__event_id
 msgid "Event"
 msgstr "אירוע"
 
 #. module: event_crm
-#: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__event_type_ids
-msgid "Event Categories"
-msgstr "קטגוריות אירועים"
+#: model:ir.actions.server,name:event_crm.ir_cron_generate_leads_ir_actions_server
+msgid "Event CRM: Generate Leads based on Rules"
+msgstr ""
+
+#. module: event_crm
+#: model:ir.model,name:event_crm.model_event_lead_request
+msgid "Event Lead Request"
+msgstr ""
 
 #. module: event_crm
 #: model:ir.model,name:event_crm.model_event_lead_rule
@@ -178,9 +191,14 @@ msgid "Event Registration"
 msgstr "הרשמה לאירוע"
 
 #. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__event_type_ids
+msgid "Event Templates"
+msgstr "תבניות אירוע"
+
+#. module: event_crm
 #: model:ir.actions.act_window,name:event_crm.event_registration_action_from_lead
 msgid "Event registrations"
-msgstr "הרשמות לאירועים"
+msgstr "הרשמות לאירוע"
 
 #. module: event_crm
 #: model:ir.model.fields,help:event_crm.field_crm_lead__event_id
@@ -190,7 +208,7 @@ msgstr "אירוע המפעיל את הכלל שיצר ליד זה"
 #. module: event_crm
 #: model_terms:ir.ui.view,arch_db:event_crm.crm_lead_merge_summary_inherit_event_crm
 msgid "Event:"
-msgstr ""
+msgstr "אירוע:"
 
 #. module: event_crm
 #: model:ir.model.fields,help:event_crm.field_event_lead_rule__event_registration_filter
@@ -221,6 +239,18 @@ msgid "For any of these Events"
 msgstr "לכל אחד מהאירועים הללו"
 
 #. module: event_crm
+#: model_terms:ir.ui.view,arch_db:event_crm.event_view_form
+msgid "Generate Leads"
+msgstr "צור לידים"
+
+#. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Got it! We've noted your request. Your leads will be created soon!"
+msgstr ""
+
+#. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__id
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__id
 msgid "ID"
 msgstr "מזהה"
@@ -286,6 +316,7 @@ msgstr "ליד/הזדמנות"
 #: model:ir.actions.act_window,name:event_crm.crm_lead_action_from_registration
 #: model:ir.model.fields,field_description:event_crm.field_event_event__lead_ids
 #: model:ir.model.fields,field_description:event_crm.field_event_registration__lead_ids
+#: model_terms:ir.ui.view,arch_db:event_crm.event_view_form
 msgid "Leads"
 msgstr "לידים"
 
@@ -302,7 +333,6 @@ msgstr "שם"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_lead_rule.py:0
-#, python-format
 msgid "New registrations"
 msgstr "הרשמות חדשות"
 
@@ -318,6 +348,17 @@ msgid "No registration found"
 msgstr "לא נמצא רישום"
 
 #. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_event__has_lead_request
+msgid "Ongoing Generation Request"
+msgstr ""
+
+#. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Only Event Managers are allowed to re-generate all leads."
+msgstr ""
+
+#. module: event_crm
 #: model:ir.model.fields.selection,name:event_crm.selection__event_lead_rule__lead_type__opportunity
 msgid "Opportunity"
 msgstr "הזדמנות"
@@ -325,8 +366,6 @@ msgstr "הזדמנות"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_registration.py:0
-#: code:addons/event_crm/models/event_registration.py:0
-#, python-format
 msgid "Participants"
 msgstr "משתתף"
 
@@ -346,6 +385,11 @@ msgstr ""
 #: model:ir.model.fields.selection,name:event_crm.selection__event_lead_rule__lead_creation_basis__order
 msgid "Per Order"
 msgstr "לכל הזמנה"
+
+#. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__processed_registration_id
+msgid "Processed Registration"
+msgstr ""
 
 #. module: event_crm
 #: model:ir.model.fields,field_description:event_crm.field_crm_lead__event_lead_rule_id
@@ -407,6 +451,11 @@ msgid "Search Lead Generation Rules"
 msgstr "חיפוש כללי יצירת לידים"
 
 #. module: event_crm
+#: model:ir.model.fields,help:event_crm.field_event_event__has_lead_request
+msgid "Set to True when a Lead Generation Request is currently running."
+msgstr ""
+
+#. module: event_crm
 #: model:ir.model.fields,field_description:event_crm.field_crm_lead__event_id
 msgid "Source Event"
 msgstr "מקור האירוע"
@@ -422,6 +471,13 @@ msgid "Tags"
 msgstr "תגיות"
 
 #. module: event_crm
+#: model:ir.model.fields,help:event_crm.field_event_lead_request__processed_registration_id
+msgid ""
+"The ID of the last processed event.registration, used to know where to "
+"resume."
+msgstr ""
+
+#. module: event_crm
 #: model_terms:ir.actions.act_window,help:event_crm.event_lead_rule_action
 msgid "Those automatically create leads when attendees register."
 msgstr "אלה יוצרים לידים באופן אוטומטי כאשר המשתתפים נרשמים."
@@ -434,8 +490,6 @@ msgstr "סוג טריגר"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_registration.py:0
-#: code:addons/event_crm/models/event_registration.py:0
-#, python-format
 msgid "Updated registrations"
 msgstr "רישומים מעודכנים"
 
@@ -443,6 +497,17 @@ msgstr "רישומים מעודכנים"
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__lead_creation_trigger
 msgid "When"
 msgstr "מתי"
+
+#. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Yee-ha, %(leads_count)s Leads have been created!"
+msgstr ""
+
+#. module: event_crm
+#: model:ir.model.constraint,message:event_crm.constraint_event_lead_request_uniq_event
+msgid "You can only have one generation request per event at a time."
+msgstr ""
 
 #. module: event_crm
 #: model_terms:ir.ui.view,arch_db:event_crm.event_lead_rule_view_form

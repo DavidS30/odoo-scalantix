@@ -1,5 +1,4 @@
-/* @odoo-module */
-import { Component, useState, onWillUnmount } from "@odoo/owl";
+import { Component, useState, onWillUnmount, status } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { browser } from "@web/core/browser/browser";
@@ -29,8 +28,8 @@ export class VoiceRecorder extends Component {
     processor;
     /** @type {Mp3Encoder} */
     encoder;
-    /** @type {import("@mail/core/common/user_settings_service").UserSettings} */
-    userSettings;
+    /** @type {import("models").Store} */
+    store;
     /** @type {ReturnType<typeof import("@web/core/notifications/notification_service").notificationService.start>} */
     notification;
     /** @type {Object} */
@@ -39,6 +38,7 @@ export class VoiceRecorder extends Component {
     voiceMessageService;
 
     setup() {
+        super.setup();
         this.state = useState({
             limitWarning: false,
             isActionPending: false,
@@ -46,7 +46,7 @@ export class VoiceRecorder extends Component {
             elapsed: "00 : 00",
         });
         this.notification = useService("notification");
-        this.userSettings = useService("mail.user_settings");
+        this.store = useState(useService("mail.store"));
         this.voiceMessageService = useState(useService("discuss.voice_message"));
         this.config = {
             // 128 or 160 kbit/s – mid-range bitrate quality
@@ -80,8 +80,12 @@ export class VoiceRecorder extends Component {
         if (!this.microphone) {
             try {
                 this.microphone = await browser.navigator.mediaDevices.getUserMedia({
-                    audio: this.userSettings.audioConstraints,
+                    audio: this.store.settings.audioConstraints,
                 });
+                if (status(this) === "destroyed") {
+                    this.cleanUp({ unmounting: true });
+                    return;
+                }
             } catch {
                 this.notification.add(
                     _t('"%(hostname)s" needs to access your microphone', {
@@ -156,7 +160,7 @@ export class VoiceRecorder extends Component {
         this.getMp3()
             .then((buffer) => {
                 const file = this._makeFile(buffer, "audio/mp3");
-                this.props.attachmentUploader.uploadFile(file, { isVoice: true });
+                this.props.attachmentUploader.uploadFile(file, { voice: true });
             })
             .catch(() => {});
         this.cleanUp();

@@ -1,20 +1,14 @@
-from odoo import api, models, fields, _
+import base64
+import logging
+import uuid
+
+import psycopg2.errors
+import requests
+
+from odoo import _, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import index_exists
 from .account_edi_proxy_auth import OdooEdiProxyAuth
-
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.fernet import Fernet
-from psycopg2 import OperationalError
-import requests
-import uuid
-import base64
-import logging
-
 
 _logger = logging.getLogger(__name__)
 
@@ -44,8 +38,13 @@ class AccountEdiProxyClientUser(models.Model):
     company_id = fields.Many2one('res.company', string='Company', required=True,
         default=lambda self: self.env.company)
     edi_identification = fields.Char(required=True, help="The unique id that identifies this user, typically the vat")
-    private_key = fields.Binary(required=True, attachment=False, groups="base.group_system", help="The key to encrypt all the user's data")
-    private_key_filename = fields.Char(compute='_compute_private_key_filename')
+    private_key_id = fields.Many2one(
+        string='Private Key',
+        comodel_name='certificate.key',
+        required=True,
+        domain=[('public', '=', False)],
+        help="The key to encrypt all the user's data",
+    )
     refresh_token = fields.Char(groups="base.group_system")
     proxy_type = fields.Selection(selection=[], required=True)
     edi_mode = fields.Selection(
@@ -77,10 +76,6 @@ class AccountEdiProxyClientUser(models.Model):
                                  ON account_edi_proxy_client_user(company_id, proxy_type, edi_mode)
                               WHERE (active = True)
             """)
-
-    def _compute_private_key_filename(self):
-        for record in self:
-            record.private_key_filename = f'{record.id_client}_{record.edi_identification}.key'
 
     def _get_proxy_urls(self):
         # To extend
@@ -132,9 +127,9 @@ class AccountEdiProxyClientUser(models.Model):
                 _('The url that this service requested returned an error. The url it tried to contact was %s', url))
 
         if 'error' in response:
-            message = _('The url that this service requested returned an error. The url it tried to contact was %s. %s', url, response['error']['message'])
+            message = _('The url that this service requested returned an error. The url it tried to contact was %(url)s. %(error_message)s', url=url, error_message=response['error']['message'])
             if response['error']['code'] == 404:
-                message = _('The url that this service tried to contact does not exist. The url was %r', url)
+                message = _('The url that this service tried to contact does not exist. The url was “%s”', url)
             raise AccountEdiProxyError('connection_error', message)
 
         proxy_error = response['result'].pop('proxy_error', False)
@@ -147,6 +142,13 @@ class AccountEdiProxyClientUser(models.Model):
             if error_code == 'no_such_user':
                 # This error is also raised if the user didn't exchange data and someone else claimed the edi_identificaiton.
                 self.sudo().active = False
+            if error_code == 'invalid_signature':
+                raise AccountEdiProxyError(
+                    error_code,
+                    _("Invalid signature for request. This might be due to another connection to odoo Access Point "
+                      "server. It can occur if you have duplicated your database. \n\n"
+                      "If you are not sure how to fix this, please contact our support."),
+                )
             raise AccountEdiProxyError(error_code, proxy_error['message'] or False)
 
         return response['result']
@@ -157,23 +159,9 @@ class AccountEdiProxyClientUser(models.Model):
 
         :param company: the company of the user.
         '''
-        # public_exponent=65537 is a default value that should be used most of the time, as per the documentation of cryptography.
-        # key_size=2048 is considered a reasonable default key size, as per the documentation of cryptography.
-        # see https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=2048,
-            backend=default_backend()
-        )
-        private_pem = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-        public_key = private_key.public_key()
-        public_pem = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        private_key_sudo = self.env['certificate.key'].sudo()._generate_rsa_private_key(
+            company,
+            name=f"{proxy_type}_{edi_mode}_{company.id}.key",
         )
         edi_identification = self._get_proxy_identification(company, proxy_type)
         if edi_mode == 'demo':
@@ -186,12 +174,16 @@ class AccountEdiProxyClientUser(models.Model):
                     'dbuuid': company.env['ir.config_parameter'].get_param('database.uuid'),
                     'company_id': company.id,
                     'edi_identification': edi_identification,
-                    'public_key': base64.b64encode(public_pem).decode(),
+                    'public_key': private_key_sudo._get_public_key_bytes(encoding='pem').decode(),
                     'proxy_type': proxy_type,
                 })
             except AccountEdiProxyError as e:
                 raise UserError(e.message)
             if 'error' in response:
+                if response['error'] == 'A user already exists with this identification.':
+                    # Note: Peppol IAP errors weren't made properly with error code that are then translated on
+                    # Odoo side. We are for now forced to check the error message.
+                    raise UserError(_('A user already exists with theses credentials on our server. Please check your information.'))
                 raise UserError(response['error'])
 
         return self.create({
@@ -200,7 +192,7 @@ class AccountEdiProxyClientUser(models.Model):
             'proxy_type': proxy_type,
             'edi_mode': edi_mode,
             'edi_identification': edi_identification,
-            'private_key': base64.b64encode(private_pem),
+            'private_key_id': private_key_sudo.id,
             'refresh_token': response['refresh_token'],
         })
 
@@ -214,10 +206,8 @@ class AccountEdiProxyClientUser(models.Model):
         try:
             with self.env.cr.savepoint(flush=False):
                 self.env.cr.execute('SELECT * FROM account_edi_proxy_client_user WHERE id IN %s FOR UPDATE NOWAIT', [tuple(self.ids)])
-        except OperationalError as e:
-            if e.pgcode == '55P03':
-                return
-            raise e
+        except psycopg2.errors.LockNotAvailable:
+            return
         response = self._make_request(self._get_server_url() + '/iap/account_edi/1/renew_token')
         if 'error' in response:
             # can happen if the database was duplicated and the refresh_token was refreshed by the other database.
@@ -231,20 +221,7 @@ class AccountEdiProxyClientUser(models.Model):
         We must therefore decrypt the symmetric key.
 
         :param data:            The data to decrypt.
-        :param symmetric_key:   The symmetric_key encrypted with self.private_key.public_key()
+        :param symmetric_key:   The symmetric_key encrypted with self.private_key_id.public_key()
         '''
-        private_key = serialization.load_pem_private_key(
-            base64.b64decode(self.sudo().private_key),
-            password=None,
-            backend=default_backend()
-        )
-        key = private_key.decrypt(
-            base64.b64decode(symmetric_key),
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            )
-        )
-        f = Fernet(key)
-        return f.decrypt(base64.b64decode(data))
+        decrypted_key = self.sudo().private_key_id._decrypt(base64.b64decode(symmetric_key))
+        return self.env['certificate.key']._account_edi_fernet_decrypt(decrypted_key, base64.b64decode(data))

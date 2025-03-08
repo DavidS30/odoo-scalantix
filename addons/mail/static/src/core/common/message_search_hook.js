@@ -1,6 +1,5 @@
-/* @odoo-module */
-
 import { useSequential } from "@mail/utils/common/hooks";
+import { createDocumentFragmentFromContent } from "@mail/utils/common/html";
 import { useState, onWillUnmount, markup } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { escapeRegExp } from "@web/core/utils/strings";
@@ -15,7 +14,7 @@ export function searchHighlight(searchTerm, target) {
     if (!searchTerm) {
         return target;
     }
-    const htmlDoc = new DOMParser().parseFromString(target, "text/html");
+    const htmlDoc = createDocumentFragmentFromContent(target);
     for (const term of searchTerm.split(" ")) {
         const regexp = new RegExp(`(${escapeRegExp(term)})`, "gi");
         // Special handling for '
@@ -63,9 +62,9 @@ export function searchHighlight(searchTerm, target) {
     return markup(htmlDoc.body.innerHTML);
 }
 
-/** @param {import('@mail/core/common/thread_model').Thread} thread */
+/** @param {import('models').Thread} thread */
 export function useMessageSearch(thread) {
-    const threadService = useService("mail.thread");
+    const store = useService("mail.store");
     const sequential = useSequential();
     const state = useState({
         thread,
@@ -73,7 +72,7 @@ export function useMessageSearch(thread) {
             if (this.searchTerm) {
                 this.searching = true;
                 const data = await sequential(() =>
-                    threadService.search(this.searchTerm, this.thread, before)
+                    store.search(this.searchTerm, this.thread, before)
                 );
                 if (!data) {
                     return;

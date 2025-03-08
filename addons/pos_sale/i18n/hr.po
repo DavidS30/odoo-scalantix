@@ -3,26 +3,21 @@
 # 	* pos_sale
 # 
 # Translators:
-# Stjepan Lovasić <stjepan.lovasic@gmail.com>, 2024
-# Carlo Štefanac, 2024
-# Vladimir Vrgoč, 2024
-# Vladimir Olujić <olujic.vladimir@storm.hr>, 2024
-# Luka Carević <luka@uvid.hr>, 2024
 # Đurđica Žarković <durdica.zarkovic@storm.hr>, 2024
-# Marko Carević <marko.carevic@live.com>, 2024
+# Vladimir Vrgoč, 2024
 # Tina Milas, 2024
-# Karolina Tonković <karolina.tonkovic@storm.hr>, 2024
 # Bole <bole@dajmi5.com>, 2024
-# Martin Trigaux, 2024
 # hrvoje sić <hrvoje.sic@gmail.com>, 2024
+# Martin Trigaux, 2024
+# Jurica Pomper, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: hrvoje sić <hrvoje.sic@gmail.com>, 2024\n"
+"POT-Creation-Date: 2024-09-25 08:39+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Jurica Pomper, 2024\n"
 "Language-Team: Croatian (https://app.transifex.com/odoo/teams/41243/hr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -32,15 +27,7 @@ msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.xml:0
-#, python-format
-msgid "(left:"
-msgstr ""
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/overrides/components/product_screen/product_screen.xml:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/components/orderline/orderline.xml:0
 msgid "(tax incl.)"
 msgstr ""
 
@@ -51,43 +38,36 @@ msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "A new order has been created."
 msgstr ""
 
 #. module: pos_sale
+#: model:ir.model.fields,field_description:pos_sale.field_sale_order__amount_unpaid
+msgid "Amount To Pay In POS"
+msgstr ""
+
+#. module: pos_sale
+#: model:ir.model.fields,help:pos_sale.field_sale_order__amount_unpaid
+msgid "Amount left to pay in POS to avoid double payment or double invoicing."
+msgstr ""
+
+#. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "Apply a down payment (fixed amount)"
 msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "Apply a down payment (percentage)"
 msgstr ""
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_control_panel/sale_order_management_control_panel.xml:0
-#, python-format
-msgid "Back"
-msgstr "Natrag"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.js:0
-#, python-format
-msgid "Cancelled"
-msgstr "Otkazano"
-
-#. module: pos_sale
 #: model:ir.model,name:pos_sale.model_res_config_settings
 msgid "Config Settings"
-msgstr "Konfiguracija postavki"
+msgstr "Konfiguracijske postavke"
 
 #. module: pos_sale
 #: model:ir.model.fields,field_description:pos_sale.field_pos_order__currency_rate
@@ -95,45 +75,24 @@ msgid "Currency Rate"
 msgstr "Tečaj"
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_list/sale_order_list.xml:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.xml:0
-#, python-format
-msgid "Customer"
-msgstr "Kupac"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
-msgid "Customer loading error"
-msgstr ""
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_list/sale_order_list.xml:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.xml:0
-#, python-format
-msgid "Date"
-msgstr "Datum"
-
-#. module: pos_sale
 #: model_terms:ir.ui.view,arch_db:pos_sale.message_body
 msgid "Delivered from"
 msgstr ""
 
 #. module: pos_sale
+#: model:ir.model.fields,field_description:pos_sale.field_pos_order_line__qty_delivered
+msgid "Delivery Quantity"
+msgstr "Količina za isporuku"
+
+#. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "Do you want to load the SN/Lots linked to the Sales Order?"
 msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "Down Payment"
 msgstr "Predujam"
 
@@ -155,31 +114,27 @@ msgid "Down Payment Product"
 msgstr "Proizvod predujma"
 
 #. module: pos_sale
+#. odoo-python
+#: code:addons/pos_sale/models/pos_order.py:0
+msgid ""
+"Down payment (ref: %(order_reference)s on \n"
+" %(date)s)"
+msgstr ""
+
+#. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "Due balance: %s"
 msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_control_panel/sale_order_management_control_panel.xml:0
-#, python-format
-msgid "E.g. customer: Steward, date: 2020-05-09"
-msgstr "Npr. kupac: Steward, datum: 2020-05-09"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "Error amount too high"
 msgstr ""
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/overrides/components/receipt_screen/order_receipt/order_receipt.xml:0
 #: model_terms:ir.ui.view,arch_db:pos_sale.report_invoice_document
-#, python-format
 msgid "From"
 msgstr "Od"
 
@@ -190,8 +145,7 @@ msgstr "Izdani računi"
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid ""
 "It seems that you didn't configure a down payment product in your point of "
 "sale. You can go to your point of sale configuration to choose one."
@@ -200,7 +154,6 @@ msgstr ""
 #. module: pos_sale
 #. odoo-python
 #: code:addons/pos_sale/models/sale_order.py:0
-#, python-format
 msgid "Linked POS Orders"
 msgstr ""
 
@@ -212,37 +165,12 @@ msgstr ""
 #. module: pos_sale
 #. odoo-python
 #: code:addons/pos_sale/models/pos_order.py:0
-#, python-format
 msgid "Linked Sale Orders"
 msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.js:0
-#, python-format
-msgid "Locked"
-msgstr "Zaključano"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_control_panel/sale_order_management_control_panel.xml:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_control_panel/sale_order_management_control_panel.xml:0
-#, python-format
-msgid "Next Order List"
-msgstr "Sljedeći popis narudžbi"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
-msgid "No"
-msgstr "Ne"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "No down payment product"
 msgstr ""
 
@@ -258,9 +186,12 @@ msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_list/sale_order_list.xml:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.xml:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/components/product_info_popup/product_info_popup.xml:0
+msgid "Optional Products:"
+msgstr ""
+
+#. module: pos_sale
+#: model:ir.model.fields,field_description:pos_sale.field_sale_report__order_reference
 msgid "Order"
 msgstr "Narudžba"
 
@@ -311,58 +242,30 @@ msgid "Pos Order Count"
 msgstr "Pos broj narudžba"
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_control_panel/sale_order_management_control_panel.xml:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_control_panel/sale_order_management_control_panel.xml:0
-#, python-format
-msgid "Previous Order List"
-msgstr "Stavke prethodne narudžbe"
+#: model:ir.model.fields.selection,name:pos_sale.selection__sale_report__state__done
+msgid "Posted"
+msgstr "Proknjiženo"
+
+#. module: pos_sale
+#: model:ir.model,name:pos_sale.model_product_product
+msgid "Product Variant"
+msgstr "Varijanta proizvoda"
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
-msgid "Products not available in POS"
-msgstr ""
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.js:0
-#, python-format
-msgid "Quotation"
-msgstr "Ponuda"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.js:0
-#, python-format
-msgid "Quotation Sent"
-msgstr "Ponuda poslana"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/set_sale_order_button/set_sale_order_button.xml:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/components/control_buttons/control_buttons.xml:0
 msgid "Quotation/Order"
-msgstr ""
-
-#. module: pos_sale
-#: model:ir.model.fields,field_description:pos_sale.field_sale_report__order_reference
-msgid "Related Order"
-msgstr ""
+msgstr "Ponuda/Nalog"
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "SN/Lots Loading"
 msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/overrides/components/product_screen/product_screen.xml:0
-#: code:addons/pos_sale/static/src/overrides/components/product_screen/product_screen.xml:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/components/orderline/orderline.xml:0
 msgid "SO"
 msgstr ""
 
@@ -382,10 +285,7 @@ msgid "Sales Analysis Report"
 msgstr "Izvještaj analize prodaje"
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.js:0
 #: model:ir.model,name:pos_sale.model_sale_order
-#, python-format
 msgid "Sales Order"
 msgstr "Prodajni nalog"
 
@@ -414,20 +314,6 @@ msgid "Sales are reported to the following sales team"
 msgstr ""
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.xml:0
-#, python-format
-msgid "Salesman"
-msgstr "Prodavač"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_list/sale_order_list.xml:0
-#, python-format
-msgid "Salesperson"
-msgstr "Prodavač"
-
-#. module: pos_sale
 #: model_terms:ir.ui.view,arch_db:pos_sale.crm_team_view_kanban_dashboard
 msgid "Session Running"
 msgstr ""
@@ -444,27 +330,15 @@ msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/set_sale_order_button/set_sale_order_button.xml:0
-#: code:addons/pos_sale/static/src/app/set_sale_order_button/set_sale_order_button.xml:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/components/control_buttons/control_buttons.xml:0
 msgid "Set Sale Order"
 msgstr ""
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "Settle the order"
-msgstr ""
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
-msgid ""
-"Some of the products in your Sale Order are not available in POS, do you "
-"want to import them?"
-msgstr ""
+msgstr "Obradi nalog"
 
 #. module: pos_sale
 #: model:ir.model.fields,field_description:pos_sale.field_pos_order_line__sale_order_line_id
@@ -472,22 +346,9 @@ msgid "Source Sale Order Line"
 msgstr ""
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_list/sale_order_list.xml:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.xml:0
-#, python-format
-msgid "State"
-msgstr "Županija"
-
-#. module: pos_sale
 #: model:ir.model.fields,field_description:pos_sale.field_sale_report__state
 msgid "Status"
 msgstr "Status"
-
-#. module: pos_sale
-#: model:ir.model.fields,help:pos_sale.field_sale_order__amount_unpaid
-msgid "The amount due from the sale order."
-msgstr ""
 
 #. module: pos_sale
 #: model:ir.model.fields,help:pos_sale.field_pos_order__currency_rate
@@ -495,13 +356,6 @@ msgid ""
 "The rate of the currency to the currency of rate applicable at the date of "
 "the order"
 msgstr "Stopa valute prema valuti važećoj na datum narudžbe"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
-msgid "There was a problem in loading the %s customer."
-msgstr ""
 
 #. module: pos_sale
 #: model:ir.model.fields,help:pos_sale.field_pos_config__crm_team_id
@@ -522,14 +376,6 @@ msgid "This product will be used as down payment on a sale order."
 msgstr ""
 
 #. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_list/sale_order_list.xml:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_row/sale_order_row.xml:0
-#, python-format
-msgid "Total"
-msgstr "Ukupno"
-
-#. module: pos_sale
 #: model:ir.model,name:pos_sale.model_stock_picking
 msgid "Transfer"
 msgstr "Prijenos"
@@ -537,42 +383,33 @@ msgstr "Prijenos"
 #. module: pos_sale
 #: model_terms:ir.ui.view,arch_db:pos_sale.view_pos_order_form_inherit_pos_sale
 msgid ""
-"Transfered<br/>\n"
+"Transferred<br/>\n"
 "                                from Sale"
 msgstr ""
 
 #. module: pos_sale
 #: model_terms:ir.ui.view,arch_db:pos_sale.view_order_form_inherit_pos_sale
 msgid ""
-"Transfered<br/>\n"
+"Transferred<br/>\n"
 "                                to POS"
 msgstr ""
 
 #. module: pos_sale
-#: model:ir.model.fields,field_description:pos_sale.field_sale_order__amount_unpaid
-msgid "Unpaid Amount"
-msgstr ""
-
-#. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid "What do you want to do?"
 msgstr "Što želite učiniti?"
 
 #. module: pos_sale
 #. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
-msgid "Yes"
-msgstr "Da"
-
-#. module: pos_sale
-#. odoo-javascript
-#: code:addons/pos_sale/static/src/app/order_management_screen/sale_order_management_screen/sale_order_management_screen.js:0
-#, python-format
+#: code:addons/pos_sale/static/src/overrides/models/pos_store.js:0
 msgid ""
 "You have tried to charge a down payment of %s but only %s remains to be "
 "paid, %s will be applied to the purchase order line."
 msgstr ""
+
+#. module: pos_sale
+#. odoo-javascript
+#: code:addons/pos_sale/static/src/overrides/components/product_info_popup/product_info_popup.xml:0
+msgid "from"
+msgstr "od"

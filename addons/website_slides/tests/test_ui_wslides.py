@@ -14,6 +14,12 @@ from odoo.tools.misc import file_open
 
 class TestUICommon(HttpCaseGamification, HttpCaseWithUserPortal):
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # remove demo data
+        cls.env["slide.channel"].search([]).unlink()
+
     def setUp(self):
         super().setUp()
         self.env.ref('gamification.rank_student').description_motivational = """
@@ -190,6 +196,15 @@ class TestUi(TestUICommon):
 
         self.start_tour('/slides', 'course_reviews', login=user_demo.login)
 
+    def test_course_reviews_reaction_public(self):
+        self.channel.message_post(
+            body="Bad course!",
+            message_type="comment",
+            rating_value="1",
+            subtype_xmlid="mail.mt_comment"
+        )
+
+        self.start_tour("/slides", "course_reviews_reaction_public", login=None)
 
 @tests.common.tagged('post_install', '-at_install')
 class TestUiPublisher(HttpCaseGamification):
@@ -270,18 +285,3 @@ class TestUiPublisherYoutube(HttpCaseGamification):
         })
 
         self.start_tour(self.env['website'].get_client_action_url('/slides'), 'course_publisher', login=user_demo.login)
-
-
-@tests.common.tagged('external', 'post_install', '-standard', '-at_install')
-class TestPortalComposer(TestUICommon):
-    def test_portal_composer_attachment(self):
-        """Check that the access token is returned when we upload an attachment."""
-        self.authenticate('demo', 'demo')
-        response = self.url_open('/portal/attachment/add', data={
-            'name': 'image.png',
-            'res_id': self.channel.id,
-            'res_model': 'slide.channel',
-            'csrf_token': http.WebRequest.csrf_token(self),
-        }, files={'file': ('image.png', '', 'image/png')})
-        self.assertTrue(response.ok)
-        self.assertTrue(response.json().get('access_token'))

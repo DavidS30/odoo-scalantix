@@ -1,4 +1,3 @@
-# coding: utf-8
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import random
@@ -9,7 +8,7 @@ from unittest.mock import patch
 
 from odoo.addons.base.tests.common import HttpCaseWithUserDemo
 from odoo.addons.website.models.website_visitor import WebsiteVisitor
-from odoo.tests import common, tagged
+from odoo.tests import common, tagged, HttpCase
 
 
 class MockVisitor(common.BaseCase):
@@ -27,10 +26,10 @@ class MockVisitor(common.BaseCase):
 
 
 @tagged('-at_install', 'post_install', 'website_visitor')
-class WebsiteVisitorTests(MockVisitor, HttpCaseWithUserDemo):
+class WebsiteVisitorTestsCommon(MockVisitor, HttpCaseWithUserDemo):
 
     def setUp(self):
-        super(WebsiteVisitorTests, self).setUp()
+        super().setUp()
 
         self.website = self.env['website'].search([
             ('company_id', '=', self.env.user.company_id.id)
@@ -127,6 +126,66 @@ class WebsiteVisitorTests(MockVisitor, HttpCaseWithUserDemo):
         well as Visitor._merge_visitor() ). """
         self.assertFalse(visitor.exists(), "The anonymous visitor should be deleted")
         self.assertTrue(visitor.website_track_ids < main_visitor.website_track_ids)
+
+    def _test_unlink_old_visitors(self, inactive_visitors, active_visitors):
+        """ This method will test that the visitors are correctly deleted when inactive.
+
+        - inactive_visitors: all visitors that should be unlinked by the CRON
+          '_cron_unlink_old_visitors'
+        - active_visitors: all visitors that should NOT be cleaned because they are either active
+          or have some important data linked to them (partner, ...) and we want to keep them.
+
+        We use this method as a private tool so that sub-module can also test the cleaning of visitors
+        based on their own sets of conditions. """
+
+        WebsiteVisitor = self.env['website.visitor']
+
+        self.env['ir.config_parameter'].sudo().set_param('website.visitor.live.days', 7)
+
+        # ensure we keep a single query by correct usage of "not in"
+        # (+1 query to fetch the 'ir.config_parameter')
+        with self.assertQueryCount(2):
+            WebsiteVisitor.search(WebsiteVisitor._inactive_visitors_domain())
+
+        inactive_visitor_ids = inactive_visitors.ids
+        active_visitor_ids = active_visitors.ids
+
+        WebsiteVisitor._cron_unlink_old_visitors()
+        if inactive_visitor_ids:
+            # all inactive visitors should be deleted
+            self.assertFalse(bool(WebsiteVisitor.search([('id', 'in', inactive_visitor_ids)])))
+        if active_visitor_ids:
+            # all active visitors should be kept
+            self.assertEqual(active_visitors, WebsiteVisitor.search([('id', 'in', active_visitor_ids)]))
+
+    def _prepare_main_visitor_data(self):
+        return {
+            'lang_id': self.env.ref('base.lang_en').id,
+            'country_id': self.env.ref('base.be').id,
+            'website_id': 1,
+            'access_token': self.partner_admin.id,
+            'website_track_ids': [(0, 0, {
+                'page_id': self.tracked_page.id,
+                'url': self.tracked_page.url
+            })]
+        }
+
+    def _prepare_linked_visitor_data(self):
+        return {
+            'lang_id': self.env.ref('base.lang_en').id,
+            'country_id': self.env.ref('base.be').id,
+            'website_id': 1,
+            'access_token': '%032x' % random.randrange(16**32),
+            'website_track_ids': [(0, 0, {
+                'page_id': self.tracked_page_2.id,
+                'url': self.tracked_page_2.url
+            })]
+        }
+
+
+class WebsiteVisitorTests(WebsiteVisitorTestsCommon):
+
+    readonly_enabled = False
 
     def test_visitor_creation_on_tracked_page(self):
         """ Test various flows involving visitor creation and update. """
@@ -317,37 +376,6 @@ class WebsiteVisitorTests(MockVisitor, HttpCaseWithUserDemo):
 
         self._test_unlink_old_visitors(inactive_visitors, active_visitors)
 
-    def _test_unlink_old_visitors(self, inactive_visitors, active_visitors):
-        """ This method will test that the visitors are correctly deleted when inactive.
-
-        - inactive_visitors: all visitors that should be unlinked by the CRON
-          '_cron_unlink_old_visitors'
-        - active_visitors: all visitors that should NOT be cleaned because they are either active
-          or have some important data linked to them (partner, ...) and we want to keep them.
-
-        We use this method as a private tool so that sub-module can also test the cleaning of visitors
-        based on their own sets of conditions. """
-
-        WebsiteVisitor = self.env['website.visitor']
-
-        self.env['ir.config_parameter'].sudo().set_param('website.visitor.live.days', 7)
-
-        # ensure we keep a single query by correct usage of "not inselect"
-        # (+1 query to fetch the 'ir.config_parameter')
-        with self.assertQueryCount(2):
-            WebsiteVisitor.search(WebsiteVisitor._inactive_visitors_domain())
-
-        inactive_visitor_ids = inactive_visitors.ids
-        active_visitor_ids = active_visitors.ids
-
-        WebsiteVisitor._cron_unlink_old_visitors()
-        if inactive_visitor_ids:
-            # all inactive visitors should be deleted
-            self.assertFalse(bool(WebsiteVisitor.search([('id', 'in', inactive_visitor_ids)])))
-        if active_visitor_ids:
-            # all active visitors should be kept
-            self.assertEqual(active_visitors, WebsiteVisitor.search([('id', 'in', active_visitor_ids)]))
-
     def test_link_to_visitor(self):
         """ Visitors are 'linked' together when the user, previously not connected, authenticates
         and the system detects it already had a website.visitor for that partner_id.
@@ -368,30 +396,6 @@ class WebsiteVisitorTests(MockVisitor, HttpCaseWithUserDemo):
         linked_visitor._merge_visitor(main_visitor)
 
         self.assertVisitorDeactivated(linked_visitor, main_visitor)
-
-    def _prepare_main_visitor_data(self):
-        return {
-            'lang_id': self.env.ref('base.lang_en').id,
-            'country_id': self.env.ref('base.be').id,
-            'website_id': 1,
-            'access_token': self.partner_admin.id,
-            'website_track_ids': [(0, 0, {
-                'page_id': self.tracked_page.id,
-                'url': self.tracked_page.url
-            })]
-        }
-
-    def _prepare_linked_visitor_data(self):
-        return {
-            'lang_id': self.env.ref('base.lang_en').id,
-            'country_id': self.env.ref('base.be').id,
-            'website_id': 1,
-            'access_token': '%032x' % random.randrange(16**32),
-            'website_track_ids': [(0, 0, {
-                'page_id': self.tracked_page_2.id,
-                'url': self.tracked_page_2.url
-            })]
-        }
 
     def test_merge_partner_with_visitor_both(self):
         """ See :meth:`test_merge_partner_with_visitor_single` """
@@ -505,3 +509,126 @@ class WebsiteVisitorTests(MockVisitor, HttpCaseWithUserDemo):
                         "The admin_duplicate visitor should now be linked to the admin partner.")
         self.assertFalse(Visitor.search_count([('partner_id', '=', self.partner_admin_duplicate.id)]),
                          "The admin_duplicate visitor should've been merged (and deleted) with the admin one.")
+
+
+@tagged('-at_install', 'post_install')
+class TestPortalWizardMultiWebsites(HttpCase):
+    def setUp(self):
+        super().setUp()
+        self.website = self.env['website'].create({
+            'name': 'website_specific_user_account',
+            'specific_user_account': True,
+        })
+        self.other_website = self.env['website'].create({
+            'name': 'other_website_specific_user_account',
+            'specific_user_account': True,
+        })
+        self.email_address = 'email_address@example.com'
+        partner_specific = self.env['res.partner'].create({
+            'name': 'partner_specific',
+            'email': self.email_address,
+            'website_id': self.website.id,
+        })
+        partner_all_websites = self.env['res.partner'].create({
+            'name': 'partner_all_websites',
+            'email': self.email_address,
+        })
+        self.portal_user_specific = self._create_portal_user(partner_specific)
+        self.portal_user_specific.action_grant_access()
+        self.assertTrue(self.portal_user_specific.is_portal)
+        self.portal_user_all_websites = self._create_portal_user(partner_all_websites)
+
+    def test_portal_wizard_multi_websites_1(self):
+        # 1)
+        # It should be possible to grant portal access for two partners that
+        # have the same email address but are linked to different websites that
+        # have the "specific user account" characteristic.
+        partner_specific_other_website = self.env['res.partner'].create({
+            'name': 'partner_specific_other_website',
+            'email': self.email_address,
+            'website_id': self.other_website.id,
+        })
+        portal_user_specific_other_website = self._create_portal_user(partner_specific_other_website)
+        self.assertEqual(portal_user_specific_other_website.email_state, 'ok')
+
+    def test_portal_wizard_multi_websites_2(self):
+        # 2)
+        # It should not be possible to grant portal access for two partners that
+        # have the same email address and are linked to the same website that
+        # has the "specific user account" characteristic.
+        partner_specific_same_website = self.env['res.partner'].create({
+            'name': 'partner_specific_same_website',
+            'email': self.email_address,
+            'website_id': self.website.id,
+        })
+        portal_user_specific_same_website = self._create_portal_user(partner_specific_same_website)
+        self.assertEqual(portal_user_specific_same_website.email_state, 'exist')
+
+    def test_portal_wizard_multi_websites_3(self):
+        # 3)
+        # In this situation, there are two partners with the same email address.
+        # One is linked to a website that has the "specific_user_account"
+        # characteristic and the other is not linked to a website. In this
+        # situation, it should be possible to grant portal access for the second
+        # partner even if the first one is already a portal user.
+        self.assertEqual(self.portal_user_all_websites.email_state, 'ok')
+
+    def test_portal_wizard_multi_websites_4(self):
+        # 4)
+        # In 3), the partner that is linked to a website that has the
+        # "specific_user_account" setting was the first to have the portal
+        # access. This situation is testing the same case than 3) but when the
+        # partner that is not linked to a website is the first to receive the
+        # portal access.
+        other_email_address = 'other_email_address@example.com'
+        partner_specific_other_website = self.env['res.partner'].create({
+            'name': 'partner_specific_other_website',
+            'email': other_email_address,
+            'website_id': self.other_website.id,
+        })
+        portal_user_specific_other_website = self._create_portal_user(partner_specific_other_website)
+        partner_all_websites = self.env['res.partner'].create({
+            'name': 'partner_all_websites',
+            'email': other_email_address,
+        })
+        portal_user_all_websites_other_address = self._create_portal_user(partner_all_websites)
+        portal_user_all_websites_other_address.action_grant_access()
+        self.assertTrue(portal_user_all_websites_other_address.is_portal)
+        self.assertEqual(portal_user_specific_other_website.email_state, 'ok')
+
+    def test_portal_wizard_multi_websites_5(self):
+        # 5)
+        # It should not be possible to grant portal access for two partners that
+        # have the same email address and are not linked to a website.
+        partner_all_websites_second = self.env['res.partner'].create({
+            'name': 'partner_all_websites_second',
+            'email': self.email_address,
+        })
+        portal_user_all_websites_second = self._create_portal_user(partner_all_websites_second)
+        self.portal_user_all_websites.action_grant_access()
+        self.assertTrue(self.portal_user_all_websites.is_portal)
+        self.assertEqual(portal_user_all_websites_second.email_state, 'exist')
+
+    def test_portal_wizard_multi_websites_6(self):
+        # 6)
+        # It should not be possible to grant portal access for a partner that is
+        # not linked to a website if it exists a user with the same email
+        # address that is linked to the current website.
+        partner_specific_current_website = self.env['res.partner'].create({
+            'name': 'partner_specific_current_website',
+            'email': self.email_address,
+            'website_id': self.env['website'].get_current_website().id,
+        })
+        portal_user_specific_current_website = self._create_portal_user(partner_specific_current_website)
+        portal_user_specific_current_website.action_grant_access()
+        self.assertTrue(portal_user_specific_current_website.is_portal)
+        self.assertEqual(self.portal_user_all_websites.email_state, 'exist')
+
+    def _create_portal_user(self, partner):
+        """ Return a portal wizard user from a partner
+        :param partner: the partner from which a portal wizard user has to be
+        created
+        """
+        portal_wizard = self.env['portal.wizard'].with_context(
+            active_ids=[partner.id]).create({})
+        return portal_wizard.user_ids

@@ -29,26 +29,25 @@ class TestConsumeComponentCommon(common.TransactionCase):
 
         cls.picking_type = cls.env['stock.picking.type'].search([('code', '=', 'mrp_operation')])[0]
         cls.picking_type.use_create_components_lots = True
-        cls.picking_type.use_auto_consume_components_lots = True
 
         # Create Products & Components
         cls.produced_lot = cls.env['product.product'].create({
             'name': 'Produced Lot',
-            'type': 'product',
+            'is_storable': True,
             'categ_id': cls.env.ref('product.product_category_all').id,
             'tracking': 'lot',
             'route_ids': [(4, cls.manufacture_route.id, 0)],
         })
         cls.produced_serial = cls.env['product.product'].create({
             'name': 'Produced Serial',
-            'type': 'product',
+            'is_storable': True,
             'categ_id': cls.env.ref('product.product_category_all').id,
             'tracking': 'serial',
             'route_ids': [(4, cls.manufacture_route.id, 0)],
         })
         cls.produced_none = cls.env['product.product'].create({
             'name': 'Produced None',
-            'type': 'product',
+            'is_storable': True,
             'categ_id': cls.env.ref('product.product_category_all').id,
             'tracking': 'none',
             'route_ids': [(4, cls.manufacture_route.id, 0)],
@@ -56,19 +55,19 @@ class TestConsumeComponentCommon(common.TransactionCase):
 
         cls.raw_lot = cls.env['product.product'].create({
             'name': 'Raw Lot',
-            'type': 'product',
+            'is_storable': True,
             'categ_id': cls.env.ref('product.product_category_all').id,
             'tracking': 'lot',
         })
         cls.raw_serial = cls.env['product.product'].create({
             'name': 'Raw Serial',
-            'type': 'product',
+            'is_storable': True,
             'categ_id': cls.env.ref('product.product_category_all').id,
             'tracking': 'serial',
         })
         cls.raw_none = cls.env['product.product'].create({
             'name': 'Raw None',
-            'type': 'product',
+            'is_storable': True,
             'categ_id': cls.env.ref('product.product_category_all').id,
             'tracking': 'none',
         })
@@ -150,7 +149,6 @@ class TestConsumeComponentCommon(common.TransactionCase):
                 qDict['lot_id'] = cls.env['stock.lot'].create({
                     'name': name + str(offset + x),
                     'product_id': product.id,
-                    'company_id': cls.env.company.id
                 }).id
             vals.append(qDict)
 
@@ -229,50 +227,11 @@ class TestConsumeComponentCommon(common.TransactionCase):
             except UserError:
                 error = True
 
-            if isComponentTracking and not mrp_productions[i].picking_type_id.use_auto_consume_components_lots:
-                self.assertTrue(error, "Immediate Production shall raise an error when tracked product are not provided.")
-            else:
-                self.assertFalse(error, "Immediate Production shall not raise an error.")
+            self.assertFalse(error, "Immediate Production shall not raise an error.")
 
 
 @tagged('post_install', '-at_install')
 class TestConsumeComponent(TestConsumeComponentCommon):
-    def test_option_disabled_and_qty_available(self):
-        """Option disabled, qty available
-        -> Not Tracked components are fully consumed
-        -> Tracked components are only consumed on button_mark_done trigger
-        """
-        self.picking_type.use_auto_consume_components_lots = False
-
-        mo_none = self.create_mo(self.mo_none_tmpl, self.DEFAULT_AVAILABLE_TRIGGERS_COUNT)
-        mo_serial = self.create_mo(self.mo_serial_tmpl, self.SERIAL_AVAILABLE_TRIGGERS_COUNT)
-        mo_lot = self.create_mo(self.mo_lot_tmpl, self.DEFAULT_AVAILABLE_TRIGGERS_COUNT)
-
-        mo_all = mo_none + mo_serial + mo_lot
-        mo_all.action_confirm()
-
-        all_qty = 2 * self.DEFAULT_AVAILABLE_TRIGGERS_COUNT + self.SERIAL_AVAILABLE_TRIGGERS_COUNT
-
-        quant = self.create_quant(self.raw_none, 3 * all_qty)
-        quant |= self.create_quant(self.raw_lot, 2 * all_qty)
-        quant |= self.create_quant(self.raw_serial, 1 * all_qty)
-        quant.action_apply_inventory()
-
-        # Quantities are fully reserved (stock.move state is available)
-        mo_all.action_assign()
-        for mov in mo_all.move_raw_ids:
-            self.assertEqual(mov.product_qty, mov.quantity, "Reserved quantity shall be equal to To Consume quantity.")
-
-        # Test for Serial Product
-        self.executeConsumptionTriggers(mo_serial)
-        self.executeConsumptionTriggers(mo_none)
-        self.executeConsumptionTriggers(mo_lot)
-        for mov in mo_all.move_raw_ids:
-            if mov.has_tracking == 'none' or mov.raw_material_production_id.state == 'done':
-                self.assertTrue(mov.picked, "non tracked components should be picked")
-            else:
-                self.assertFalse(mov.picked, "tracked components should be picked")
-
     def test_option_enabled_and_qty_available(self):
         """Option enabled, qty available
         -> Not Tracked components are fully consumed
@@ -387,7 +346,7 @@ class TestConsumeComponent(TestConsumeComponentCommon):
 
     def test_tracked_production_2_steps_manufacturing(self):
         """
-        Create an MO for a product tracked by SN in 2-steps manufacturing with tracked compoenents.
+        Create an MO for a product tracked by SN in 2-steps manufacturing with tracked components.
         Assign a SN to the final product using the auto generation, then validate the pbm picking.
         This test checks that the tracking of components is updated on the MO.
         """
@@ -442,3 +401,65 @@ class TestConsumeComponent(TestConsumeComponentCommon):
         ])
         mo.move_raw_ids.picked = True
         mo.button_mark_done()
+
+    def test_automatic_consume_new_added_component(self):
+        """
+        Create an MO for a product and set qty_producing than add a new component with quantity and automatically it's picked.
+        """
+        sfg_product, compo1, compo2 = self.env['product.product'].create([
+            {
+                'name': 'SFG Product',
+                'is_storable': True,
+                'route_ids': [(4, self.manufacture_route.id, 0)],
+            },
+            {
+                'name': 'Compo 1',
+                'is_storable': True,
+            },
+            {
+                'name': 'Compo 2',
+                'is_storable': True,
+            }
+        ])
+
+        quant = self.create_quant(compo1, 10)
+        quant |= self.create_quant(compo2, 10)
+        quant.action_apply_inventory()
+
+        bom = self.env['mrp.bom'].create({
+            'product_tmpl_id': sfg_product.product_tmpl_id.id,
+            'product_uom_id': sfg_product.uom_id.id,
+            'consumption': 'flexible',
+            'sequence': 1
+        })
+        self.create_bom_lines(bom, compo1, [1])
+
+        mo = self.env['mrp.production'].create({
+            'product_id': sfg_product.id,
+            'product_uom_id': sfg_product.uom_id.id,
+            'product_qty': 1,
+            'bom_id': bom.id
+        })
+        mo.action_confirm()
+        self.assertRecordValues(mo.move_raw_ids, [
+            {'product_uom_qty': 1.0, 'picked': False},
+        ])
+        with Form(mo) as mo_form:
+            mo_form.qty_producing = 1.0
+        self.assertRecordValues(mo.move_raw_ids, [
+            {'should_consume_qty': 1.0, 'quantity': 1.0, 'picked': True},
+        ])
+        move = self.env['stock.move'].create({
+            'name': mo.name,
+            'product_id': compo2.id,
+            'raw_material_production_id': mo.id,
+            'location_id': self.ref('stock.stock_location_stock'),
+            'location_dest_id': self.env['stock.location'].search([('usage', '=', 'production'), ('company_id', '=', self.env.company.id)]).id,
+        })
+        move.should_consume_qty = 1
+        move.quantity = 1
+        move._action_assign()
+        self.assertRecordValues(mo.move_raw_ids, [
+            {'should_consume_qty': 1.0, 'quantity': 1.0, 'picked': True},
+            {'should_consume_qty': 1.0, 'quantity': 1.0, 'picked': True},
+        ])

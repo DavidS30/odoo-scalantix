@@ -3,23 +3,31 @@
 # 	* account_edi_proxy_client
 # 
 # Translators:
-# Martin Trigaux, 2023
-# Mads Søndergaard, 2023
 # Sanne Kristensen <sanne@vkdata.dk>, 2024
+# Martin Trigaux, 2024
+# Mads Søndergaard, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Sanne Kristensen <sanne@vkdata.dk>, 2024\n"
+"POT-Creation-Date: 2025-01-20 14:49+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Mads Søndergaard, 2025\n"
 "Language-Team: Danish (https://app.transifex.com/odoo/teams/41243/da/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Language: da\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: account_edi_proxy_client
+#. odoo-python
+#: code:addons/account_edi_proxy_client/models/account_edi_proxy_user.py:0
+msgid ""
+"A user already exists with theses credentials on our server. Please check "
+"your information."
+msgstr ""
 
 #. module: account_edi_proxy_client
 #: model:ir.model,name:account_edi_proxy_client.model_account_edi_proxy_client_user
@@ -60,6 +68,11 @@ msgstr "Oprettet af"
 #: model:ir.model.fields,field_description:account_edi_proxy_client.field_account_edi_proxy_client_user__create_date
 msgid "Created on"
 msgstr "Oprettet den"
+
+#. module: account_edi_proxy_client
+#: model:ir.model,name:account_edi_proxy_client.model_certificate_key
+msgid "Cryptographic Keys"
+msgstr ""
 
 #. module: account_edi_proxy_client
 #: model:ir.model.fields.selection,name:account_edi_proxy_client.selection__account_edi_proxy_client_user__edi_mode__demo
@@ -112,14 +125,9 @@ msgid "Last Updated on"
 msgstr "Sidst opdateret den"
 
 #. module: account_edi_proxy_client
-#: model:ir.model.fields,field_description:account_edi_proxy_client.field_account_edi_proxy_client_user__private_key
+#: model:ir.model.fields,field_description:account_edi_proxy_client.field_account_edi_proxy_client_user__private_key_id
 msgid "Private Key"
 msgstr "Privat nøgle"
-
-#. module: account_edi_proxy_client
-#: model:ir.model.fields,field_description:account_edi_proxy_client.field_account_edi_proxy_client_user__private_key_filename
-msgid "Private Key Filename"
-msgstr ""
 
 #. module: account_edi_proxy_client
 #: model:ir.model.fields.selection,name:account_edi_proxy_client.selection__account_edi_proxy_client_user__edi_mode__prod
@@ -142,7 +150,7 @@ msgid "Test mode"
 msgstr "Test tilstand"
 
 #. module: account_edi_proxy_client
-#: model:ir.model.fields,help:account_edi_proxy_client.field_account_edi_proxy_client_user__private_key
+#: model:ir.model.fields,help:account_edi_proxy_client.field_account_edi_proxy_client_user__private_key_id
 msgid "The key to encrypt all the user's data"
 msgstr "Nøglen til at kryptere alle brugerens data"
 
@@ -154,7 +162,16 @@ msgstr ""
 #. module: account_edi_proxy_client
 #. odoo-python
 #: code:addons/account_edi_proxy_client/models/account_edi_proxy_user.py:0
-#, python-format
+msgid ""
+"The url that this service requested returned an error. The url it tried to "
+"contact was %(url)s. %(error_message)s"
+msgstr ""
+"URL denne service anmodede returnerede en fejl. URL den forsøgte at kontakte"
+" var %(url)s. %(error_message)s"
+
+#. module: account_edi_proxy_client
+#. odoo-python
+#: code:addons/account_edi_proxy_client/models/account_edi_proxy_user.py:0
 msgid ""
 "The url that this service requested returned an error. The url it tried to "
 "contact was %s"
@@ -165,20 +182,8 @@ msgstr ""
 #. module: account_edi_proxy_client
 #. odoo-python
 #: code:addons/account_edi_proxy_client/models/account_edi_proxy_user.py:0
-#, python-format
 msgid ""
-"The url that this service requested returned an error. The url it tried to "
-"contact was %s. %s"
-msgstr ""
-"URL denne service anmodede returnerede en fejl. URL den forsøgte at kontakte"
-" var %s. %s"
-
-#. module: account_edi_proxy_client
-#. odoo-python
-#: code:addons/account_edi_proxy_client/models/account_edi_proxy_user.py:0
-#, python-format
-msgid ""
-"The url that this service tried to contact does not exist. The url was %r"
+"The url that this service tried to contact does not exist. The url was “%s”"
 msgstr ""
 
 #. module: account_edi_proxy_client

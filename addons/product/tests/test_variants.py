@@ -44,12 +44,29 @@ class TestVariantsSearch(ProductVariantsCommon):
     def test_name_search(self):
         self.product_slip_template = self.env['product.template'].create({
             'name': 'Slip',
+            'default_code': 'ABC',
         })
         res = self.env['product.product'].name_search('Shirt', [], 'not ilike', None)
         res_ids = [r[0] for r in res]
         self.assertIn(self.product_slip_template.product_variant_ids.id, res_ids,
                       'Slip should be found searching \'not ilike\'')
 
+        templates = self.product_slip_template.name_search(
+            "ABC",
+            [['id', '!=', -1]],
+        )
+        self.assertFalse(templates, "Should not return template when searching on code")
+        templates = self.product_slip_template.with_context(search_product_product=True).name_search(
+            "ABC",
+            [['id', '!=', -1]],
+        )
+        self.assertTrue(templates, "Should return template when searching on code")
+
+        templates = self.product_slip_template.with_context(search_product_product=True).name_search(
+            "ABC",
+            [['id', '!=', self.product_slip_template.id]],
+        )
+        self.assertFalse(templates, "Should not return template.")
 
 @tagged('post_install', '-at_install')
 class TestVariants(ProductVariantsCommon):
@@ -1349,6 +1366,40 @@ class TestVariantsArchive(ProductVariantsCommon):
         self.assertEqual(len(variants), 1)
         self.assertFalse(variants[0].product_template_attribute_value_ids)
 
+    @mute_logger('odoo.models.unlink')
+    def test_unlink_and_archive_multiple_variants(self):
+        """
+        Test unlinking multiple variants in various scenarios
+        - Unlink one archived variant
+        - Unlink one archived and one active variant
+        - Unlink multiple archived variants and multiple active variants at once
+        """
+        products = self.env['product.product'].create([
+            {'name': 'variant 1', 'description': 'var 1'},
+            {'name': 'variant 2', 'description': 'var 2'},
+            {'name': 'variant 3', 'description': 'var 3'},
+            {'name': 'variant 4', 'description': 'var 4'},
+            {'name': 'variant 5', 'description': 'var 5'},
+            {'name': 'variant 6', 'description': 'var 6'},
+            {'name': 'variant 7', 'description': 'var 7'},
+        ])
+        # Unlink one archived variant
+        products[0].action_archive()
+        products[0].unlink()
+        self.assertFalse(products[0].exists())
+
+        # Unlink one archived and one active variant
+        products[1].action_archive()
+        active_and_archived = products[1] + products[2]
+        active_and_archived.unlink()
+        self.assertFalse(active_and_archived.exists())
+
+        # Unlink multiple archived variants and multiple active variants at once
+        multiple_archived = products[3] + products[4]
+        multiple_active = products[5] + products[6]
+        multiple_archived.action_archive()
+        (multiple_archived + multiple_active).unlink()
+        self.assertFalse(products.exists())
 
 @tagged('post_install', '-at_install')
 class TestVariantWrite(TransactionCase):

@@ -1,12 +1,19 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { useService } from "@web/core/utils/hooks";
+import { useService, useBus } from "@web/core/utils/hooks";
 import { BomOverviewControlPanel } from "../bom_overview_control_panel/mrp_bom_overview_control_panel";
 import { BomOverviewTable } from "../bom_overview_table/mrp_bom_overview_table";
 import { Component, EventBus, onWillStart, useSubEnv, useState } from "@odoo/owl";
+import { standardActionServiceProps } from "@web/webclient/actions/action_service";
 
 export class BomOverviewComponent extends Component {
+    static template = "mrp.BomOverviewComponent";
+    static components = {
+        BomOverviewControlPanel,
+        BomOverviewTable,
+    };
+    static props = { ...standardActionServiceProps };
     setup() {
         this.orm = useService("orm");
         this.context = this.props.action.context;
@@ -33,11 +40,18 @@ export class BomOverviewComponent extends Component {
             bomData: {},
             precision: 2,
             bomQuantity: null,
+            allFolded: true,
         });
 
         useSubEnv({
             overviewBus: new EventBus(),
         });
+
+        useBus(
+            this.env.overviewBus,
+            "toggle-fold-all",
+            () => (this.state.allFolded = !this.state.allFolded)
+        );
 
         onWillStart(async () => {
             await this.getWarehouses();
@@ -75,7 +89,7 @@ export class BomOverviewComponent extends Component {
         ];
         const context = { ...this.context};
         if (this.state.currentWarehouse) {
-            context.warehouse = this.state.currentWarehouse.id;
+            context.warehouse_id = this.state.currentWarehouse.id;
         }
         const bomData = await this.orm.call(
             "report.mrp.report_bom_structure",
@@ -164,11 +178,5 @@ export class BomOverviewComponent extends Component {
         return reportName;
     }
 }
-
-BomOverviewComponent.template = "mrp.BomOverviewComponent";
-BomOverviewComponent.components = {
-    BomOverviewControlPanel,
-    BomOverviewTable,
-};
 
 registry.category("actions").add("mrp_bom_report", BomOverviewComponent);

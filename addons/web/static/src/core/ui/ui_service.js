@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import { useService } from "@web/core/utils/hooks";
 import { registry } from "@web/core/registry";
 import { throttleForAnimation } from "@web/core/utils/timing";
@@ -75,7 +73,13 @@ export function useActiveElement(refName) {
                 if (!el.contains(document.activeElement)) {
                     firstTabableEl.focus();
                 }
-                return () => {
+                return async () => {
+                    // Components are destroyed from top to bottom, meaning that this cleanup is
+                    // called before the ones of children. As a consequence, event handlers added on
+                    // the current active element in children aren't removed yet, and can thus be
+                    // executed if we deactivate that active element right away (e.g. the blur and
+                    // change events could be triggered). For that reason, we wait for a micro-tick.
+                    await Promise.resolve();
                     uiService.deactivateElement(el);
                     el.removeEventListener("keydown", trapFocus);
 
@@ -156,9 +160,12 @@ export const uiService = {
         let blockCount = 0;
         function block(data) {
             blockCount++;
+            // TODO could probably be improved to handle multiple block demands
+            // but that have different messages and delays
             if (blockCount === 1) {
                 bus.trigger("BLOCK", {
                     message: data?.message,
+                    delay: data?.delay,
                 });
             }
         }

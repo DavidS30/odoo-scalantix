@@ -10,6 +10,7 @@
         <field name="phone">+230 01 234 5678</field>
         <field name="email">info@company.muexample.com</field>
         <field name="website">www.muexample.com</field>
+        <field name="is_company" eval="True"/>
     </record>
 
     <record id="demo_company_mu" model="res.company">
@@ -36,5 +37,6 @@
         <value eval="[]"/>
         <value>mu</value>
         <value model="res.company" eval="obj().env.ref('l10n_mu_account.demo_company_mu')"/>
+        <value name="install_demo" eval="True"/>
     </function>
 </odoo>

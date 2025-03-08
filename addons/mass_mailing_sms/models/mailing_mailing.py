@@ -61,10 +61,10 @@ class Mailing(models.Model):
     def _compute_medium_id(self):
         super(Mailing, self)._compute_medium_id()
         for mailing in self:
-            if mailing.mailing_type == 'sms' and (not mailing.medium_id or mailing.medium_id == self.env.ref('utm.utm_medium_email')):
-                mailing.medium_id = self.env.ref('mass_mailing_sms.utm_medium_sms').id
-            elif mailing.mailing_type == 'mail' and (not mailing.medium_id or mailing.medium_id == self.env.ref('mass_mailing_sms.utm_medium_sms')):
-                mailing.medium_id = self.env.ref('utm.utm_medium_email').id
+            if mailing.mailing_type == 'sms' and (not mailing.medium_id or mailing.medium_id == self.env['utm.medium']._fetch_or_create_utm_medium('email')):
+                mailing.medium_id = self.env['utm.medium']._fetch_or_create_utm_medium("sms", module="mass_mailing_sms").id
+            elif mailing.mailing_type == 'mail' and (not mailing.medium_id or mailing.medium_id == self.env['utm.medium']._fetch_or_create_utm_medium("sms", module="mass_mailing_sms")):
+                mailing.medium_id = self.env['utm.medium']._fetch_or_create_utm_medium('email').id
 
     @api.depends('sms_template_id', 'mailing_type')
     def _compute_body_plaintext(self):
@@ -135,7 +135,7 @@ class Mailing(models.Model):
     def _action_view_traces_filtered(self, view_filter):
         action = super(Mailing, self)._action_view_traces_filtered(view_filter)
         if self.mailing_type == 'sms':
-            action['views'] = [(self.env.ref('mass_mailing_sms.mailing_trace_view_tree_sms').id, 'tree'),
+            action['views'] = [(self.env.ref('mass_mailing_sms.mailing_trace_view_tree_sms').id, 'list'),
                                (self.env.ref('mass_mailing_sms.mailing_trace_view_form_sms').id, 'form')]
         return action
 
@@ -237,11 +237,11 @@ class Mailing(models.Model):
             'mass_sms_allow_unsubscribe': self.sms_allow_unsubscribe,
         }
 
-    def action_send_mail(self, res_ids=None):
+    def _action_send_mail(self, res_ids=None):
         mass_sms = self.filtered(lambda m: m.mailing_type == 'sms')
         if mass_sms:
             mass_sms.action_send_sms(res_ids=res_ids)
-        return super(Mailing, self - mass_sms).action_send_mail(res_ids=res_ids)
+        return super(Mailing, self - mass_sms)._action_send_mail(res_ids=res_ids)
 
     def action_send_sms(self, res_ids=None):
         for mailing in self:
@@ -329,7 +329,7 @@ class Mailing(models.Model):
         if self:
             self.ensure_one()
 
-        self.check_access_rights('write')
+        self.check_access('write')
 
         max_sms = self.env['sms.sms'].sudo().search_read([], ['id'], order='id desc', limit=1)
         sms_id_length = max(len(str(max_sms[0]['id'])), 5) if max_sms else 5  # Assumes a mailing won't be more than 10⁵ sms at once

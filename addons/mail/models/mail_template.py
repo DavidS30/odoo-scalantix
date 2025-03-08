@@ -7,6 +7,7 @@ import logging
 from ast import literal_eval
 
 from odoo import _, api, fields, models, tools, Command
+from odoo.osv import expression
 from odoo.exceptions import ValidationError, UserError
 from odoo.tools import is_html_empty
 from odoo.tools.safe_eval import safe_eval, time
@@ -33,7 +34,7 @@ class MailTemplate(models.Model):
     # description
     name = fields.Char('Name', translate=True)
     description = fields.Text(
-        'Template description', translate=True,
+        'Template Description', translate=True,
         help="This field is used for internal description of the template's usage.")
     active = fields.Boolean(default=True)
     template_category = fields.Selection(
@@ -41,7 +42,7 @@ class MailTemplate(models.Model):
          ('hidden_template', 'Hidden Template'),
          ('custom_template', 'Custom Template')],
          compute="_compute_template_category", search="_search_template_category")
-    model_id = fields.Many2one('ir.model', 'Applies to')
+    model_id = fields.Many2one('ir.model', 'Applies to', ondelete='cascade')
     model = fields.Char('Related Document Model', related='model_id.model', index=True, store=True, readonly=True)
     subject = fields.Char('Subject', translate=True, prefetch=True, help="Subject (placeholders may be used here)")
     email_from = fields.Char('From',
@@ -62,7 +63,8 @@ class MailTemplate(models.Model):
     # content
     body_html = fields.Html(
         'Body', render_engine='qweb', render_options={'post_process': True},
-        prefetch=True, translate=True, sanitize=False)
+        prefetch=True, translate=True, sanitize='email_outgoing',
+    )
     attachment_ids = fields.Many2many('ir.attachment', 'email_template_attachment_rel', 'email_template_id',
                                       'attachment_id', 'Attachments',
                                       help="You may attach files to this template, to be added to all "
@@ -100,13 +102,13 @@ class MailTemplate(models.Model):
 
     @api.depends_context('uid')
     def _compute_can_write(self):
-        writable_templates = self._filter_access_rules('write')
+        writable_templates = self._filtered_access('write')
         for template in self:
             template.can_write = template in writable_templates
 
     @api.depends_context('uid')
     def _compute_is_template_editor(self):
-        self.is_template_editor = self.user_has_groups('mail.group_mail_template_editor')
+        self.is_template_editor = self.env.user.has_group('mail.group_mail_template_editor')
 
     @api.depends('active', 'description')
     def _compute_template_category(self):
@@ -130,19 +132,37 @@ class MailTemplate(models.Model):
 
     @api.model
     def _search_template_category(self, operator, value):
-        if operator in ['in', 'not in'] and isinstance(value, list):
-            value_templates = self.env['mail.template'].search([]).filtered(
-                lambda t: t.template_category in value
-            )
-            return [('id', operator, value_templates.ids)]
+        if operator not in ['in', 'not in', '=', '!=']:
+            raise NotImplementedError(_('Operation not supported'))
 
-        if operator in ['=', '!='] and isinstance(value, str):
-            value_templates = self.env['mail.template'].search([]).filtered(
-                lambda t: t.template_category == value
-            )
-            return [('id', 'in' if operator == "=" else 'not in', value_templates.ids)]
+        value = [value] if isinstance(value, str) else value
+        operator = 'in' if operator in ("in", "=") else 'not in'
 
-        raise NotImplementedError(_('Operation not supported'))
+        templates_with_xmlid = self.env['ir.model.data']._search([
+            ('model', '=', 'mail.template'),
+            ('module', '!=', '__export__')
+        ]).subselect('res_id')
+
+        domain = []
+        if 'hidden_template' in value:
+            domain.append(['|', ('active', '=', False), '&', ('description', '=', False), ('id', 'in', templates_with_xmlid)])
+
+        if 'base_template' in value:
+            domain.append(['&', ('description', '!=', False), ('id', 'in', templates_with_xmlid)])
+
+        if 'custom_template' in value:
+            domain.append([('template_category', 'not in', ['base_template', 'hidden_template'])])
+
+        if operator == 'not in':
+            for dom in domain:
+                dom.insert(0, "!")
+
+        if len(domain) > 1:
+            domain = (expression.OR if operator == 'in' else expression.AND)(domain)
+        else:
+            domain = domain[0]
+
+        return domain
 
     # ------------------------------------------------------------
     # CRUD
@@ -199,11 +219,9 @@ class MailTemplate(models.Model):
             'context': {'dialog_size': 'large'},
         }
 
-    @api.returns('self', lambda value: value.id)
-    def copy(self, default=None):
-        default = dict(default or {},
-                       name=_("%s (copy)", self.name))
-        return super(MailTemplate, self).copy(default=default)
+    def copy_data(self, default=None):
+        vals_list = super().copy_data(default=default)
+        return [dict(vals, name=self.env._("%s (copy)", template.name)) for template, vals in zip(self, vals_list)]
 
     def unlink_action(self):
         for template in self:
@@ -226,7 +244,7 @@ class MailTemplate(models.Model):
                 'type': 'ir.actions.act_window',
                 'res_model': 'mail.compose.message',
                 'context': repr(context),
-                'view_mode': 'form,tree',
+                'view_mode': 'form,list',
                 'view_id': view.id,
                 'target': 'new',
                 'binding_model_id': template.model_id.id,
@@ -573,8 +591,7 @@ class MailTemplate(models.Model):
 
     def _send_check_access(self, res_ids):
         records = self.env[self.model].browse(res_ids)
-        records.check_access_rights('read')
-        records.check_access_rule('read')
+        records.check_access('read')
 
     def send_mail(self, res_id, force_send=False, raise_exception=False, email_values=None,
                   email_layout_xmlid=False):

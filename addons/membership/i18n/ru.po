@@ -3,10 +3,7 @@
 # 	* membership
 # 
 # Translators:
-# Alena Vlasova, 2023
-# Сергей Шебанин <sergey@shebanin.ru>, 2023
-# Ivan Kropotkin <yelizariev@itpp.dev>, 2023
-# Martin Trigaux, 2023
+# Ilya Rozhkov, 2024
 # Wil Odoo, 2024
 # 
 msgid ""
@@ -14,7 +11,7 @@ msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
 "Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Russian (https://app.transifex.com/odoo/teams/41243/ru/)\n"
 "MIME-Version: 1.0\n"
@@ -26,7 +23,7 @@ msgstr ""
 #. module: membership
 #: model:ir.model.fields,field_description:membership.field_report_membership__num_invoiced
 msgid "# Invoiced"
-msgstr "# Счет-фактура"
+msgstr "# выставлен счет"
 
 #. module: membership
 #: model:ir.model.fields,field_description:membership.field_report_membership__num_paid
@@ -45,7 +42,7 @@ msgid ""
 "title=\"Period\"/><strong> From: </strong>"
 msgstr ""
 "<i class=\"fa fa-clock-o\" role=\"img\" aria-label=\"Period\" "
-"title=\"Period\"/><strong> От: </strong>"
+"title=\"Period\"/><strong> С: </strong></i>"
 
 #. module: membership
 #: model_terms:ir.ui.view,arch_db:membership.membership_products_kanban
@@ -302,12 +299,12 @@ msgstr "Счет-фактура Членство"
 #: model:ir.model.fields.selection,name:membership.selection__report_membership__membership_state__invoiced
 #: model:ir.model.fields.selection,name:membership.selection__res_partner__membership_state__invoiced
 msgid "Invoiced Member"
-msgstr "Член в счете"
+msgstr "Участник со счетом"
 
 #. module: membership
 #: model_terms:ir.ui.view,arch_db:membership.view_res_partner_member_filter
 msgid "Invoiced/Paid/Free"
-msgstr "В счете/Оплаченные/Свободные"
+msgstr "Есть счет/Оплачено/Бесплатно"
 
 #. module: membership
 #: model:ir.model.fields,help:membership.field_res_partner__membership_state
@@ -366,7 +363,7 @@ msgstr "Запись в журнале"
 #. module: membership
 #: model:ir.model,name:membership.model_account_move_line
 msgid "Journal Item"
-msgstr "Наименование в журнале"
+msgstr "Элемент журнала"
 
 #. module: membership
 #: model:ir.model.fields,field_description:membership.field_membership_invoice__write_uid
@@ -562,14 +559,12 @@ msgstr "Партнер"
 #. module: membership
 #. odoo-python
 #: code:addons/membership/models/partner.py:0
-#, python-format
 msgid "Partner doesn't have an address to make the invoice."
 msgstr "У партнера нет адреса для выставления счета."
 
 #. module: membership
 #. odoo-python
 #: code:addons/membership/models/partner.py:0
-#, python-format
 msgid "Partner is a free Member."
 msgstr "Партнер является свободным участником."
 
@@ -631,7 +626,7 @@ msgstr "Дата начала членства"
 #. module: membership
 #: model_terms:ir.ui.view,arch_db:membership.report_membership_view_tree
 msgid "Sum of # Invoiced"
-msgstr "Сумма # выставленного счета"
+msgstr "Сумма # выставлен счет"
 
 #. module: membership
 #: model_terms:ir.ui.view,arch_db:membership.report_membership_view_tree
@@ -694,6 +689,5 @@ msgstr "Ждущий член"
 #. module: membership
 #. odoo-python
 #: code:addons/membership/models/partner.py:0
-#, python-format
 msgid "You cannot create recursive associated members."
 msgstr "Вы не можете создавать рекурсивные ассоциированные члены."

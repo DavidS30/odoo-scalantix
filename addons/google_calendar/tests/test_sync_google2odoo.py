@@ -7,11 +7,14 @@ from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta
 from odoo.tests.common import new_test_user
 from odoo.exceptions import ValidationError
+from odoo.addons.google_calendar.models.res_users import User
 from odoo.addons.google_calendar.tests.test_sync_common import TestSyncGoogle, patch_api
 from odoo.addons.google_calendar.utils.google_calendar import GoogleEvent, GoogleCalendarService
 from odoo import Command, tools
 from unittest.mock import patch
 
+
+@patch.object(User, '_get_google_calendar_token', lambda user: 'dummy-token')
 class TestSyncGoogle2Odoo(TestSyncGoogle):
 
     def setUp(self):
@@ -263,6 +266,41 @@ class TestSyncGoogle2Odoo(TestSyncGoogle):
         self.assertGoogleAPINotCalled()
 
     @patch_api
+    def test_cancelled_with_portal_attendee(self):
+        """Cancel an event with a portal attendee.
+
+        This test exercises a bug that only happened under these circumstances:
+        - One portal user was invited to more than one event.
+        - At least one of them was going to be notified in the future.
+        - Google cancelled the first of those.
+        """
+        portal_user = new_test_user(self.env, login='portal-user', groups='base.group_portal')
+        notif30min = self.ref("calendar.alarm_notif_2")
+        # Cannot use freezegun because there are direct calls to now() from SQL
+        now = datetime.now()
+        one = self.env['calendar.event'].create({
+            'name': 'test',
+            'start': now + timedelta(hours=1),
+            'stop': now + timedelta(hours=2),
+            'google_id': 'one',
+            'user_id': self.env.user.id,
+            'need_sync': False,
+            'alarm_ids': [(6, 0, [notif30min])],
+            'partner_ids': [(6, 0, (self.env.user | portal_user).partner_id.ids)]
+        })
+        two = one.copy({
+            'google_id': 'two',
+            'start': now + timedelta(hours=2),
+            'stop': now + timedelta(hours=3),
+        })
+        gevent = GoogleEvent([
+            {'id': 'one', 'status': 'cancelled'},
+        ])
+        self.sync(gevent)
+        self.assertFalse(one.exists())
+        self.assertTrue(two.exists())
+
+    @patch_api
     def test_private_extended_properties(self):
         google_id = 'oj44nep1ldf8a3ll02uip0c9aa'
         event = self.env['calendar.event'].create({
@@ -358,7 +396,6 @@ class TestSyncGoogle2Odoo(TestSyncGoogle):
             "updated": self.now,
             'organizer': {'email': 'odoocalendarref@gmail.com', 'self': True},
             'summary': 'coucou',
-            'visibility': 'public',
             'attendees': [],  # <= attendee removed in Google
             'recurrence': ['RRULE:FREQ=WEEKLY;COUNT=2;BYDAY=MO'],
             'reminders': {'useDefault': True},
@@ -382,7 +419,6 @@ class TestSyncGoogle2Odoo(TestSyncGoogle):
             'description': 'Small mini desc',
             'organizer': {'email': 'odoocalendarref@gmail.com', 'self': True},
             'summary': 'Pricing new update',
-            'visibility': 'public',
             'recurrence': ['RRULE:FREQ=WEEKLY;WKST=SU;COUNT=3;BYDAY=MO'],
             'reminders': {'useDefault': True},
             'start': {'date': '2020-01-6'},
@@ -1276,7 +1312,6 @@ class TestSyncGoogle2Odoo(TestSyncGoogle):
             "updated": self.now,
             'organizer': {'email': 'odoocalendarref@gmail.com', 'self': True},
             'summary': """I don't want to be with me anymore""",
-            'visibility': 'public',
             'attendees': [{
                 'displayName': 'calendar-user (base.group_user)',
                 'email': 'c.c@example.com',
@@ -1330,7 +1365,6 @@ class TestSyncGoogle2Odoo(TestSyncGoogle):
             'extendedProperties': {'shared': {'%s_odoo_id' % self.env.cr.dbname: event.id,
                                               '%s_owner_id' % self.env.cr.dbname: other_user.id}},
             'reminders': {'overrides': [], 'useDefault': False},
-            'visibility': 'public',
             'transparency': 'opaque',
         }, timeout=3)
 
@@ -2175,100 +2209,28 @@ class TestSyncGoogle2Odoo(TestSyncGoogle):
         self.assertEqual(events[0].attendee_ids[0].state, 'accepted', 'after google sync, organizer should have accepted status still')
         self.assertGoogleAPINotCalled()
 
-    @patch.object(GoogleCalendarService, "get_events")
-    def test_recurring_event_moved_to_future(self, mock_get_events):
-        # There's a daily recurring event from 2024-07-01 to 2024-07-02
-        recurrence_id = "abcd1"
-        recurrence = self.generate_recurring_event(
-            mock_dt="2024-07-01",
-            google_id=recurrence_id,
-            rrule="FREQ=DAILY;INTERVAL=1;COUNT=2",
-            start=datetime(2024, 7, 1, 9),
-            stop=datetime(2024, 7, 1, 10),
-            partner_ids=[
-                Command.set(
-                    [
-                        self.organizer_user.partner_id.id,
-                        self.attendee_user.partner_id.id,
-                    ]
-                )
-            ],
-        )
-        self.assertRecordValues(
-            recurrence.calendar_event_ids.sorted("start"),
-            [
-                {
-                    "start": datetime(2024, 7, 1, 9),
-                    "stop": datetime(2024, 7, 1, 10),
-                    "google_id": f"{recurrence_id}_20240701T090000Z",
-                },
-                {
-                    "start": datetime(2024, 7, 2, 9),
-                    "stop": datetime(2024, 7, 2, 10),
-                    "google_id": f"{recurrence_id}_20240702T090000Z",
-                },
-            ],
-        )
-        # User moves batch to next week
-        common = {
-            "attendees": [
-                {
-                    "email": self.attendee_user.partner_id.email,
-                    "responseStatus": "needsAction",
-                },
-                {
-                    "email": self.organizer_user.partner_id.email,
-                    "responseStatus": "needsAction",
-                },
-            ],
-            "organizer": {"email": self.organizer_user.partner_id.email},
-            "reminders": {"useDefault": True},
-            "summary": "coucou",
-            "updated": "2024-07-02T08:00:00Z",
+    @patch_api
+    def test_create_event_with_default_and_undefined_privacy(self):
+        """ Check if google events are created in Odoo when 'default' privacy setting is defined and also when it is not. """
+        # Sync events from Google to Odoo after adding the privacy property.
+        sample_event_values = {
+            'summary': 'Test',
+            'start': {'dateTime': '2020-01-06T10:00:00+01:00'},
+            'end': {'dateTime': '2020-01-06T11:00:00+01:00'},
+            'reminders': {'useDefault': True},
+            'organizer': {'email': self.env.user.email},
+            'attendees': [{'email': self.env.user.email, 'responseStatus': 'accepted'}],
+            'updated': self.now,
         }
-        google_events = [
-            # Recurrence event
-            dict(
-                common,
-                id=recurrence_id,
-                start={"dateTime": "2024-07-08T09:00:00+00:00"},
-                end={"dateTime": "2024-07-08T10:00:00+00:00"},
-                recurrence=["RRULE:FREQ=DAILY;INTERVAL=1;COUNT=2"],
-            ),
-            # Cancelled instances
-            {"id": f"{recurrence_id}_20240701T090000Z", "status": "cancelled"},
-            {"id": f"{recurrence_id}_20240702T090000Z", "status": "cancelled"},
-            # New base event
-            dict(
-                common,
-                id=f"{recurrence_id}_20240708T090000Z",
-                start={"dateTime": "2024-07-08T09:00:00+00:00"},
-                end={"dateTime": "2024-07-08T10:00:00+00:00"},
-                recurringEventId=recurrence_id,
-            ),
-        ]
-        mock_get_events.return_value = (
-            GoogleEvent(google_events),
-            None,
-            [{"method": "popup", "minutes": 30}],
-        )
-        with self.mock_datetime_and_now("2024-04-03"):
-            self.organizer_user.sudo()._sync_google_calendar(self.google_service)
-            self.assertRecordValues(
-                recurrence.calendar_event_ids.sorted("start"),
-                [
-                    {
-                        "start": datetime(2024, 7, 8, 9),
-                        "stop": datetime(2024, 7, 8, 10),
-                        "google_id": f"{recurrence_id}_20240708T090000Z",
-                    },
-                    {
-                        "start": datetime(2024, 7, 9, 9),
-                        "stop": datetime(2024, 7, 9, 10),
-                        "google_id": f"{recurrence_id}_20240709T090000Z",
-                    },
-                ],
-            )
+        undefined_privacy_event = {'id': 100, **sample_event_values}
+        default_privacy_event = {'id': 200, 'privacy': 'default', **sample_event_values}
+        self.env['calendar.event']._sync_google2odoo(GoogleEvent([undefined_privacy_event, default_privacy_event]))
+
+        # Ensure that synced events have the correct privacy field in Odoo.
+        undefined_privacy_odoo_event = self.env['calendar.event'].search([('google_id', '=', 1)])
+        default_privacy_odoo_event = self.env['calendar.event'].search([('google_id', '=', 2)])
+        self.assertFalse(undefined_privacy_odoo_event.privacy, "Event with undefined privacy must have False value in privacy field.")
+        self.assertFalse(default_privacy_odoo_event.privacy, "Event with default privacy must have False value in privacy field.")
 
     @patch.object(GoogleCalendarService, 'get_events')
     def test_accepting_recurrent_event_with_this_event_option_synced_by_attendee(self, mock_get_events):

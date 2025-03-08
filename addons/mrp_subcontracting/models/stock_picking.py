@@ -34,6 +34,19 @@ class StockPicking(models.Model):
             if subcontracted_moves._subcontrating_can_be_record():
                 picking.display_action_record_components = 'facultative'
 
+    @api.depends('picking_type_id', 'partner_id')
+    def _compute_location_id(self):
+        super()._compute_location_id()
+
+        for picking in self:
+            # If this is a subcontractor resupply transfer, set the destination location
+            # to the vendor subcontractor location
+            subcontracting_resupply_type_id = picking.picking_type_id.warehouse_id.subcontracting_resupply_type_id
+            if picking.picking_type_id == subcontracting_resupply_type_id\
+                and picking.partner_id.property_stock_subcontractor:
+                picking.location_dest_id = picking.partner_id.property_stock_subcontractor
+
+
     # -------------------------------------------------------------------------
     # Action methods
     # -------------------------------------------------------------------------
@@ -131,6 +144,9 @@ class StockPicking(models.Model):
         })
         product = subcontract_move.product_id
         warehouse = self._get_warehouse(subcontract_move)
+        subcontracting_location = \
+            subcontract_move.picking_id.partner_id.with_company(subcontract_move.company_id).property_stock_subcontractor \
+            or subcontract_move.company_id.subcontracting_location_id
         vals = {
             'company_id': subcontract_move.company_id.id,
             'procurement_group_id': group.id,
@@ -139,8 +155,8 @@ class StockPicking(models.Model):
             'product_id': product.id,
             'product_uom_id': subcontract_move.product_uom.id,
             'bom_id': bom.id,
-            'location_src_id': subcontract_move.picking_id.partner_id.with_company(subcontract_move.company_id).property_stock_subcontractor.id,
-            'location_dest_id': subcontract_move.picking_id.partner_id.with_company(subcontract_move.company_id).property_stock_subcontractor.id,
+            'location_src_id': subcontracting_location.id,
+            'location_dest_id': subcontracting_location.id,
             'product_qty': subcontract_move.product_uom_qty or subcontract_move.quantity,
             'picking_type_id': warehouse.subcontracting_type_id.id,
             'date_start': subcontract_move.date - relativedelta(days=bom.produce_delay)
@@ -181,20 +197,3 @@ class StockPicking(models.Model):
             finished_move.write({'move_dest_ids': [(4, move.id, False)]})
 
         all_mo.action_assign()
-
-    @api.onchange('location_id', 'location_dest_id')
-    def _onchange_locations(self):
-        moves = self.move_ids | self.move_ids_without_package
-        moves.filtered(lambda m: m.is_subcontract).update({
-            "location_dest_id": self.location_dest_id,
-        })
-        moves.filtered(lambda m: not m.is_subcontract).update({
-            "location_id": self.location_id,
-            "location_dest_id": self.location_dest_id,
-        })
-        if self._origin.location_id != self.location_id and any(line.quantity for line in self.move_ids.move_line_ids):
-            return {'warning': {
-                    'title': _("Locations to update"),
-                    'message': _("You might want to update the locations of this transfer's operations"),
-                }
-            }

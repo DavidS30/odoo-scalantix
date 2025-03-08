@@ -3,43 +3,34 @@
 # 	* link_tracker
 # 
 # Translators:
-# Sanna Edelman <direct@generare.com>, 2023
-# Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2023
-# Timo Koukkari <ti.ko@netikka.fi>, 2023
-# Svante Suominen <svante.suominen@web-veistamo.fi>, 2023
-# Kari Lindgren <karisatu@gmail.com>, 2023
-# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2023
-# Martin Trigaux, 2023
-# Henri Komulainen <henri.komulainen@web-veistamo.fi>, 2023
-# Kari Lindgren <kari.lindgren@emsystems.fi>, 2023
-# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2023
-# Johanna Valkonen <miujohanna@gmail.com>, 2023
-# Miika Nissi <miika.nissi@tawasta.fi>, 2023
-# Jenni Heikkilä <jenni.heikkila@sv-oy.fi>, 2023
-# Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024
+# Jenni Heikkilä <jenni.heikkila@sv-oy.fi>, 2024
+# Veikko Väätäjä <veikko.vaataja@gmail.com>, 2024
+# Svante Suominen <svante.suominen@web-veistamo.fi>, 2024
+# Johanna Valkonen <miujohanna@gmail.com>, 2024
+# Timo Koukkari <ti.ko@netikka.fi>, 2024
+# Kari Lindgren <karisatu@gmail.com>, 2024
+# Martin Trigaux, 2024
+# Sanna Edelman <direct@generare.com>, 2024
+# Henri Komulainen <henri.komulainen@web-veistamo.fi>, 2024
+# Tuomo Aura <tuomo.aura@web-veistamo.fi>, 2024
+# Kari Lindgren <kari.lindgren@emsystems.fi>, 2024
+# Jarmo Kortetjärvi <jarmo.kortetjarvi@gmail.com>, 2024
+# Miika Nissi <miika.nissi@tawasta.fi>, 2024
+# Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-01-29 10:45+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2024\n"
+"POT-Creation-Date: 2024-09-26 08:55+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2025\n"
 "Language-Team: Finnish (https://app.transifex.com/odoo/teams/41243/fi/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Language: fi\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-
-#. module: link_tracker
-#. odoo-python
-#: code:addons/link_tracker/models/link_tracker.py:0
-#: code:addons/link_tracker/models/link_tracker.py:0
-#, python-format
-msgid "%r is not a valid link, links cannot redirect to the current page."
-msgstr ""
-"%r ei ole kelvollinen linkki, linkit eivät voi ohjata nykyiselle sivulle."
 
 #. module: link_tracker
 #: model_terms:ir.ui.view,arch_db:link_tracker.utm_campaign_view_kanban
@@ -92,6 +83,18 @@ msgid "Codes"
 msgstr "Koodit"
 
 #. module: link_tracker
+#. odoo-python
+#: code:addons/link_tracker/models/link_tracker.py:0
+msgid ""
+"Combinations of Link Tracker values (URL, campaign, medium, source, and label) must be unique.\n"
+"The following combinations are already used: \n"
+"- %(error_lines)s"
+msgstr ""
+"Link Tracker -arvojen (URL, kampanja, media, lähde ja label) yhdistelmien on oltava yksilöllisiä.\n"
+"Seuraavat yhdistelmät ovat jo käytössä:\n"
+"- %(error_lines)s"
+
+#. module: link_tracker
 #: model:ir.model.fields,field_description:link_tracker.field_link_tracker_click__country_id
 #: model_terms:ir.ui.view,arch_db:link_tracker.link_tracker_click_view_search
 msgid "Country"
@@ -120,8 +123,6 @@ msgstr "Luotu"
 #. module: link_tracker
 #. odoo-python
 #: code:addons/link_tracker/models/link_tracker.py:0
-#: code:addons/link_tracker/models/link_tracker.py:0
-#, python-format
 msgid "Creating a Link Tracker without URL is not possible"
 msgstr "Linkkiseurannan luominen ilman URL-osoitetta ei ole mahdollista"
 
@@ -202,17 +203,6 @@ msgstr "Seurantalinkin klikkaus"
 #: model:ir.model,name:link_tracker.model_link_tracker_code
 msgid "Link Tracker Code"
 msgstr "Linkin seurantakoodi"
-
-#. module: link_tracker
-#. odoo-python
-#: code:addons/link_tracker/models/link_tracker.py:0
-#, python-format
-msgid ""
-"Link Tracker values (URL, campaign, medium and source) must be unique (%s, "
-"%s, %s, %s)."
-msgstr ""
-"Linkkiseuranta-arvojen (URL, kampanja, media ja lähde) on oltava "
-"yksilöllisiä (%s, %s, %s, %s)."
 
 #. module: link_tracker
 #: model_terms:ir.ui.view,arch_db:link_tracker.link_tracker_view_graph
@@ -318,6 +308,7 @@ msgstr "Otsikko ja URL"
 
 #. module: link_tracker
 #: model:ir.model.fields,field_description:link_tracker.field_link_tracker__short_url
+#: model_terms:ir.ui.view,arch_db:link_tracker.link_tracker_view_form
 msgid "Tracked URL"
 msgstr "Seurattava URL"
 
@@ -356,7 +347,6 @@ msgstr "Sivukäynti"
 #. module: link_tracker
 #. odoo-python
 #: code:addons/link_tracker/models/link_tracker.py:0
-#, python-format
 msgid "Visit Webpage"
 msgstr "Vieraile verkkosivulla"
 
@@ -364,3 +354,11 @@ msgstr "Vieraile verkkosivulla"
 #: model_terms:ir.ui.view,arch_db:link_tracker.link_tracker_view_form
 msgid "Website Link"
 msgstr "Verkkosivusto"
+
+#. module: link_tracker
+#. odoo-python
+#: code:addons/link_tracker/models/link_tracker.py:0
+msgid "“%s” is not a valid link, links cannot redirect to the current page."
+msgstr ""
+"\"%s\" ei ole kelvollinen linkki, linkit eivät voi ohjata nykyiselle "
+"sivulle."

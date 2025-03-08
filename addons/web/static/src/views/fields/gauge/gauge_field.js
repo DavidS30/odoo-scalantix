@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import { _t } from "@web/core/l10n/translation";
 import { loadBundle } from "@web/core/assets";
 import { registry } from "@web/core/registry";
@@ -9,6 +7,17 @@ import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Component, onWillStart, useEffect, useRef } from "@odoo/owl";
 
 export class GaugeField extends Component {
+    static template = "web.GaugeField";
+    static props = {
+        ...standardFieldProps,
+        maxValueField: { type: String, optional: true },
+        maxValue: { type: Number, optional: true },
+        title: { type: String, optional: true },
+    };
+    static defaultProps = {
+        maxValue: 100,
+    };
+
     setup() {
         this.chart = null;
         this.canvasRef = useRef("canvas");
@@ -38,7 +47,8 @@ export class GaugeField extends Component {
 
     renderChart() {
         const gaugeValue = this.props.record.data[this.props.name];
-        let maxValue = Math.max(gaugeValue, this.props.record.data[this.props.maxValueField] || this.props.maxValue);
+        let maxValue = this.props.maxValueField ? this.props.record.data[this.props.maxValueField] : this.props.maxValue;
+        maxValue = Math.max(gaugeValue, maxValue);
         let maxLabel = maxValue;
         if (gaugeValue === 0 && maxValue === 0) {
             maxValue = 1;
@@ -75,9 +85,9 @@ export class GaugeField extends Component {
                         callbacks: {
                             label: function (tooltipItem) {
                                 if (tooltipItem.dataIndex === 0) {
-                                    return _t("Value: ") + gaugeValue;
+                                    return _t("Value: %(value)s", { value: gaugeValue });
                                 }
-                                return _t("Max: ") + maxLabel;
+                                return _t("Max: %(max)s", { max: maxLabel });
                             },
                         },
                     },
@@ -88,17 +98,6 @@ export class GaugeField extends Component {
         this.chart = new Chart(this.canvasRef.el, config);
     }
 }
-
-GaugeField.template = "web.GaugeField";
-GaugeField.props = {
-    ...standardFieldProps,
-    maxValueField: { type: String, optional: true },
-    maxValue: { type: Number, optional: true},
-    title: { type: String, optional: true },
-};
-GaugeField.defaultProps = {
-    maxValue: 100,
-};
 
 export const gaugeField = {
     component: GaugeField,

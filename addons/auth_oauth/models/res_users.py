@@ -4,7 +4,12 @@
 import json
 
 import requests
-import werkzeug.http
+from werkzeug import http, datastructures
+
+if hasattr(datastructures.WWWAuthenticate, "from_header"):
+    parse_auth = datastructures.WWWAuthenticate.from_header
+else:
+    parse_auth = http.parse_www_authenticate_header
 
 from odoo import api, fields, models
 from odoo.exceptions import AccessDenied, UserError
@@ -33,9 +38,8 @@ class ResUsers(models.Model):
         if response.ok: # nb: could be a successful failure
             return response.json()
 
-        auth_challenge = werkzeug.http.parse_www_authenticate_header(
-            response.headers.get('WWW-Authenticate'))
-        if auth_challenge.type == 'bearer' and 'error' in auth_challenge:
+        auth_challenge = parse_auth(response.headers.get("WWW-Authenticate"))
+        if auth_challenge and auth_challenge.type == 'bearer' and 'error' in auth_challenge:
             return dict(auth_challenge)
 
         return {'error': 'invalid_request'}
@@ -130,15 +134,21 @@ class ResUsers(models.Model):
         # return user credentials
         return (self.env.cr.dbname, login, access_token)
 
-    def _check_credentials(self, password, env):
+    def _check_credentials(self, credential, env):
         try:
-            return super(ResUsers, self)._check_credentials(password, env)
+            return super()._check_credentials(credential, env)
         except AccessDenied:
+            if not (credential['type'] == 'oauth_token' and credential['token']):
+                raise
             passwd_allowed = env['interactive'] or not self.env.user._rpc_api_keys_only()
             if passwd_allowed and self.env.user.active:
-                res = self.sudo().search([('id', '=', self.env.uid), ('oauth_access_token', '=', password)])
+                res = self.sudo().search([('id', '=', self.env.uid), ('oauth_access_token', '=', credential['token'])])
                 if res:
-                    return
+                    return {
+                        'uid': self.env.user.id,
+                        'auth_method': 'oauth',
+                        'mfa': 'default',
+                    }
             raise
 
     def _get_session_token_fields(self):

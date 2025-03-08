@@ -6,10 +6,17 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Dropdown } from "@web/core/dropdown/dropdown";
 import { DropdownItem } from "@web/core/dropdown/dropdown_item";
+import { session } from "@web/session";
 import wUtils from '@website/js/utils';
 import { Component } from "@odoo/owl";
 
 export class WebsiteSwitcherSystray extends Component {
+    static template = "website.WebsiteSwitcherSystray";
+    static components = {
+        Dropdown,
+        DropdownItem,
+    };
+    static props = {};
     setup() {
         this.websiteService = useService('website');
         this.notificationService = useService("notification");
@@ -21,11 +28,21 @@ export class WebsiteSwitcherSystray extends Component {
             name: website.name,
             id: website.id,
             domain: website.domain,
+            dataset: Object.assign({
+                'data-website-id': website.id,
+            }, website.domain ? {} : {
+                'data-tooltip': _t('This website does not have a domain configured.'),
+                'data-tooltip-position': 'left',
+            }),
             callback: () => {
-                if (website.domain && !wUtils.isHTTPSorNakedDomainRedirection(website.domain, window.location.origin)) {
+                // TODO share this condition with the website_preview somehow
+                // -> we should probably show the redirection warning here too
+                if (!session.website_bypass_domain_redirect // Used by the Odoo support (bugs to be expected)
+                        && website.domain
+                        && !wUtils.isHTTPSorNakedDomainRedirection(website.domain, window.location.origin)) {
                     const { location: { pathname, search, hash } } = this.websiteService.contentWindow;
                     const path = pathname + search + hash;
-                    window.location.href = `${encodeURI(website.domain)}/web#action=website.website_preview&path=${encodeURIComponent(path)}&website_id=${encodeURIComponent(website.id)}`;
+                    window.location.href = `${encodeURI(website.domain)}/odoo/action-website.website_preview?path=${encodeURIComponent(path)}&website_id=${encodeURIComponent(website.id)}`;
                 } else {
                     this.websiteService.goToWebsite({ websiteId: website.id, path: "", lang: "default" });
                     if (!website.domain) {
@@ -57,19 +74,14 @@ export class WebsiteSwitcherSystray extends Component {
                     }
                 }
             },
-            class: website.id === this.websiteService.currentWebsite.id ? 'active' : '',
+            class: website.id === this.websiteService.currentWebsite.id ? 'text-truncate active' : 'text-truncate',
         }));
     }
 }
-WebsiteSwitcherSystray.template = "website.WebsiteSwitcherSystray";
-WebsiteSwitcherSystray.components = {
-    Dropdown,
-    DropdownItem,
-};
 
 export const systrayItem = {
     Component: WebsiteSwitcherSystray,
     isDisplayed: env => env.services.website.hasMultiWebsites,
 };
 
-registry.category("website_systray").add("WebsiteSwitcher", systrayItem, { sequence: 11 });
+registry.category("website_systray").add("WebsiteSwitcher", systrayItem, { sequence: 12 });

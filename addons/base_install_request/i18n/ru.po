@@ -3,17 +3,14 @@
 # 	* base_install_request
 # 
 # Translators:
-# Сергей Шебанин <sergey@shebanin.ru>, 2023
-# Alena Vlasova, 2023
-# Martin Trigaux, 2023
 # Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"POT-Creation-Date: 2025-01-27 13:03+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
 "Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Russian (https://app.transifex.com/odoo/teams/41243/ru/)\n"
 "MIME-Version: 1.0\n"
@@ -28,51 +25,29 @@ msgid ""
 "<div style=\"margin: 0px; padding: 0px;\">\n"
 "    <p style=\"margin: 0px; padding: 0px; font-size: 13px;\">\n"
 "        Hello,\n"
-"        <br><br>\n"
-"        <span style=\"font-weight: bold;\" t-out=\"object.user_id.name\"></span> has requested to activate the <span style=\"font-weight: bold;\" t-out=\"object.module_id.shortdesc\"></span> module. This module is included in your subscription. It has <span style=\"color: #875A7B; font-weight: bold;\">no extra cost</span>, but an administrator role is required to activate it.\n"
-"        <br><br>\n"
-"        <blockquote>\n"
-"            <t t-out=\"object.body_html\"></t>\n"
+"        <br/><br/>\n"
+"        <span style=\"font-weight: bold;\" t-out=\"object.user_id.name\"/> has requested to activate the <span style=\"font-weight: bold;\" t-out=\"object.module_id.shortdesc\"/> module. This module is included in your subscription. It has <span style=\"color: #875A7B; font-weight: bold;\">no extra cost</span>, but an administrator role is required to activate it.\n"
+"        <br/><br/>\n"
+"        </p><blockquote data-o-mail-quote-node=\"1\" data-o-mail-quote=\"1\">\n"
+"            <t t-out=\"object.body_html\"/>\n"
 "        </blockquote>\n"
-"        <br><br>\n"
-"        <a style=\"background-color:#875A7B; padding:8px 16px 8px 16px; text-decoration:none; color:#fff; border-radius:5px\" t-attf-href=\"/web?#action=base_install_request.action_base_module_install_review&amp;active_id={{ object.module_id.id }}&amp;menu_id={{ ctx['menu_id'] }}\">Review Request</a>\n"
-"        <br><br>\n"
+"        <br data-o-mail-quote=\"1\"/><br data-o-mail-quote=\"1\"/>\n"
+"        <a style=\"background-color:#875A7B; padding:8px 16px 8px 16px; text-decoration:none; color:#fff; border-radius:5px\" t-attf-href=\"/odoo/{{ object.module_id.id }}/action-base_install_request.action_base_module_install_review?menu_id={{ ctx['menu_id'] }}\">Review Request</a>\n"
+"        <br/><br/>\n"
 "        Thanks,\n"
-"        <t t-if=\"not is_html_empty(object.user_id.signature)\">\n"
-"            <br><br>\n"
-"            <t t-out=\"object.user_id.signature or ''\">--<br>Mitchell Admin</t>\n"
+"        <t t-if=\"not is_html_empty(object.user_id.signature)\" data-o-mail-quote-container=\"1\">\n"
+"            <br/><br/>\n"
+"            <t t-out=\"object.user_id.signature or ''\" data-o-mail-quote=\"1\">--<br data-o-mail-quote=\"1\"/>Mitchell Admin</t>\n"
 "        </t>\n"
-"        <br><br>\n"
-"    </p>\n"
+"        <br/><br/>\n"
+"    \n"
 "</div>\n"
 "            "
 msgstr ""
-"<div style=\"margin: 0px; padding: 0px;\">\n"
-"    <p style=\"margin: 0px; padding: 0px; font-size: 13px;\">\n"
-"        Здравствуйте,\n"
-"        <br><br>\n"
-"        <span style=\"font-weight: bold;\" t-out=\"object.user_id.name\"></span> вы запросили активацию модуля <span style=\"font-weight: bold;\" t-out=\"object.module_id.shortdesc\"></span>. Этот модуль включен в вашу подписку. Он <span style=\"color: #875A7B; font-weight: bold;\">не требует дополнительной оплаты</span>, но для его активации необходима роль администратора.\n"
-"       <br><br>\n"
-"        <blockquote>\n"
-"            <t t-out=\"object.body_html\"></t>\n"
-"        </blockquote>\n"
-"       <br><br>\n"
-"       <a style=\"background-color:#875A7B; padding:8px 16px 8px 16px; text-decoration:none; color:#fff; border-radius:5px\" t-attf-href=\"/web?#action=base_install_request.action_base_module_install_review&amp;active_id={{ object.module_id.id }}&amp;menu_id={{ ctx['menu_id'] }}\">Запрос на рецензирование</a>\n"
-"       <br><br>\n"
-"        Спасибо,\n"
-"        <t t-if=\"not is_html_empty(object.user_id.signature)\">\n"
-"            <br><br>\n"
-"            <t t-out=\"object.user_id.signature or ''\">--<br>Митчелл Администратор</t>\n"
-"        </t>\n"
-"       <br><br>\n"
-"    </p>\n"
-"</div>\n"
-"            "
 
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/models/ir_module_module.py:0
-#, python-format
 msgid "Activation Request of \"%s\""
 msgstr "Запрос на активацию \"%s\""
 
@@ -173,7 +148,6 @@ msgstr "Никаких дополнительных затрат, это при�
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/wizard/base_module_install_request.py:0
-#, python-format
 msgid "No module selected."
 msgstr "Модуль не выбран."
 
@@ -201,7 +175,6 @@ msgstr "Будут установлены следующие приложени�
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/wizard/base_module_install_request.py:0
-#, python-format
 msgid "The module is already installed."
 msgstr "Модуль уже установлен."
 
@@ -233,7 +206,6 @@ msgstr "Вы собираетесь установить дополнитель�
 #. module: base_install_request
 #. odoo-python
 #: code:addons/base_install_request/wizard/base_module_install_request.py:0
-#, python-format
 msgid "Your request has been successfully sent"
 msgstr "Ваш запрос успешно отправлен"
 

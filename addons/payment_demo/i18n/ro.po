@@ -3,20 +3,16 @@
 # 	* payment_demo
 # 
 # Translators:
-# Cozmin Candea <office@terrabit.ro>, 2024
-# Foldi Robert <foldirobert@nexterp.ro>, 2024
-# Martin Trigaux, 2024
-# Dorin Hongu <dhongu@gmail.com>, 2024
 # Maria Muntean, 2024
 # Wil Odoo, 2024
 # Lyall Kindmurr, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-13 10:28+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"POT-Creation-Date: 2024-09-26 08:56+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
 "Last-Translator: Lyall Kindmurr, 2024\n"
 "Language-Team: Romanian (https://app.transifex.com/odoo/teams/41243/ro/)\n"
 "MIME-Version: 1.0\n"
@@ -35,8 +31,8 @@ msgid ""
 "                    <option value=\"pending\" title=\"Payment processing\">\n"
 "                        Pending\n"
 "                    </option>\n"
-"                    <option value=\"cancel\" title=\"Payment canceled by customer\">\n"
-"                        Canceled\n"
+"                    <option value=\"cancel\" title=\"Payment cancelled by customer\">\n"
+"                        Cancelled\n"
 "                    </option>\n"
 "                    <option value=\"error\" title=\"Processing error\">\n"
 "                        Error\n"
@@ -142,6 +138,7 @@ msgstr "Confirmat"
 
 #. module: payment_demo
 #: model:ir.model.fields.selection,name:payment_demo.selection__payment_provider__code__demo
+#: model:payment.method,name:payment_demo.payment_method_demo
 msgid "Demo"
 msgstr "Demo"
 
@@ -153,7 +150,6 @@ msgstr ""
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_provider.py:0
-#, python-format
 msgid "Demo providers should never be enabled."
 msgstr ""
 
@@ -165,14 +161,12 @@ msgstr "Eroare"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
-#, python-format
 msgid "No delivery method is available."
 msgstr ""
 
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "No transaction found matching reference %s."
 msgstr "Nu s-a găsit nicio tranzacție care să se potrivească cu referința %s."
 
@@ -189,7 +183,7 @@ msgstr ""
 #. module: payment_demo
 #: model:ir.model,name:payment_demo.model_payment_provider
 msgid "Payment Provider"
-msgstr "Furnizor de plată"
+msgstr "Procesator de plată"
 
 #. module: payment_demo
 #: model:ir.model,name:payment_demo.model_payment_token
@@ -204,7 +198,6 @@ msgstr "Tranzacție plată"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/payment_demo_mixin.js:0
-#, python-format
 msgid "Payment processing failed"
 msgstr "Procesarea plății a eșuat"
 
@@ -217,7 +210,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:payment_demo.token_inline_form
 msgid ""
 "Payments made with this payment method will be automatically "
-"<b>canceled</b>."
+"<b>cancelled</b>."
 msgstr ""
 
 #. module: payment_demo
@@ -265,7 +258,6 @@ msgstr "Cod tehnic al acestui procesator de plată"
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "The transaction is not linked to a token."
 msgstr "Tranzacția nu este legată de un token."
 
@@ -277,7 +269,6 @@ msgstr "Nepublicat"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
-#, python-format
 msgid "Validation Error"
 msgstr "Eroare de validare"
 
@@ -289,6 +280,5 @@ msgstr ""
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "You selected the following demo payment status: %s"
 msgstr ""

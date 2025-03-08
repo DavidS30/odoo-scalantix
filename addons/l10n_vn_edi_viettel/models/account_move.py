@@ -198,6 +198,12 @@ class AccountMove(models.Model):
 
         return super().button_request_cancel()
 
+    def _get_fields_to_detach(self):
+        # EXTENDS account
+        fields_list = super()._get_fields_to_detach()
+        fields_list.extend(['l10n_vn_edi_sinvoice_file', 'l10n_vn_edi_sinvoice_xml_file','l10n_vn_edi_sinvoice_pdf_file'])
+        return fields_list
+
     def _l10n_vn_edi_fetch_invoice_file_data(self, file_format):
         """ Helper to try fetching a few time in case the files are not yet ready. """
         self.ensure_one()
@@ -504,7 +510,7 @@ class AccountMove(models.Model):
         self.l10n_vn_edi_invoice_state = 'canceled'
 
         try:
-            self._check_fiscalyear_lock_date()
+            self._check_fiscal_lock_dates()
             self.line_ids._check_tax_lock_date()
 
             self.button_cancel()
@@ -715,9 +721,9 @@ class AccountMove(models.Model):
         """ Create and return the tax breakdown of the current invoice. """
         self.ensure_one()
 
-        def grouping_key_generator(base_line, tax_values):
+        def grouping_key_generator(base_line, tax_data):
             # Requirement is to generate a tax breakdown per taxPercentage
-            return {'tax_percentage': tax_values['tax_repartition_line'].tax_id.amount or -2}
+            return {'tax_percentage': tax_data['tax'].amount or -2}
 
         tax_breakdowns = []
 

@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
-
-from odoo import api, fields, models, _
+from odoo import fields, models, _
 
 
 class Partner(models.Model):
@@ -14,7 +12,7 @@ class Partner(models.Model):
 
     def _compute_employees_count(self):
         for partner in self:
-            partner.employees_count = len(partner.employee_ids.filtered(lambda e: e.company_id in self.env.companies))
+            partner.employees_count = len(partner.sudo().employee_ids.filtered(lambda e: e.company_id in self.env.companies))
 
     def action_open_employees(self):
         self.ensure_one()
@@ -31,7 +29,7 @@ class Partner(models.Model):
             'name': _('Employee'),
             'type': 'ir.actions.act_window',
             'res_model': 'hr.employee',
-            'res_id': self.employee_ids.id,
+            'res_id': self.employee_ids.filtered(lambda e: e.company_id in self.env.companies).id,
             'view_mode': 'form',
         }
 
@@ -57,11 +55,11 @@ class Partner(models.Model):
 class ResPartnerBank(models.Model):
     _inherit = ['res.partner.bank']
 
-    @api.depends_context('uid')
     def _compute_display_name(self):
         account_employee = self.browse()
-        if not self.user_has_groups('hr.group_hr_user'):
+        if not self.env.user.has_group('hr.group_hr_user'):
             account_employee = self.sudo().filtered("partner_id.employee_ids")
-            for account in account_employee.sudo(False):
-                account.display_name = account.acc_number[:2] + "*" * len(account.acc_number[2:-4]) + account.acc_number[-4:]
+            for account in account_employee:
+                account.sudo(self.env.su).display_name = \
+                    account.acc_number[:2] + "*" * len(account.acc_number[2:-4]) + account.acc_number[-4:]
         super(ResPartnerBank, self - account_employee)._compute_display_name()

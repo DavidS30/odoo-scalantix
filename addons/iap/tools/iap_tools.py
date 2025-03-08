@@ -9,7 +9,7 @@ import threading
 import uuid
 
 from odoo import exceptions, _
-from odoo.tools import email_normalize, pycompat
+from odoo.tools import email_normalize
 
 _logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ _MAIL_PROVIDERS = {
     'freemail.hu', 'live.it', 'blackwaretech.com', 'byom.de', 'dispostable.com', 'dayrep.com', 'aim.com', 'prixgen.com', 'gmail.om',
     'asterisk-tech.mn', 'in.com', 'aliceadsl.fr', 'lycos.com', 'topnet.tn', 'teleworm.us', 'kedgebs.com', 'supinfo.com', 'posteo.de',
     'yahoo.com ', 'op.pl', 'gmail.fr', 'grr.la', 'oci.fr', 'aselcis.com', 'optusnet.com.au', 'mailcatch.com', 'rambler.ru', 'protonmail.ch',
-    'prisme.ch', 'bbox.fr', 'orbitalu.com', 'netcourrier.com', 'iinet.net.au', 'cegetel.net', 'proton.me', 'dbmail.com', 'club-internet.fr',
+    'prisme.ch', 'bbox.fr', 'orbitalu.com', 'netcourrier.com', 'iinet.net.au', 'cegetel.net', 'proton.me', 'dbmail.com', 'club-internet.fr', 'outlook.jp',
     # Dummy entries
     'example.com',
 }
@@ -124,7 +124,7 @@ def iap_jsonrpc(url, method='call', params=None, timeout=15):
         req = requests.post(url, json=payload, timeout=timeout)
         req.raise_for_status()
         response = req.json()
-        _logger.info("iap jsonrpc %s answered in %s seconds", url, req.elapsed.total_seconds())
+        _logger.info("iap jsonrpc %s responded in %.3f seconds", url, req.elapsed.total_seconds())
         if 'error' in response:
             name = response['error']['data'].get('name').rpartition('.')[-1]
             message = response['error']['data'].get('message')
@@ -134,16 +134,23 @@ def iap_jsonrpc(url, method='call', params=None, timeout=15):
                 e_class = exceptions.AccessError
             elif name == 'UserError':
                 e_class = exceptions.UserError
+            elif name == "ReadTimeout":
+                raise requests.exceptions.Timeout()
             else:
                 raise requests.exceptions.ConnectionError()
             e = e_class(message)
             e.data = response['error']['data']
             raise e
         return response.get('result')
-    except (ValueError, requests.exceptions.ConnectionError, requests.exceptions.MissingSchema, requests.exceptions.Timeout, requests.exceptions.HTTPError):
+    except requests.exceptions.Timeout:
+        _logger.warning('Request timeout with the URL: %s', url)
+        raise exceptions.ValidationError(
+            _('The request to the service timed out. Please contact the author of the app. The URL it tried to contact was %s', url)
+        )
+    except (ValueError, requests.exceptions.ConnectionError, requests.exceptions.MissingSchema, requests.exceptions.HTTPError):
         _logger.exception("iap jsonrpc %s failed", url)
         raise exceptions.AccessError(
-            _('The url that this service requested returned an error. Please contact the author of the app. The url it tried to contact was %s', url)
+            _("An error occurred while reaching %s. Please contact Odoo support if this error persists.", url)
         )
 
 #----------------------------------------------------------
@@ -172,7 +179,7 @@ def iap_authorize(env, key, account_token, credit, dbuuid=False, description=Non
     except InsufficientCreditError as e:
         if credit_template:
             arguments = json.loads(e.args[0])
-            arguments['body'] = pycompat.to_text(env['ir.qweb']._render(credit_template))
+            arguments['body'] = env['ir.qweb']._render(credit_template)
             e.args = (json.dumps(arguments),)
         raise e
     return transaction_token

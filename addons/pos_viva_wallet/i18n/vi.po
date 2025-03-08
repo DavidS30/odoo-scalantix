@@ -4,15 +4,15 @@
 # 
 # Translators:
 # Wil Odoo, 2024
-# Thi Huong Nguyen, 2024
+# Thi Huong Nguyen, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-13 10:27+0000\n"
-"PO-Revision-Date: 2024-02-07 08:49+0000\n"
-"Last-Translator: Thi Huong Nguyen, 2024\n"
+"POT-Creation-Date: 2025-01-27 13:03+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Thi Huong Nguyen, 2025\n"
 "Language-Team: Vietnamese (https://app.transifex.com/odoo/teams/41243/vi/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -26,9 +26,23 @@ msgid "API Key"
 msgstr "Khóa API"
 
 #. module: pos_viva_wallet
+#. odoo-python
+#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
+msgid "Can't create payment method. Please check the data and update it."
+msgstr ""
+"Không thể tạo phương thức thanh toán. Vui lòng kiểm tra dữ liệu và cập nhật."
+
+#. module: pos_viva_wallet
+#. odoo-python
+#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
+msgid "Can't update payment method. Please check the data and update it."
+msgstr ""
+"Không thể cập nhật phương thức thanh toán. Vui lòng kiểm tra dữ liệu và cập "
+"nhật."
+
+#. module: pos_viva_wallet
 #. odoo-javascript
 #: code:addons/pos_viva_wallet/static/src/app/payment_viva_wallet.js:0
-#, python-format
 msgid "Cannot process transactions with negative amount."
 msgstr "Không thể xử lý giao dịch có số tiền âm. "
 
@@ -40,12 +54,11 @@ msgstr "Client ID"
 #. module: pos_viva_wallet
 #: model:ir.model.fields,field_description:pos_viva_wallet.field_pos_payment_method__viva_wallet_client_secret
 msgid "Client secret"
-msgstr "Mật khẩu khách"
+msgstr "Mã bí mật của ứng dụng"
 
 #. module: pos_viva_wallet
 #. odoo-javascript
 #: code:addons/pos_viva_wallet/static/src/app/payment_viva_wallet.js:0
-#, python-format
 msgid ""
 "Could not connect to the Odoo server, please check your internet connection "
 "and try again."
@@ -56,9 +69,8 @@ msgstr ""
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#, python-format
 msgid "It is essential to provide API key for the use of viva wallet"
-msgstr "Cần cung cấp mã khoá API để sử dụng Viva Wallet"
+msgstr "Cần cung cấp khoá API để sử dụng Viva Wallet"
 
 #. module: pos_viva_wallet
 #: model:ir.model.fields,field_description:pos_viva_wallet.field_pos_payment_method__viva_wallet_merchant_id
@@ -68,43 +80,42 @@ msgstr "ID người bán"
 #. module: pos_viva_wallet
 #. odoo-javascript
 #: code:addons/pos_viva_wallet/static/src/app/payment_viva_wallet.js:0
-#, python-format
 msgid "Message from Viva Wallet: %s"
 msgstr "Thông báo từ ví Viva Wallet: %s"
 
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#, python-format
-msgid "Not receive Bearer Token"
-msgstr "Không nhận được Bearer Token"
+msgid "Only 'group_pos_user' are allowed to cancel a Viva Wallet payment"
+msgstr "Chỉ 'group_pos_user' mới được phép hủy thanh toán Viva Wallet"
 
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#, python-format
-msgid "Only 'group_pos_user' are allowed to fetch token from Viva Wallet"
-msgstr "Chỉ 'group_pos_user' mới được phép lấy token từ Viva Wallet"
-
-#. module: pos_viva_wallet
-#. odoo-python
-#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#, python-format
 msgid "Only 'group_pos_user' are allowed to get latest transaction status"
 msgstr ""
 "Chỉ 'group_pos_user' mới được phép lấy thông tin trạng thái giao dịch mới "
 "nhất"
 
 #. module: pos_viva_wallet
+#. odoo-python
+#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
+msgid ""
+"Only 'group_pos_user' are allowed to get the payment status from Viva Wallet"
+msgstr ""
+"Chỉ 'group_pos_user' mới được phép nhận trạng thái thanh toán từ Viva Wallet"
+
+#. module: pos_viva_wallet
+#. odoo-python
+#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
+msgid ""
+"Only 'group_pos_user' are allowed to send a Viva Wallet payment request"
+msgstr "Chỉ 'group_pos_user' mới được phép gửi yêu cầu thanh toán Viva Wallet"
+
+#. module: pos_viva_wallet
 #: model:ir.model,name:pos_viva_wallet.model_pos_payment_method
 msgid "Point of Sale Payment Methods"
 msgstr "Phương thức thanh toán điểm bán hàng"
-
-#. module: pos_viva_wallet
-#: model:ir.model,name:pos_viva_wallet.model_pos_session
-msgid "Point of Sale Session"
-msgstr "Phiên POS"
 
 #. module: pos_viva_wallet
 #: model:ir.model.fields,help:pos_viva_wallet.field_pos_payment_method__viva_wallet_test_mode
@@ -124,8 +135,6 @@ msgstr "Chế độ kiểm tử"
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#, python-format
 msgid "There are some issues between us and Viva Wallet, try again later. %s"
 msgstr ""
 "Đang có một số vấn đề giữa hệ thống và Viva Wallet, vui lòng thử lại sau. %s"
@@ -133,10 +142,19 @@ msgstr ""
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#, python-format
 msgid "There are some issues between us and Viva Wallet, try again later.%s)"
 msgstr ""
 "Đang có một số vấn đề giữa hệ thống và Viva Wallet, vui lòng thử lại sau.%s)"
+
+#. module: pos_viva_wallet
+#. odoo-python
+#: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
+msgid ""
+"Unable to retrieve Viva Wallet Bearer Token: Please verify that the Client "
+"ID and Client Secret are correct"
+msgstr ""
+"Không thể truy xuất Bearer token Viva Wallet: Vui lòng xác minh rằng ID ứng "
+"dụng và Mã bí mật của ứng dụng là chính xác"
 
 #. module: pos_viva_wallet
 #: model:ir.model.fields,help:pos_viva_wallet.field_pos_payment_method__viva_wallet_api_key
@@ -169,7 +187,6 @@ msgstr "Bearer Token Viva Wallet"
 #. module: pos_viva_wallet
 #. odoo-javascript
 #: code:addons/pos_viva_wallet/static/src/app/payment_viva_wallet.js:0
-#, python-format
 msgid "Viva Wallet Error"
 msgstr "Lỗi Viva Wallet "
 
@@ -186,12 +203,11 @@ msgstr "Endpoint Webhook Viva Wallet"
 #. module: pos_viva_wallet
 #: model:ir.model.fields,field_description:pos_viva_wallet.field_pos_payment_method__viva_wallet_webhook_verification_key
 msgid "Viva Wallet Webhook Verification Key"
-msgstr "Mã khoá xác thực Webhook Viva Wallet"
+msgstr "Khoá xác thực Webhook Viva Wallet"
 
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/models/pos_payment_method.py:0
-#, python-format
 msgid "Your transaction with Viva Wallet failed. Please try again later."
 msgstr ""
 "Giao dịch qua Viva Wallet của bạn không thành công. Vui lòng thử lại sau."
@@ -205,7 +221,6 @@ msgstr ""
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/controllers/main.py:0
-#, python-format
 msgid "received a message for a pos payment provider not registered."
 msgstr ""
 "nhận được thông báo nhà cung cấp dịch vụ thanh toán pos chưa được đăng ký."
@@ -213,7 +228,6 @@ msgstr ""
 #. module: pos_viva_wallet
 #. odoo-python
 #: code:addons/pos_viva_wallet/controllers/main.py:0
-#, python-format
 msgid "received a message for a terminal not registered in Odoo: %s"
 msgstr ""
 "nhận được thông báo về thiết bị đầu cuối chưa được đăng ký trong Odoo: %s"

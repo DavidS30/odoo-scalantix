@@ -17,9 +17,6 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-DEFAULT_IAP_ENDPOINT = "https://l10n-in-edi.api.odoo.com"
-DEFAULT_IAP_TEST_ENDPOINT = "https://l10n-in-edi-demo.api.odoo.com"
-
 
 class AccountEdiFormat(models.Model):
     _inherit = "account.edi.format"
@@ -37,18 +34,6 @@ class AccountEdiFormat(models.Model):
         if self.code != 'in_einvoice_1_03':
             return super()._is_compatible_with_journal(journal)
         return journal.country_code == 'IN' and journal.type == 'sale'
-
-    def _get_l10n_in_base_tags(self):
-        return (
-           self.env.ref('l10n_in.tax_tag_base_sgst').ids
-           + self.env.ref('l10n_in.tax_tag_base_cgst').ids
-           + self.env.ref('l10n_in.tax_tag_base_igst').ids
-           + self.env.ref('l10n_in.tax_tag_base_cess').ids
-           + self.env.ref('l10n_in.tax_tag_zero_rated').ids
-           + self.env.ref("l10n_in.tax_tag_exempt").ids
-           + self.env.ref("l10n_in.tax_tag_nil_rated").ids
-           + self.env.ref("l10n_in.tax_tag_non_gst_supplies").ids
-        )
 
     def _get_l10n_in_gst_tags(self):
         return (
@@ -112,26 +97,21 @@ class AccountEdiFormat(models.Model):
             error_message.append(_("Invoice number should not be more than 16 characters"))
         all_base_tags = self._get_l10n_in_gst_tags() + self._get_l10n_in_non_taxable_tags()
         for line in move.invoice_line_ids.filtered(lambda line: line.display_type not in ('line_note', 'line_section', 'rounding') and not self._l10n_in_is_global_discount(line)):
-            if line.price_subtotal < 0:
-                # Line having a negative amount is not allowed.
-                if not move._l10n_in_edi_is_managing_invoice_negative_lines_allowed():
-                    raise ValidationError(_("Invoice lines having a negative amount are not allowed to generate the IRN. "
-                                  "Please create a credit note instead."))
-            if line.display_type == 'product' and line.discount < 0:
-                error_message.append(_("Negative discount is not allowed, set in line %s", line.name))
+            if line.display_type == 'product':
+                if line.discount < 0:
+                    error_message.append(_("Negative discount is not allowed, set in line %s", line.name))
+                hsn_code = self._l10n_in_edi_extract_digits(line.l10n_in_hsn_code)
+                if not hsn_code:
+                    error_message.append(_("HSN code is not set in product line %s", line.name))
+                elif not re.match(r'^\d{4}$|^\d{6}$|^\d{8}$', hsn_code):
+                    error_message.append(_(
+                        "Invalid HSN Code (%(hsn_code)s) in product line %(product_line)s") % {
+                        'hsn_code': hsn_code,
+                        'product_line': line.product_id.name or line.name
+                    })
             if not line.tax_tag_ids or not any(move_line_tag.id in all_base_tags for move_line_tag in line.tax_tag_ids):
                 error_message.append(_(
                     """Set an appropriate GST tax on line "%s" (if it's zero rated or nil rated then select it also)""", line.product_id.name))
-            if line.product_id:
-                hsn_code = self._l10n_in_edi_extract_digits(line.product_id.l10n_in_hsn_code)
-                if not hsn_code:
-                    error_message.append(_("HSN code is not set in product %s", line.product_id.name))
-                elif not re.match("^[0-9]+$", hsn_code):
-                    error_message.append(_(
-                        "Invalid HSN Code (%s) in product %s", hsn_code, line.product_id.name
-                    ))
-            else:
-                error_message.append(_("product is required to get HSN code"))
         return error_message
 
     def _l10n_in_edi_get_iap_buy_credits_message(self, company):
@@ -183,7 +163,7 @@ class AccountEdiFormat(models.Model):
                     "blocking_level": "error",
                 }}
             elif error:
-                error_message = "<br/>".join(["[%s] %s" % (e.get("code"), html_escape(e.get("message"))) for e in error])
+                error_message = "<br/>".join([html_escape("[%s] %s" % (e.get("code"), e.get("message"))) for e in error])
                 return {invoice: {
                     "success": False,
                     "error": error_message,
@@ -239,7 +219,7 @@ class AccountEdiFormat(models.Model):
                     "blocking_level": "error",
                 }}
             if error:
-                error_message = "<br/>".join(["[%s] %s" % (e.get("code"), html_escape(e.get("message"))) for e in error])
+                error_message = "<br/>".join([html_escape("[%s] %s" % (e.get("code"), e.get("message"))) for e in error])
                 return {invoice: {
                     "success": False,
                     "error": error_message,
@@ -270,8 +250,8 @@ class AccountEdiFormat(models.Model):
             message.append(_("- City required min 3 and max 100 characters"))
         if partner.country_id.code == "IN" and not re.match("^.{3,50}$", partner.state_id.name or ""):
             message.append(_("- State required min 3 and max 50 characters"))
-        if partner.country_id.code == "IN" and not re.match("^[0-9]{6,}$", partner.zip or ""):
-            message.append(_("- Zip code required 6 digits"))
+        if partner.country_id.code == "IN" and not re.match("^([1-9][0-9]{5})$", partner.zip or ""):
+            message.append(_("- ZIP code required 6 digits ranging from 100000 to 999999"))
         if partner.phone and not re.match("^[0-9]{10,12}$",
             self._l10n_in_edi_extract_digits(partner.phone)
         ):
@@ -376,11 +356,12 @@ class AccountEdiFormat(models.Model):
             # government does not accept negative in qty or unit price
             unit_price_in_inr = unit_price_in_inr * -1
             quantity = quantity * -1
+        PrdDesc = line.product_id.display_name or line.name
         return {
             "SlNo": str(index),
-            "PrdDesc": line.name.replace("\n", ""),
+            "PrdDesc": PrdDesc.replace("\n", ""),
             "IsServc": line.product_id.type == "service" and "Y" or "N",
-            "HsnCd": self._l10n_in_edi_extract_digits(line.product_id.l10n_in_hsn_code),
+            "HsnCd": self._l10n_in_edi_extract_digits(line.l10n_in_hsn_code),
             "Qty": self._l10n_in_round_value(quantity or 0.0, 3),
             "Unit": line.product_uom_id.l10n_in_code and line.product_uom_id.l10n_in_code.split("-")[0] or "OTH",
             # Unit price in company currency and tax excluded so its different then price_unit
@@ -482,6 +463,7 @@ class AccountEdiFormat(models.Model):
                 json_payload['ItemList'].remove(discount_line)
         if not discount_lines:
             return json_payload
+        invoice.message_post(body=_("Negative lines will be decreased from positive invoice lines having the same taxes and HSN code"))
 
         lines_grouped_and_sorted = defaultdict(list)
         for line in sorted(json_payload['ItemList'], key=lambda i: i['AssAmt'], reverse=True):
@@ -513,9 +495,9 @@ class AccountEdiFormat(models.Model):
                 "TaxSch": "GST",
                 "SupTyp": self._l10n_in_get_supply_type(invoice, tax_details_by_code),
                 "RegRev": tax_details_by_code.get("is_reverse_charge") and "Y" or "N",
-                "IgstOnIntra": is_intra_state and tax_details_by_code.get("igst") and "Y" or "N"},
+                "IgstOnIntra": is_intra_state and tax_details_by_code.get("igst_amount") and "Y" or "N"},
             "DocDtls": {
-                "Typ": invoice.move_type == "out_refund" and "CRN" or "INV",
+                "Typ": (invoice.move_type == "out_refund" and "CRN") or (invoice.debit_origin_id and "DBN") or "INV",
                 "No": invoice.name,
                 "Dt": invoice.invoice_date.strftime("%d/%m/%Y")},
             "SellerDtls": self._get_l10n_in_edi_partner_details(saler_buyer.get("seller_details")),
@@ -562,7 +544,7 @@ class AccountEdiFormat(models.Model):
         if is_overseas:
             json_payload.update({
                 "ExpDtls": {
-                    "RefClm": tax_details_by_code.get("igst") and "Y" or "N",
+                    "RefClm": tax_details_by_code.get("igst_amount") and "Y" or "N",
                     "ForCur": invoice.currency_id.name,
                     "CntCode": saler_buyer.get("buyer_details").country_id.code or "",
                 }
@@ -579,18 +561,16 @@ class AccountEdiFormat(models.Model):
                 json_payload["ExpDtls"].update({
                     "Port": invoice.l10n_in_shipping_port_code_id.code
                 })
-        if not invoice._l10n_in_edi_is_managing_invoice_negative_lines_allowed():
-            return json_payload
         return self._l10n_in_edi_generate_invoice_json_managing_negative_lines(invoice, json_payload)
 
     @api.model
     def _l10n_in_prepare_edi_tax_details(self, move, in_foreign=False, filter_invl_to_apply=None):
-        def l10n_in_grouping_key_generator(base_line, tax_values):
+        def l10n_in_grouping_key_generator(base_line, tax_data):
             invl = base_line['record']
-            tax = tax_values['tax_repartition_line'].tax_id
-            tags = tax_values['tax_repartition_line'].tag_ids
+            tax = tax_data['tax']
+            tags = tax.invoice_repartition_line_ids.tag_ids
             line_code = "other"
-            if not invl.currency_id.is_zero(tax_values['tax_amount_currency']):
+            if not invl.currency_id.is_zero(tax_data['tax_amount_currency']):
                 if any(tag in tags for tag in self.env.ref("l10n_in.tax_tag_cess")):
                     if tax.amount_type != "percent":
                         line_code = "cess_non_advol"
@@ -674,21 +654,17 @@ class AccountEdiFormat(models.Model):
 
     @api.model
     def _l10n_in_edi_connect_to_server(self, company, url_path, params):
-        user_token = self.env["iap.account"].get("l10n_in_edi")
         params.update({
-            "account_token": user_token.account_token,
-            "dbuuid": self.env["ir.config_parameter"].sudo().get_param("database.uuid"),
             "username": company.sudo().l10n_in_edi_username,
             "gstin": company.vat,
         })
-        if company.sudo().l10n_in_edi_production_env:
-            default_endpoint = DEFAULT_IAP_ENDPOINT
-        else:
-            default_endpoint = DEFAULT_IAP_TEST_ENDPOINT
-        endpoint = self.env["ir.config_parameter"].sudo().get_param("l10n_in_edi.endpoint", default_endpoint)
-        url = "%s%s" % (endpoint, url_path)
         try:
-            return jsonrpc(url, params=params, timeout=25)
+            return self.env['iap.account']._l10n_in_connect_to_server(
+              company.sudo().l10n_in_edi_production_env,
+              params,
+              url_path,
+              "l10n_in_edi.endpoint"
+            )
         except AccessError as e:
             _logger.warning("Connection error: %s", e.args[0])
             return {

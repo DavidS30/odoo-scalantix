@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import Command
@@ -159,6 +158,38 @@ class TestCustomSnippet(TransactionCase):
         self.assertIn(
             'Texte Francais',
             custom_snippet_view.with_context(lang=parseltongue.code).arch)
+
+        # Check that a translated page/view with a custom snippet won't copy
+        # the translation from the saved custom view for the terms that are
+        # "already translated".
+        view = View.create({
+            'name': 'Custom Snippet Test View',
+            'type': 'qweb',
+            'arch': """
+                <body>
+                    <section class="s_title">
+                        <h1>English Text</h1>
+                    </section>
+                    <div/>
+                </body>
+            """,
+            'key': 'test.custom_snippet_test_view',
+            'website_id': website.id,
+        })
+
+        view.update_field_translations('arch_db', {
+           parseltongue.code: {
+                'English Text': 'Parseltongue Text',
+            }
+        })
+        self.assertIn(
+            'Parseltongue Text',
+            view.with_context(lang=parseltongue.code).arch)
+
+        view.save(f'<div>{snippet_arch}</div>', xpath='/body[1]/div[1]')
+        self.assertIn(
+            'Parseltongue Text',
+            view.with_context(lang=parseltongue.code).arch)
 
 
 @tagged('post_install', '-at_install')

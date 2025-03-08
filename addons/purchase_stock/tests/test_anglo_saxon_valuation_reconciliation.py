@@ -4,16 +4,22 @@
 from freezegun import freeze_time
 
 from odoo.addons.stock_account.tests.test_anglo_saxon_valuation_reconciliation_common import ValuationReconciliationTestCommon
-from odoo.tests.common import Form, tagged
+from odoo.tests import Form, tagged
 from odoo import Command, fields
 
 
 
 @tagged('post_install', '-at_install')
 class TestValuationReconciliation(ValuationReconciliationTestCommon):
+
     @classmethod
-    def setup_company_data(cls, company_name, chart_template=None, **kwargs):
-        company_data = super().setup_company_data(company_name, chart_template=chart_template, **kwargs)
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.other_currency = cls.setup_other_currency('EUR', rounding=0.001)
+
+    @classmethod
+    def collect_company_accounting_data(cls, company):
+        company_data = super().collect_company_accounting_data(company)
 
         # Create stock config.
         company_data.update({
@@ -22,16 +28,17 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
                 'code': 'STOCKDIFF',
                 'reconcile': True,
                 'account_type': 'asset_current',
-                'company_id': company_data['company'].id,
             }),
         })
         return company_data
 
-    def _create_purchase(self, product, date, quantity=1.0, set_tax=False, price_unit=66.0):
+    def _create_purchase(self, product, date, quantity=1.0, set_tax=False, price_unit=66.0, currency=False):
+        if not currency:
+            currency = self.other_currency
         with freeze_time(date):
             rslt = self.env['purchase.order'].create({
                 'partner_id': self.partner_a.id,
-                'currency_id': self.currency_data['currency'].id,
+                'currency_id': currency.id,
                 'order_line': [
                     (0, 0, {
                         'name': product.name,
@@ -52,7 +59,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
             move_form = Form(self.env['account.move'].with_context(default_move_type='in_invoice', default_date=date))
             move_form.invoice_date = date
             move_form.partner_id = self.partner_a
-            move_form.currency_id = self.currency_data['currency']
+            move_form.currency_id = self.other_currency
             move_form.purchase_vendor_bill_id = self.env['purchase.bill.union'].browse(-purchase_order.id)
             return move_form.save()
 
@@ -97,7 +104,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
                 active_ids=picking.ids, active_id=picking.ids[0], active_model='stock.picking'))
             stock_return_picking = stock_return_picking_form.save()
             stock_return_picking.product_return_moves.quantity = 1.0
-            stock_return_picking_action = stock_return_picking.create_returns()
+            stock_return_picking_action = stock_return_picking.action_create_returns()
             return_pick = self.env['stock.picking'].browse(stock_return_picking_action['res_id'])
             return_pick.action_assign()
             return_pick.move_ids.quantity = 1
@@ -111,7 +118,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
             'journal_id': invoice.journal_id.id,
         })
         new_invoice = self.env['account.move'].browse(refund_invoice_wiz.modify_moves()['res_id'])
-        refund_invoice = invoice.reversal_move_id
+        refund_invoice = invoice.reversal_move_ids
         # Check the result
         self.assertEqual(invoice.payment_state, 'reversed', "Invoice should be in 'reversed' state")
         self.assertEqual(refund_invoice.payment_state, 'paid', "Refund should be in 'paid' state")
@@ -225,7 +232,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
         date_accounting = '2021-01-03'
         rate_accounting = 26.0
 
-        foreign_currency = self.currency_data['currency']
+        foreign_currency = self.other_currency
         company_currency = self.env.company.currency_id
         self.env['res.currency.rate'].create([
         {
@@ -289,7 +296,6 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
             'code': 'cash.basis.base.account',
             'name': 'cash_basis_base_account',
             'account_type': 'income',
-            'company_id': self.company_data['company'].id,
         })
         self.company_data['company'].account_cash_basis_base_account_id = cash_basis_base_account
 
@@ -297,14 +303,12 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
             'code': 'cash.basis.transfer.account',
             'name': 'cash_basis_transfer_account',
             'account_type': 'income',
-            'company_id': self.company_data['company'].id,
         })
 
         tax_account_1 = self.env['account.account'].create({
             'code': 'tax.account.1',
             'name': 'tax_account_1',
             'account_type': 'income',
-            'company_id': self.company_data['company'].id,
         })
 
         tax_tags = self.env['account.account.tag'].create({
@@ -348,7 +352,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
         product_A = self.env["product.product"].create(
             {
                 "name": "Product A",
-                "type": "product",
+                "is_storable": True,
                 "default_code": "prda",
                 "categ_id": self.stock_account_product_categ.id,
                 "taxes_id": [(5, 0, 0)],
@@ -407,14 +411,14 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
         date_po_and_delivery = '2022-03-02'
         self.product_a.write({
             'categ_id': self.stock_account_product_categ,
-            'detailed_type': 'product',
+            'is_storable': True,
         })
         self.product_b.write({
             'categ_id': self.stock_account_product_categ,
-            'detailed_type': 'product',
+            'is_storable': True,
         })
         purchase_order = self.env['purchase.order'].create({
-                'currency_id': self.currency_data['currency'].id,
+            'currency_id': self.other_currency.id,
                 'order_line': [
                     Command.create({
                         'name': self.product_a.name,
@@ -451,7 +455,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
         self.product_a.write({
             'standard_price': 27.0,
             'categ_id': self.stock_account_product_categ,
-            'detailed_type': 'product',
+            'is_storable': True,
         })
 
         self.stock_account_product_categ['property_cost_method'] = 'average'
@@ -470,7 +474,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
             active_model='stock.picking'))
         stock_return_picking = stock_return_picking_form.save()
         stock_return_picking.product_return_moves.write({'quantity': 1000.0})
-        stock_return_picking_action = stock_return_picking.create_returns()
+        stock_return_picking_action = stock_return_picking.action_create_returns()
         return_pick = self.env['stock.picking'].browse(stock_return_picking_action['res_id'])
         return_pick.move_line_ids.write({'quantity': 1000})
         return_pick.button_validate()
@@ -556,7 +560,7 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
         self.stock_account_product_categ.property_cost_method = 'average'
         self.product_a.write({
             'categ_id': self.stock_account_product_categ.id,
-            'detailed_type': 'product',
+            'is_storable': True,
         })
 
         purchase_order = self.env['purchase.order'].create({
@@ -578,3 +582,69 @@ class TestValuationReconciliation(ValuationReconciliationTestCommon):
             '|', ('debit', '=', 5), ('credit', '=', 5),
         ])
         self.assertEqual(cost_change_journal_items.mapped('quantity'), [0, 0])
+
+    @freeze_time('2025-01-07')
+    def test_exchange_rate_backdated_bill(self):
+        """ Having a purchase order in some foreign currency:
+        Changing the invoice date on the bill for that order after having received the product
+        should not affect the journal entries created after the user clicks the `Post` button on
+        the bill- specifically:
+        (A) In the case where that date is in the future (relative to the actual User time) and
+        (B) The date has an associated currency rate which differs from the one used at reception
+        """
+        self.env.ref('base.EUR').active = True
+        product = self.test_product_order
+        self.env['res.currency.rate'].create([{
+            'name': name,
+            'rate': rate,
+            'currency_id': self.env.ref('base.EUR').id,
+            'company_id': self.env.company.id,
+        } for (name, rate) in [('2025-01-06', 0.8), ('2025-01-07', 0.7), ('2025-01-08', 0.8)]])
+        for date in ('2025-01-07', '2025-01-06', '2025-01-08'):
+            purchase_order = self._create_purchase(product, '2025-01-07', quantity=1, price_unit=10, currency=self.env.ref('base.EUR'))
+            receipt = purchase_order.picking_ids
+            receipt.move_ids.quantity = 1
+            receipt.button_validate()
+            purchase_order.action_create_invoice()
+            bill = purchase_order.invoice_ids
+            with Form(bill) as bill_form:
+                bill_form.invoice_date = date
+            bill.action_post()
+
+        # Prior to the commit introducing this test, we would have entries in the following journals:
+        #   | Inventory Valuation | Vendor Bills | Exchange Difference |
+        # Post commit, we should see no entries in the Exchange Difference journal
+        stock_journal_id, bills_journal_id, exchg_journal_id = (
+            product.categ_id.property_stock_journal.id,
+            self.company_data['default_journal_purchase'].id,
+            self.env.company.currency_exchange_journal_id.id,
+        )
+        relevant_amls = self.env['account.move.line'].search([
+            ('journal_id', 'in', (stock_journal_id, bills_journal_id, exchg_journal_id)),
+        ], order='id asc')
+        self.assertEqual(len(relevant_amls), 16)
+        self.assertEqual(self.env['account.journal'].browse(exchg_journal_id).entries_count, 0)
+        self.assertRecordValues(
+            relevant_amls,
+            [
+                # Control (no reconciliation needed)
+                {'journal_id': stock_journal_id,    'balance': -14.29},
+                {'journal_id': stock_journal_id,    'balance':  14.29},
+                {'journal_id': bills_journal_id,    'balance':  14.29},
+                {'journal_id': bills_journal_id,    'balance': -14.29},
+                # back-dated bill
+                {'journal_id': stock_journal_id,    'balance': -14.29},
+                {'journal_id': stock_journal_id,    'balance':  14.29},
+                {'journal_id': bills_journal_id,    'balance':  12.50},
+                {'journal_id': bills_journal_id,    'balance': -12.50},
+                {'journal_id': stock_journal_id,    'balance':   1.79},
+                {'journal_id': stock_journal_id,    'balance':  -1.79},
+                # forward-dated bill
+                {'journal_id': stock_journal_id,    'balance': -14.29},
+                {'journal_id': stock_journal_id,    'balance':  14.29},
+                {'journal_id': bills_journal_id,    'balance':  12.50},
+                {'journal_id': bills_journal_id,    'balance': -12.50},
+                {'journal_id': stock_journal_id,    'balance':   1.79},
+                {'journal_id': stock_journal_id,    'balance':  -1.79},
+            ],
+        )

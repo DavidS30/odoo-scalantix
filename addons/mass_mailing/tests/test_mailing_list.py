@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from odoo import exceptions
 from odoo.addons.mass_mailing.tests.common import MassMailCommon
-from odoo.tests.common import Form, tagged, users
+from odoo.tests import Form, tagged, users
 
 
 @tagged('mailing_list')
@@ -116,8 +116,8 @@ class TestMailingListMerge(MassMailCommon):
                 subscription.list_id = self.mailing_list_2
                 subscription.opt_out = False
             contact = contact_form.save()
-        self.assertEqual(contact.subscription_ids[0].opt_out_datetime, datetime(2022, 1, 1, 12, 0, 0))
-        self.assertFalse(contact.subscription_ids[1].opt_out_datetime)
+        self.assertEqual(contact.subscription_ids.filtered(lambda s: s.list_id == self.mailing_list_1).opt_out_datetime, datetime(2022, 1, 1, 12, 0, 0))
+        self.assertFalse(contact.subscription_ids.filtered(lambda s: s.list_id == self.mailing_list_2).opt_out_datetime)
 
     @users('user_marketing')
     def test_mailing_list_action_send_mailing(self):

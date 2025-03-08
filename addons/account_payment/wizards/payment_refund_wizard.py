@@ -27,8 +27,8 @@ class PaymentRefundWizard(models.TransientModel):
     )
     currency_id = fields.Many2one(string="Currency", related='transaction_id.currency_id')
     support_refund = fields.Selection(
-        string="Type of Refund Supported",
-        selection=[('full_only', "Full Only"), ('partial', "Partial")],
+        string="Refund",
+        selection=[('none', "Unsupported"), ('full_only', "Full Only"), ('partial', "Partial")],
         compute='_compute_support_refund',
     )
     has_pending_refund = fields.Boolean(
@@ -58,11 +58,12 @@ class PaymentRefundWizard(models.TransientModel):
     @api.depends('transaction_id.provider_id', 'transaction_id.payment_method_id')
     def _compute_support_refund(self):
         for wizard in self:
-            p_support_refund = wizard.transaction_id.provider_id.support_refund
-            pm = wizard.transaction_id.payment_method_id
-            pm_support_refund = (pm.primary_payment_method_id or pm).support_refund
-            if not p_support_refund or not pm_support_refund:
-                wizard.support_refund = False
+            tx_sudo = wizard.transaction_id.sudo()  # needed for users without access to the provider
+            p_support_refund = tx_sudo.provider_id.support_refund
+            pm_sudo = tx_sudo.payment_method_id
+            pm_support_refund = (pm_sudo.primary_payment_method_id or pm_sudo).support_refund
+            if p_support_refund == 'none' or pm_support_refund == 'none':
+                wizard.support_refund = 'none'
             elif p_support_refund == 'full_only' or pm_support_refund == 'full_only':
                 wizard.support_refund = 'full_only'
             else:  # Both support partial refunds.

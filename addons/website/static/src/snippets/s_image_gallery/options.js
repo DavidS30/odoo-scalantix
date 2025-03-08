@@ -5,6 +5,10 @@ import options from "@web_editor/js/editor/snippets.options";
 import wUtils from '@website/js/utils';
 import { _t } from "@web/core/l10n/translation";
 import { renderToElement } from "@web/core/utils/render";
+import {
+    loadImageInfo,
+    applyModifications,
+} from "@web_editor/js/editor/image_processing";
 
 /**
  * This class provides layout methods for interacting with the ImageGallery
@@ -159,38 +163,26 @@ options.registry.GalleryLayout = options.registry.CarouselHandler.extend({
     _slideshow() {
         const imageEls = this._getItemsGallery();
         const imgHolderEls = this._getImgHolderEls();
-        const images = Array.from(imageEls).map((img) => ({
-            // Use getAttribute to get the attribute value otherwise .src
-            // returns the absolute url.
-            src: img.getAttribute('src'),
-            // TODO: remove me in master. This is not needed anymore as the
-            // images of the rendered `website.gallery.slideshow` are replaced
-            // by the elements of `imgHolderEls`.
-            alt: img.getAttribute('alt'),
-        }));
         var currentInterval = this.$target.find('.carousel:first').attr('data-bs-interval');
-        var params = {
-            images: images,
+        let params = {
+            images: imageEls,
             index: 0,
-            title: "",
             interval: currentInterval || 0,
+            ride: !currentInterval ? "false" : "carousel",
             id: 'slideshow_' + new Date().getTime(),
-            // TODO: in master, remove `attrClass` and `attStyle` from `params`.
-            // This is not needed anymore as the images of the rendered
-            // `website.gallery.slideshow` are replaced by the elements of
-            // `imgHolderEls`.
-            attrClass: imageEls.length > 0 ? imageEls[0].className : '',
-            attrStyle: imageEls.length > 0 ? imageEls[0].style.cssText : '',
-        },
-        $slideshow = $(renderToElement('website.gallery.slideshow', params));
-        const imgSlideshowEls = $slideshow[0].querySelectorAll("img[data-o-main-image]");
-        imgSlideshowEls.forEach((imgSlideshowEl, index) => {
-            // Replace the template image by the original one. This is needed in
-            // order to keep the characteristics of the image such as the
-            // filter, the width, the quality, the link on which the users are
-            // redirected once they click on the image etc...
-            imgSlideshowEl.after(imgHolderEls[index]);
-            imgSlideshowEl.remove();
+            hideImage: true,
+        };
+        // Since there is no versioning for this snippet we use the last version
+        // of "website.gallery.slideshow" called "website.s_image_gallery_mirror"
+        if (this.$target[0].dataset.vcss === '002') {
+            let carouselEl = this.$target[0].querySelector('.carousel');
+            params.colorContrast  = carouselEl && carouselEl.classList.contains('carousel-dark') ? 'carousel-dark' : ' ';
+        }
+        let $slideshow = $(renderToElement('website.s_image_gallery_mirror', params));
+        const carouselItemEls = $slideshow[0].querySelectorAll(".carousel-item");
+        carouselItemEls.forEach((carouselItemEl, index) => {
+            // Add the images in the carousel items.
+            carouselItemEl.appendChild(imgHolderEls[index]);
         });
         this._replaceContent($slideshow);
         this.$("img").toArray().forEach((img, index) => {
@@ -200,6 +192,7 @@ options.registry.GalleryLayout = options.registry.CarouselHandler.extend({
 
         // Apply layout animation
         this.$target.off('slide.bs.carousel').off('slid.bs.carousel');
+        this._slideshowStart();
         this.$('li.fa').off('click');
     },
     /**
@@ -280,6 +273,51 @@ options.registry.GalleryLayout = options.registry.CarouselHandler.extend({
     _relayout() {
         return this._setMode(this._getMode());
     },
+    /**
+     * Sets up listeners on slideshow to activate selected image.
+     */
+    _slideshowStart() {
+        const $carousel = this.$bsTarget.is(".carousel") ? this.$bsTarget : this.$bsTarget.find(".carousel");
+        let _previousEditor;
+        let _miniatureClicked;
+        const carouselIndicatorsEl = this.$target[0].querySelector(".carousel-indicators");
+        if (carouselIndicatorsEl) {
+            carouselIndicatorsEl.addEventListener("click", () => {
+                _miniatureClicked = true;
+            });
+        }
+        let lastSlideTimeStamp;
+        $carousel.on("slide.bs.carousel.image_gallery", (ev) => {
+            lastSlideTimeStamp = ev.timeStamp;
+            const activeImageEl = this.$target[0].querySelector(".carousel-item.active img");
+            this.trigger_up("is_element_selected", {
+                el: activeImageEl,
+                callback: () => {
+                    _previousEditor = true;
+                },
+            });
+            this.trigger_up("hide_overlay");
+        });
+        $carousel.on("slid.bs.carousel.image_gallery", (ev) => {
+            if (!_previousEditor && !_miniatureClicked) {
+                return;
+            }
+            _previousEditor = undefined;
+            _miniatureClicked = false;
+            // slid.bs.carousel is most of the time fired too soon by bootstrap
+            // since it emulates the transitionEnd with a setTimeout. We wait
+            // here an extra 20% of the time before retargeting edition, which
+            // should be enough...
+            const _slideDuration = new Date().getTime() - lastSlideTimeStamp;
+            setTimeout(() => {
+                const activeImageEl = this.$target[0].querySelector(".carousel-item.active img");
+                this.trigger_up("activate_snippet", {
+                    $snippet: $(activeImageEl),
+                    ifInactiveOptions: true,
+                });
+            }, 0.2 * _slideDuration);
+        });
+    },
 });
 
 options.registry.gallery = options.registry.GalleryLayout.extend({
@@ -295,7 +333,13 @@ options.registry.gallery = options.registry.GalleryLayout.extend({
         } else {
             layoutPromise = Promise.resolve();
         }
-        return layoutPromise.then(() => _super.apply(this, arguments));
+        return layoutPromise.then(() => _super.apply(this, arguments).then(() => {
+            // Call specific mode's start if defined (e.g. _slideshowStart)
+            const startMode = this[`_${this._getMode()}Start`];
+            if (startMode) {
+                startMode.bind(this)();
+            }
+        }));
     },
     /**
      * @override
@@ -446,18 +490,44 @@ options.registry.GalleryImageList = options.registry.GalleryLayout.extend({
                 multiImages: true,
                 onlyImages: true,
                 save: images => {
+                    const imagePromises = [];
                     for (const image of images) {
-                        $('<img/>', {
-                            class: $images.length > 0 ? $images[0].className : 'img img-fluid d-block ',
+                        const $img = $('<img/>', {
+                            class: $images.length > 0 ? $images[0].className : 'img img-fluid d-block mh-100 mw-100 mx-auto rounded object-fit-cover',
                             src: image.src,
                             'data-index': ++index,
                             alt: image.alt || '',
                             'data-name': _t('Image'),
                             style: $images.length > 0 ? $images[0].style.cssText : '',
                         }).appendTo($container);
+                        const imgEl = $img[0];
+                        imagePromises.push(new Promise(resolve => {
+                            loadImageInfo(imgEl).then(() => {
+                                if (imgEl.dataset.mimetype && ![
+                                    "image/gif",
+                                    "image/svg+xml",
+                                    "image/webp",
+                                ].includes(imgEl.dataset.mimetype)) {
+                                    // Convert to webp but keep original width.
+                                    imgEl.dataset.mimetype = "image/webp";
+                                    applyModifications(imgEl, {
+                                        mimetype: "image/webp",
+                                    }).then(src => {
+                                        imgEl.src = src;
+                                        imgEl.classList.add("o_modified_image_to_save");
+                                        resolve();
+                                    });
+                                } else {
+                                    resolve();
+                                }
+                            });
+                        }));
                     }
+                    savedPromise = Promise.all(imagePromises);
                     if (images.length > 0) {
-                        savedPromise = this._relayout();
+                        savedPromise = savedPromise.then(async () => {
+                            await this._relayout();
+                        });
                         this.trigger_up('cover_update');
                     }
                 },

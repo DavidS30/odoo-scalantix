@@ -3,23 +3,20 @@
 # 	* pos_online_payment
 # 
 # Translators:
-# Daniel Löfgren, 2023
-# Kim Asplund <kim.asplund@gmail.com>, 2023
-# Haojun Zou <apollo_zhj@msn.com>, 2023
-# Chrille Hedberg <hedberg.chrille@gmail.com>, 2023
-# Lasse L, 2023
-# Patrik Lermon <patrik.lermon@gmail.com>, 2023
-# Martin Trigaux, 2023
-# Claes-Johan Dahlin, 2024
+# Martin Trigaux, 2024
+# Daniel Löfgren, 2024
 # Anders Wallenquist <anders.wallenquist@vertel.se>, 2024
+# Kim Asplund <kim.asplund@gmail.com>, 2024
+# Lasse L, 2024
+# Chrille Hedberg <hedberg.chrille@gmail.com>, 2024
 # Jakob Krabbe <jakob.krabbe@vertel.se>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"POT-Creation-Date: 2024-09-26 08:55+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
 "Last-Translator: Jakob Krabbe <jakob.krabbe@vertel.se>, 2024\n"
 "Language-Team: Swedish (https://app.transifex.com/odoo/teams/41243/sv/)\n"
 "MIME-Version: 1.0\n"
@@ -41,34 +38,20 @@ msgstr ""
 "<strong>Fel:</strong> Det uppstod ett problem under betalningsprocessen."
 
 #. module: pos_online_payment
-#: model_terms:ir.ui.view,arch_db:pos_online_payment.pay
-msgid ""
-"<strong>No suitable payment method could be found.</strong>\n"
-"                            <br/>\n"
-"                            If you believe that it is an error, please contact the website administrator."
-msgstr ""
-"<strong>Ingen lämplig betalningsmetod kunde hittas.</strong>\n"
-"                            <br/>\n"
-"                            Om du tror att det är ett fel, vänligen kontakta webbplatsadministratören."
-
-#. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_config.py:0
-#, python-format
 msgid "A POS config cannot have more than one online payment method."
 msgstr "En POS-konfigurator kan inte ha mer än en betalningsmetod online."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "A payment option must be specified."
 msgstr "Ett betalningsalternativ måste anges."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid ""
 "A validation payment cannot be used for a Point of Sale online payment."
 msgstr ""
@@ -83,7 +66,6 @@ msgstr "Alla tillgängliga leverantörer"
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_payment_method.py:0
-#, python-format
 msgid ""
 "All payment providers configured for an online payment method must use the "
 "same currency as the Sales Journal, or the company currency if that is not "
@@ -105,18 +87,9 @@ msgstr "Belopp"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/customer_display/customer_display_template.xml:0
-#: code:addons/pos_online_payment/static/src/app/utils/online_payment_popup/online_payment_popup.xml:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/app/online_payment_popup/online_payment_popup.xml:0
 msgid "Amount:"
 msgstr "Belopp:"
-
-#. module: pos_online_payment
-#. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/utils/online_payment_popup/online_payment_popup.xml:0
-#, python-format
-msgid "Cancel"
-msgstr "Avbryt"
 
 #. module: pos_online_payment
 #: model_terms:ir.ui.view,arch_db:pos_online_payment.pay
@@ -126,8 +99,6 @@ msgstr "Avbryt betalning"
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_payment.py:0
-#: code:addons/pos_online_payment/models/pos_payment.py:0
-#, python-format
 msgid "Cannot create a POS online payment without an accounting payment."
 msgstr ""
 "Det går inte att skapa en POS-onlinebetalning utan en bokföringsbetalning."
@@ -135,7 +106,6 @@ msgstr ""
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_payment.py:0
-#, python-format
 msgid ""
 "Cannot create a POS payment with a not online payment method and an online "
 "accounting payment."
@@ -146,19 +116,18 @@ msgstr ""
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_payment.py:0
-#, python-format
 msgid "Cannot edit a POS online payment essential data."
 msgstr "Det går inte att redigera viktiga data för en POS-betalning online."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_payment_method.py:0
-#, python-format
 msgid ""
-"Could not create an online payment method (company_id=%d, pos_config_id=%d)"
+"Could not create an online payment method (company_id=%(company_id)d, "
+"pos_config_id=%(pos_config_id)d)"
 msgstr ""
-"Det gick inte att skapa en betalningsmetod online (company_id=%d, "
-"pos_config_id=%d)"
+"Det gick inte att skapa en onlinebetalningsmetod (company_id=%(company_id)d,"
+" pos_config_id=%(pos_config_id)d)"
 
 #. module: pos_online_payment
 #: model:ir.model.fields,field_description:pos_online_payment.field_pos_payment_method__has_an_online_payment_provider
@@ -167,29 +136,19 @@ msgstr "Har en leverantör av onlinebetalningar"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Invalid online payment"
 msgstr "Ogiltig onlinebetalning"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Invalid online payments"
 msgstr "Ogiltiga betalningar online"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/utils/online_payment_popup/online_payment_popup.xml:0
-#, python-format
-msgid "Invite your customer to scan the QR code to pay:"
-msgstr "Bjud in kunden att skanna QR-koden för att betala:"
-
-#. module: pos_online_payment
-#. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Invoice could not be generated"
 msgstr "Fakturan kunde inte genereras"
 
@@ -201,13 +160,12 @@ msgstr "Nästa onlinebetalning belopp att betala"
 #. module: pos_online_payment
 #: model:ir.model.fields.selection,name:pos_online_payment.selection__pos_payment_method__type__online
 msgid "Online"
-msgstr "Uppkopplad"
+msgstr "Online"
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_payment_method.py:0
 #: model:ir.model.fields,field_description:pos_online_payment.field_pos_payment_method__is_online_payment
-#, python-format
 msgid "Online Payment"
 msgstr "Onlinebetalning"
 
@@ -223,18 +181,13 @@ msgstr "Betalning av bokföring online"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Online payment unavailable"
 msgstr "Onlinebetalning inte tillgänglig"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Online payments cannot have a negative amount (%s: %s)."
 msgstr "Onlinebetalningar kan inte ha ett negativt belopp (%s: %s)."
 
@@ -255,24 +208,13 @@ msgstr "Orderreferens"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/customer_display/customer_display_template.xml:0
-#: code:addons/pos_online_payment/static/src/app/utils/online_payment_popup/online_payment_popup.xml:0
-#, python-format
-msgid "Order id:"
-msgstr "Order id:"
-
-#. module: pos_online_payment
-#. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/customer_display/customer_display_template.xml:0
-#: code:addons/pos_online_payment/static/src/app/utils/online_payment_popup/online_payment_popup.xml:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/app/online_payment_popup/online_payment_popup.xml:0
 msgid "Order reference:"
 msgstr "Beställningsreferens:"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Order saving issue"
 msgstr "Problem med att spara order"
 
@@ -284,7 +226,6 @@ msgstr "Problem med att spara order"
 #: model:ir.model.fields,field_description:pos_online_payment.field_payment_transaction__pos_order_id
 #: model_terms:ir.ui.view,arch_db:pos_online_payment.payment_transaction_form
 #: model_terms:ir.ui.view,arch_db:pos_online_payment.view_account_payment_form_inherit_pos_online_payment
-#, python-format
 msgid "POS Order"
 msgstr "POS Order"
 
@@ -302,13 +243,6 @@ msgstr "Betalningstransaktion"
 #: model:ir.model,name:pos_online_payment.model_account_payment
 msgid "Payments"
 msgstr "Betalningar"
-
-#. module: pos_online_payment
-#. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/customer_display/customer_display_template.xml:0
-#, python-format
-msgid "Please scan the QR code to open the payment page"
-msgstr "Vänligen skanna QR-koden för att öppna betalningssidan"
 
 #. module: pos_online_payment
 #: model:ir.model,name:pos_online_payment.model_pos_config
@@ -342,37 +276,37 @@ msgstr "Bearbetad av"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/customer_display/customer_display_template.xml:0
-#: code:addons/pos_online_payment/static/src/app/utils/online_payment_popup/online_payment_popup.xml:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/app/online_payment_popup/online_payment_popup.xml:0
 msgid "QR Code to pay"
 msgstr "QR-kod för att betala"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/utils/online_payment_popup/online_payment_popup.xml:0
-#, python-format
-msgid "Scan to Pay"
+#: code:addons/pos_online_payment/static/src/app/online_payment_popup/online_payment_popup.xml:0
+msgid "Scan the QR code to pay"
+msgstr "Skanna QR-koden för att betala"
+
+#. module: pos_online_payment
+#. odoo-javascript
+#: code:addons/pos_online_payment/static/src/app/online_payment_popup/online_payment_popup.xml:0
+msgid "Scan to pay"
 msgstr "Skanna för att betala"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Server error"
 msgstr "Serverfel"
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/payment_transaction.py:0
-#, python-format
 msgid "The POS online payment (tx.id=%d) could not be saved correctly"
 msgstr "POS-betalningen online (tx.id=%d) kunde inte sparas korrekt"
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/payment_transaction.py:0
-#, python-format
 msgid ""
 "The POS online payment (tx.id=%d) could not be saved correctly because the "
 "online payment method could not be found"
@@ -383,7 +317,6 @@ msgstr ""
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "The POS session is not opened."
 msgstr "POS-sessionen är inte öppnad."
 
@@ -401,64 +334,55 @@ msgstr "Order på försäljningsstället som är kopplad till denna betalning"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "The QR Code for paying could not be generated."
 msgstr "QR-koden för att betala kunde inte genereras."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "The amount to pay has changed. Please refresh the page."
 msgstr "Beloppet som ska betalas har ändrats. Vänligen uppdatera sidan."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "The currency is invalid."
 msgstr "Valutan är ogiltig."
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "The invoice could not be generated."
 msgstr "Fakturan kunde inte skapas."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
-msgid "The order has been canceled."
+msgid "The order has been cancelled."
 msgstr "Beställningen har annullerats."
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "The order has not been saved correctly on the server."
 msgstr "Ordern har inte sparats på rätt sätt på servern."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_session.py:0
-#, python-format
 msgid "The partner of the POS online payment (id=%d) could not be found"
 msgstr "Partnern för POS-betalningen online (id=%d) kunde inte hittas"
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "The payment provider is invalid."
 msgstr "Betalningsleverantören är ogiltig."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid ""
 "The payment should either be direct, with redirection, or made by a token."
 msgstr ""
@@ -468,42 +392,36 @@ msgstr ""
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "The payment token is invalid."
 msgstr "Betalningspolletten är ogiltig."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/payment_transaction.py:0
-#, python-format
 msgid "The payment transaction (%d) has a negative amount."
 msgstr "Betalningstransaktionen (%d) har ett negativt belopp."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "The provided order or access token is invalid."
 msgstr "Den angivna beställningen eller åtkomstpolletten är ogiltig."
 
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "The provided partner_id is different than expected."
 msgstr "Det angivna partner_id är annorlunda än förväntat."
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "The saved order could not be retrieved."
 msgstr "Den sparade ordern kunde inte hämtas."
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid ""
 "The total amount of remaining online payments to execute (%s) doesn't "
 "correspond to the remaining unpaid amount of the order (%s)."
@@ -513,26 +431,13 @@ msgstr ""
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "There are online payments that were missing in your view."
 msgstr "Det finns onlinebetalningar som saknades i din vy."
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
-msgid ""
-"There is a problem with the server. The order cannot be saved and therefore "
-"the online payment is not possible."
-msgstr ""
-"Det har uppstått ett problem med servern. Beställningen kan inte sparas och "
-"därför är det inte möjligt att betala online."
-
-#. module: pos_online_payment
-#. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid ""
 "There is a problem with the server. The order online payment status cannot "
 "be retrieved."
@@ -542,8 +447,7 @@ msgstr ""
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid ""
 "There is a problem with the server. The order online payment status cannot "
 "be retrieved. Are you sure there is no online payment for this order ?"
@@ -555,7 +459,6 @@ msgstr ""
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid ""
 "There is no online payment method configured for this Point of Sale order."
 msgstr ""
@@ -565,7 +468,6 @@ msgstr ""
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "There is nothing to pay for this order."
 msgstr "Det finns inget att betala för denna beställning."
 
@@ -582,7 +484,6 @@ msgstr "Att betala"
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/models/pos_config.py:0
-#, python-format
 msgid ""
 "To use an online payment method in a POS config, it must have at least one "
 "published payment provider supporting the currency of that POS config."
@@ -594,7 +495,6 @@ msgstr ""
 #. module: pos_online_payment
 #. odoo-python
 #: code:addons/pos_online_payment/controllers/payment_portal.py:0
-#, python-format
 msgid "Tokenization is not available for logged out customers."
 msgstr "Tokenisering är inte tillgänglig för inloggade kunder."
 
@@ -615,8 +515,7 @@ msgstr "Typ"
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Updated online payments"
 msgstr "Uppdaterade onlinebetalningar"
 
@@ -631,8 +530,7 @@ msgstr ""
 
 #. module: pos_online_payment
 #. odoo-javascript
-#: code:addons/pos_online_payment/static/src/app/screens/payment_screen/payment_screen.js:0
-#, python-format
+#: code:addons/pos_online_payment/static/src/overrides/pos_overrides/components/payment_screen/payment_screen.js:0
 msgid "Yes"
 msgstr "Ja"
 

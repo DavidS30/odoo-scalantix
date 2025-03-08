@@ -1,24 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates>
 
+<t t-name="website.DuplicatePageDialog">
+    <WebsiteDialog close="props.close" primaryClick="() => this.duplicate()">
+        <div class="mb-3 row">
+            <label class="col-form-label col-md-3">
+                Page Name
+            </label>
+            <div class="col-md-9">
+                <input type="text" t-model="state.name" class="form-control" required="required" t-ref="autofocus"/>
+            </div>
+        </div>
+    </WebsiteDialog>
+</t>
+
 <t t-name="website.PageDependencies">
     <t t-if="!!Object.keys(state.dependencies).length">
         <t t-if="props.mode === 'popover'">
             <t t-set="depTemplate">
                 <t t-call="{{ constructor.popoverTemplate }}"/>
             </t>
-            <t t-if="props.type === 'key'">
-                <div t-att-data-bs-template="depTemplate" data-bs-html="true" title="Dependencies" t-ref="action">
-                    It looks like your file is being called by
-                    <a href="#" t-on-click="showDependencies"><t t-esc="depText" /></a>.
-                    Changing its name will break these calls.
-                </div>
-            </t>
-            <t t-else="">
-                <div t-att-data-bs-template="depTemplate" data-bs-html="true" title="Dependencies" t-ref="action">
-                    (could be used in <a href="#" t-on-click="showDependencies"><t t-esc="state.depText" /></a>)
-                </div>
-            </t>
+            <div t-att-data-bs-template="depTemplate" data-bs-html="true" title="Dependencies" t-ref="action">
+                Could be used in many places, see here: <a href="#" t-on-click="showDependencies">Dependencies</a>
+            </div>
         </t>
         <t t-else="">
             <p class="text-warning">We found these ones:</p>
@@ -34,9 +38,9 @@
                 <div t-attf-id="collapseDependencies{{ dependency_index }}" class="collapse" aria-expanded="false">
                     <ul>
                         <li t-foreach="dependency_value" t-as="item" t-key="item_index">
-                            <t t-set="link_text">This URL is contained in the '%s' of the following '%s'</t>
+                            <t t-set="link_text">This URL is contained in the “%(field)s” of the following “%(model)s”</t>
                             <a t-att-href="item.link" target="_blank">
-                                <t t-out="sprintf(link_text, item.field_name, item.model_name)"/>: <b t-out="item.record_name"/>
+                                <t t-out="sprintf(link_text, { field: item.field_name, model: item.model_name })"/>: <b t-out="item.record_name"/>
                             </a>
                         </li>
                     </ul>
@@ -60,9 +64,13 @@
 </t>
 
 <t t-name="website.DeletePageDialog">
-    <WebsiteDialog title="title" close="props.close">
+    <WebsiteDialog title.translate="Delete Page" close="props.close">
         <p t-if="props.resIds.length > 1">Are you sure you want to delete those pages?</p>
         <p t-else="">Are you sure you want to delete this page?</p>
+        <p t-if="props.hasNewPageTemplate" class="text-warning">
+            <t t-if="props.resIds.length > 1">Some of these pages are used as new page templates.</t>
+            <t t-else="">This page is used as a new page template.</t>
+        </p>
         <p class="text-warning">Don't forget to update all links referring to it.</p>
         <PageDependencies resIds="props.resIds" resModel="props.resModel" mode="'collapse'"/>
         <CheckBox value="state.confirm" onChange.bind="onConfirmCheckboxChange">
@@ -80,10 +88,10 @@
     </WebsiteDialog>
 </t>
 
-<t t-name="website.PagePropertiesDialog" t-inherit="web.FormViewDialog">
-    <xpath expr="//t[@t-set-slot='footer']" position="inside">
-        <button class="btn btn-link order-last ms-auto" t-on-click="clonePage"><i class="fa fa-fw fa-clone"/>Duplicate Page</button>
-        <button class="btn btn-link order-last" t-on-click="deletePage"><i class="fa fa-fw fa-trash"/>Delete Page</button>
+<t t-name="website.PagePropertiesDialogButtons" t-inherit="web.FormViewDialog.ToOne.buttons">
+    <xpath expr="//button[contains(@class, 'o_form_button_cancel')]" position="after">
+        <button class="btn btn-link order-last ms-auto" t-on-click="props.clonePage"><i class="fa fa-fw fa-clone"/>Duplicate Page</button>
+        <button class="btn btn-link order-last" t-on-click="props.deletePage"><i class="fa fa-fw fa-trash"/>Delete Page</button>
     </xpath>
 </t>
 

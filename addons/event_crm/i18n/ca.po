@@ -3,24 +3,25 @@
 # 	* event_crm
 # 
 # Translators:
-# Óscar Fonseca <tecnico@pyming.com>, 2023
-# M Palau <mpalau@tda.ad>, 2023
-# jabiri7, 2023
-# Manel Fernandez Ramirez <manelfera@outlook.com>, 2023
-# Ivan Espinola, 2023
-# Quim - eccit <quim@eccit.com>, 2023
-# Josep Anton Belchi, 2023
-# Marc Tormo i Bochaca <mtbochaca@gmail.com>, 2023
-# marcescu, 2023
-# Martin Trigaux, 2023
+# Óscar Fonseca <tecnico@pyming.com>, 2024
+# M Palau <mpalau@tda.ad>, 2024
+# jabiri7, 2024
+# Iván Infantes Castarnado, 2024
+# Ivan Espinola, 2024
+# Marc Tormo i Bochaca <mtbochaca@gmail.com>, 2024
+# Josep Anton Belchi, 2024
+# Quim - coopdevs <quim.rebull@coopdevs.org>, 2024
+# Martin Trigaux, 2024
+# Manel Fernandez Ramirez <manelfera@outlook.com>, 2024
+# marcescu, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Martin Trigaux, 2023\n"
+"POT-Creation-Date: 2024-09-26 08:55+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: marcescu, 2024\n"
 "Language-Team: Catalan (https://app.transifex.com/odoo/teams/41243/ca/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -42,7 +43,6 @@ msgstr "# Registres"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_registration.py:0
-#, python-format
 msgid "(updated)"
 msgstr "(actualitzar)"
 
@@ -53,7 +53,6 @@ msgstr "<span class=\"o_stat_text\"> Assistents</span>"
 
 #. module: event_crm
 #: model_terms:ir.ui.view,arch_db:event_crm.event_registration_view_form
-#: model_terms:ir.ui.view,arch_db:event_crm.event_view_form
 msgid "<span class=\"o_stat_text\"> Leads</span>"
 msgstr "<span class=\"o_stat_text\"> Iniciatives</span>"
 
@@ -99,6 +98,12 @@ msgstr ""
 msgid "Automatically assign the created leads to this Salesperson."
 msgstr ""
 "Assigni automàticament els clients amb iniciatives creats a aquest venedor."
+
+#. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Aww! No Leads created, check your Lead Generation Rules and try again."
+msgstr ""
 
 #. module: event_crm
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__company_id
@@ -154,20 +159,27 @@ msgid "Default lead type when this rule is applied."
 msgstr "Tipus de client potencial per defecte quan s'aplica aquesta regla."
 
 #. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__display_name
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__display_name
 msgid "Display Name"
 msgstr "Nom mostrat"
 
 #. module: event_crm
 #: model:ir.model,name:event_crm.model_event_event
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__event_id
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__event_id
 msgid "Event"
 msgstr "Esdeveniment"
 
 #. module: event_crm
-#: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__event_type_ids
-msgid "Event Categories"
-msgstr "Categories de l'esdeveniment"
+#: model:ir.actions.server,name:event_crm.ir_cron_generate_leads_ir_actions_server
+msgid "Event CRM: Generate Leads based on Rules"
+msgstr ""
+
+#. module: event_crm
+#: model:ir.model,name:event_crm.model_event_lead_request
+msgid "Event Lead Request"
+msgstr ""
 
 #. module: event_crm
 #: model:ir.model,name:event_crm.model_event_lead_rule
@@ -178,6 +190,11 @@ msgstr "Regles potencials de l'esdeveniment"
 #: model:ir.model,name:event_crm.model_event_registration
 msgid "Event Registration"
 msgstr "Registre esdeveniment"
+
+#. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__event_type_ids
+msgid "Event Templates"
+msgstr "Plantilles d'esdeveniment"
 
 #. module: event_crm
 #: model:ir.actions.act_window,name:event_crm.event_registration_action_from_lead
@@ -224,6 +241,18 @@ msgid "For any of these Events"
 msgstr "Per a qualsevol d'aquests esdeveniments"
 
 #. module: event_crm
+#: model_terms:ir.ui.view,arch_db:event_crm.event_view_form
+msgid "Generate Leads"
+msgstr "Genera iniciatives"
+
+#. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Got it! We've noted your request. Your leads will be created soon!"
+msgstr ""
+
+#. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__id
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__id
 msgid "ID"
 msgstr "ID"
@@ -289,6 +318,7 @@ msgstr "Iniciativa/Oportunitat"
 #: model:ir.actions.act_window,name:event_crm.crm_lead_action_from_registration
 #: model:ir.model.fields,field_description:event_crm.field_event_event__lead_ids
 #: model:ir.model.fields,field_description:event_crm.field_event_registration__lead_ids
+#: model_terms:ir.ui.view,arch_db:event_crm.event_view_form
 msgid "Leads"
 msgstr "Iniciatives"
 
@@ -305,7 +335,6 @@ msgstr "Nom"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_lead_rule.py:0
-#, python-format
 msgid "New registrations"
 msgstr "Registres nous"
 
@@ -321,6 +350,17 @@ msgid "No registration found"
 msgstr "No s'ha trobat cap registre"
 
 #. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_event__has_lead_request
+msgid "Ongoing Generation Request"
+msgstr ""
+
+#. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Only Event Managers are allowed to re-generate all leads."
+msgstr ""
+
+#. module: event_crm
 #: model:ir.model.fields.selection,name:event_crm.selection__event_lead_rule__lead_type__opportunity
 msgid "Opportunity"
 msgstr "Oportunitat"
@@ -328,8 +368,6 @@ msgstr "Oportunitat"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_registration.py:0
-#: code:addons/event_crm/models/event_registration.py:0
-#, python-format
 msgid "Participants"
 msgstr "Participants"
 
@@ -349,6 +387,11 @@ msgstr ""
 #: model:ir.model.fields.selection,name:event_crm.selection__event_lead_rule__lead_creation_basis__order
 msgid "Per Order"
 msgstr "Per comanda"
+
+#. module: event_crm
+#: model:ir.model.fields,field_description:event_crm.field_event_lead_request__processed_registration_id
+msgid "Processed Registration"
+msgstr ""
 
 #. module: event_crm
 #: model:ir.model.fields,field_description:event_crm.field_crm_lead__event_lead_rule_id
@@ -410,6 +453,11 @@ msgid "Search Lead Generation Rules"
 msgstr "Regles de generació de clients potencials en la cerca"
 
 #. module: event_crm
+#: model:ir.model.fields,help:event_crm.field_event_event__has_lead_request
+msgid "Set to True when a Lead Generation Request is currently running."
+msgstr ""
+
+#. module: event_crm
 #: model:ir.model.fields,field_description:event_crm.field_crm_lead__event_id
 msgid "Source Event"
 msgstr "Esdeveniment d'origen"
@@ -423,6 +471,13 @@ msgstr "Registres d'origen"
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__lead_tag_ids
 msgid "Tags"
 msgstr "Etiquetes"
+
+#. module: event_crm
+#: model:ir.model.fields,help:event_crm.field_event_lead_request__processed_registration_id
+msgid ""
+"The ID of the last processed event.registration, used to know where to "
+"resume."
+msgstr ""
 
 #. module: event_crm
 #: model_terms:ir.actions.act_window,help:event_crm.event_lead_rule_action
@@ -439,8 +494,6 @@ msgstr "Tipus d'activació"
 #. module: event_crm
 #. odoo-python
 #: code:addons/event_crm/models/event_registration.py:0
-#: code:addons/event_crm/models/event_registration.py:0
-#, python-format
 msgid "Updated registrations"
 msgstr "Registres actualitzats"
 
@@ -448,6 +501,17 @@ msgstr "Registres actualitzats"
 #: model:ir.model.fields,field_description:event_crm.field_event_lead_rule__lead_creation_trigger
 msgid "When"
 msgstr "Data i hora"
+
+#. module: event_crm
+#. odoo-python
+#: code:addons/event_crm/models/event_event.py:0
+msgid "Yee-ha, %(leads_count)s Leads have been created!"
+msgstr ""
+
+#. module: event_crm
+#: model:ir.model.constraint,message:event_crm.constraint_event_lead_request_uniq_event
+msgid "You can only have one generation request per event at a time."
+msgstr ""
 
 #. module: event_crm
 #: model_terms:ir.ui.view,arch_db:event_crm.event_lead_rule_view_form

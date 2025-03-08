@@ -8,8 +8,8 @@ from odoo.addons.point_of_sale.tests.test_frontend import TestPointOfSaleHttpCom
 
 class TestPosHrHttpCommon(TestPointOfSaleHttpCommon):
     @classmethod
-    def setUpClass(cls, chart_template_ref=None):
-        super().setUpClass(chart_template_ref=chart_template_ref)
+    def setUpClass(cls):
+        super().setUpClass()
 
         cls.env.user.groups_id += cls.env.ref('hr.group_hr_user')
 
@@ -45,22 +45,27 @@ class TestPosHrHttpCommon(TestPointOfSaleHttpCommon):
         emp2.write({"name": "Pos Employee2", "pin": "1234"})
         (admin + emp1 + emp2).company_id = cls.env.company
 
+        emp3 = cls.env['hr.employee'].create({
+            'name': 'Test Employee 3',
+            "user_id": cls.pos_user.id,
+            "company_id": cls.env.company.id,
+        })
+
         cls.main_pos_config.write({
-            'basic_employee_ids': [Command.link(emp1.id), Command.link(emp2.id)]
+            'basic_employee_ids': [Command.link(emp1.id), Command.link(emp2.id), Command.link(emp3.id)]
         })
 
 
 @tagged("post_install", "-at_install")
 class TestUi(TestPosHrHttpCommon):
     def test_01_pos_hr_tour(self):
-        # open a session, the /pos/ui controller will redirect to it
+        self.pos_admin.write({
+            "groups_id": [
+                (4, self.env.ref('account.group_account_invoice').id)
+            ]
+        })
         self.main_pos_config.with_user(self.pos_admin).open_ui()
-
-        self.start_tour(
-            "/pos/ui?config_id=%d" % self.main_pos_config.id,
-            "PosHrTour",
-            login="pos_admin",
-        )
+        self.start_pos_tour("PosHrTour", login="pos_admin")
 
     def test_cashier_stay_logged_in(self):
         # open a session, the /pos/ui controller will redirect to it
@@ -70,4 +75,25 @@ class TestUi(TestPosHrHttpCommon):
             "/pos/ui?config_id=%d" % self.main_pos_config.id,
             "CashierStayLogged",
             login="pos_admin",
+        )
+
+    def test_cashier_can_see_product_info(self):
+        # open a session, the /pos/ui controller will redirect to it
+        self.product_a.available_in_pos = True
+        self.main_pos_config.with_user(self.pos_admin).open_ui()
+
+        self.start_tour(
+            "/pos/ui?config_id=%d" % self.main_pos_config.id,
+            "CashierCanSeeProductInfo",
+            login="pos_admin",
+        )
+
+    def test_basic_user_cannot_close_session(self):
+        # open a session, the /pos/ui controller will redirect to it
+        self.main_pos_config.with_user(self.pos_admin).open_ui()
+
+        self.start_tour(
+            "/pos/ui?config_id=%d" % self.main_pos_config.id,
+            "CashierCannotClose",
+            login="pos_user",
         )

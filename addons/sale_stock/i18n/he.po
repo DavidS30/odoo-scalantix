@@ -3,26 +3,29 @@
 # 	* sale_stock
 # 
 # Translators:
-# ilan kl <ilan@qaroads.co.il>, 2023
-# Lilach Gilliam <lilach.gilliam@gmail.com>, 2023
-# NoaFarkash, 2023
-# Fishfur A Banter <fishfurbanter@gmail.com>, 2023
-# hed shefer <hed@laylinetech.com>, 2023
-# ExcaliberX <excaliberx@gmail.com>, 2023
-# Yihya Hugirat <hugirat@gmail.com>, 2023
-# דודי מלכה <Dudimalka6@gmail.com>, 2023
-# yael terner, 2023
+# Fishfur A Banter <fishfurbanter@gmail.com>, 2024
+# NoaFarkash, 2024
 # Orel Nahmany, 2024
+# yael terner, 2024
+# ilan kl <ilan@qaroads.co.il>, 2024
+# ExcaliberX <excaliberx@gmail.com>, 2024
 # Roy Sayag, 2024
+# דודי מלכה <Dudimalka6@gmail.com>, 2024
+# Hed Shefer <hed@laylinetech.com>, 2024
+# Yihya Hugirat <hugirat@gmail.com>, 2024
+# Mendi Soudry, 2024
 # ZVI BLONDER <ZVIBLONDER@gmail.com>, 2024
+# MichaelHadar, 2025
+# Lilach Gilliam <lilach.gilliam@gmail.com>, 2025
+# or balmas, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-13 10:28+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: ZVI BLONDER <ZVIBLONDER@gmail.com>, 2024\n"
+"POT-Creation-Date: 2024-12-16 13:40+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: or balmas, 2025\n"
 "Language-Team: Hebrew (https://app.transifex.com/odoo/teams/41243/he/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -52,12 +55,12 @@ msgstr ""
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.sale_order_portal_content_inherit_sale_stock
 msgid "<i class=\"fa fa-fw fa-times\"/> Cancelled"
-msgstr ""
+msgstr "<i class=\"fa fa-fw fa-times\"/> בוטל"
 
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.sale_order_portal_content_inherit_sale_stock
 msgid "<i class=\"fa fa-fw fa-times\"/>Cancelled"
-msgstr ""
+msgstr "<i class=\"fa fa-fw fa-times\"/> בוטל"
 
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.sale_order_portal_content_inherit_sale_stock
@@ -72,7 +75,7 @@ msgstr "<span class=\"o_stat_text\">מכירות</span>"
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.sale_order_portal_content_inherit_sale_stock
 msgid ""
-"<span class=\"small badge text-bg-success orders_label_text_align\">\n"
+"<span class=\"small badge rounded-pill text-bg-success orders_label_text_align\">\n"
 "                                        <i class=\"fa fa-fw fa-truck\"/> Shipped\n"
 "                                    </span>"
 msgstr ""
@@ -87,14 +90,19 @@ msgstr ""
 
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.report_delivery_document_inherit_sale_stock
-msgid "<strong>Customer Reference:</strong>"
-msgstr "<strong>מספר הזמנת לקוח:</strong>"
+msgid "<strong>Customer Reference</strong>"
+msgstr "<strong>מזהה לקוח</strong>"
 
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.report_delivery_document_inherit_sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.report_saleorder_document_inherit_sale_stock
-msgid "<strong>Incoterm:</strong>"
-msgstr "<strong>מונחי סחר בינלאומיים:</strong>"
+msgid "<strong>Incoterm</strong>"
+msgstr "<strong>חוקי סחר ספק/לקוח</strong>"
+
+#. module: sale_stock
+#: model:ir.model.fields,help:sale_stock.field_sale_order_line__is_storable
+msgid "A storable product is a product for which you manage stock."
+msgstr "מוצר לאחסון הוא מוצר שאתה מנהל עבורו מלאי."
 
 #. module: sale_stock
 #: model:ir.model.fields,help:sale_stock.field_sale_order_line__qty_delivered_method
@@ -109,7 +117,6 @@ msgstr ""
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "All planned operations included"
 msgstr "כל הפעולות המתוכננות כלולות"
 
@@ -126,22 +133,27 @@ msgstr "בהקדם האפשרי"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Availability"
 msgstr "זמינות"
 
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Available"
 msgstr "זמין"
 
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Available in stock"
+msgstr ""
+
+#. module: sale_stock
+#: model:ir.model.fields,help:sale_stock.field_sale_order__delivery_status
+msgid ""
+"Blue: Not Delivered/Started\n"
+"            Orange: Partially Delivered\n"
+"            Green: Fully Delivered"
 msgstr ""
 
 #. module: sale_stock
@@ -162,7 +174,7 @@ msgstr "תאריך סיום של הזמנת המשלוח הראשונה"
 #. module: sale_stock
 #: model:ir.model,name:sale_stock.model_res_config_settings
 msgid "Config Settings"
-msgstr "הגדר הגדרות"
+msgstr "הגדרות תצורה"
 
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.report_delivery_document_inherit_sale_stock
@@ -219,7 +231,6 @@ msgstr "הצג יישומון כמות"
 #. module: sale_stock
 #. odoo-python
 #: code:addons/sale_stock/models/sale_order.py:0
-#, python-format
 msgid ""
 "Do not forget to change the partner on the following delivery orders: %s"
 msgstr "אל תשכח לשנות את הלקוח בהזמנות המשלוח הבאות: %s"
@@ -253,7 +264,6 @@ msgstr "תאריך צפוי"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Expected Delivery"
 msgstr "משלוח צפוי"
 
@@ -270,7 +280,6 @@ msgstr "צפי תאריך קבלה"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Forecasted Stock"
 msgstr "מלאי חזוי"
 
@@ -416,9 +425,13 @@ msgid "Move forward expected delivery dates by"
 msgstr "העבר קדימה את מועדי האספקה ​​הצפויים עד"
 
 #. module: sale_stock
+#: model_terms:ir.ui.view,arch_db:sale_stock.sale_stock_help_message_template
+msgid "No delivery yet! Automate them with sales orders."
+msgstr ""
+
+#. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "No future availability"
 msgstr "אין זמינות עתידית"
 
@@ -430,7 +443,6 @@ msgstr "לא נשלח"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Not enough future availability"
 msgstr ""
 
@@ -444,7 +456,6 @@ msgstr "מספר ימים בין אישור ההזמנה לבין שליחת ה�
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "On"
 msgstr "מופעל"
 
@@ -487,7 +498,6 @@ msgstr "כמות למשלוח"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/sale_stock_forecasted/forecasted_details.xml:0
-#, python-format
 msgid "Quotations"
 msgstr "הצעות מחיר"
 
@@ -497,25 +507,34 @@ msgid "RETURN"
 msgstr "החזרה"
 
 #. module: sale_stock
+#: model_terms:ir.ui.view,arch_db:sale_stock.sale_stock_help_message_template
+msgid ""
+"Reduce back orders with reservations, locations management, smart\n"
+"                replenishment propositions, shipping connectors, barcode scanner, etc."
+msgstr ""
+
+#. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Remaining demand available at"
 msgstr ""
 
 #. module: sale_stock
 #. odoo-python
 #: code:addons/sale_stock/models/sale_order_line.py:0
-#, python-format
 msgid "Replenish on Order (MTO)"
 msgstr "חדש מלאי בהזמנה (הכן להזמנה)"
 
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "Reserved"
 msgstr "שמור"
+
+#. module: sale_stock
+#: model:ir.model,name:sale_stock.model_stock_return_picking
+msgid "Return Picking"
+msgstr "החזר ליקוט"
 
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.sale_order_portal_content_inherit_sale_stock
@@ -575,6 +594,7 @@ msgstr "שורות הזמנת לקוח"
 
 #. module: sale_stock
 #: model:ir.model.fields,field_description:sale_stock.field_stock_lot__sale_order_ids
+#: model_terms:ir.ui.view,arch_db:sale_stock.sale_stock_help_message_template
 msgid "Sales Orders"
 msgstr "הזמנות לקוח"
 
@@ -642,7 +662,7 @@ msgstr "תנועות מלאי"
 #. module: sale_stock
 #: model:ir.model,name:sale_stock.model_stock_forecasted_product_product
 msgid "Stock Replenishment Report"
-msgstr ""
+msgstr "דוח חידוש מלאי"
 
 #. module: sale_stock
 #: model:ir.model,name:sale_stock.model_stock_rule
@@ -662,36 +682,31 @@ msgstr "דוח כללי מלאי"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/xml/delay_alert.xml:0
-#, python-format
 msgid "The delivery"
 msgstr ""
 
 #. module: sale_stock
 #. odoo-python
 #: code:addons/sale_stock/models/sale_order.py:0
-#, python-format
 msgid ""
 "The delivery address has been changed on the Sales Order<br/>\n"
-"                        From <strong>\"%s\"</strong> To <strong>\"%s\"</strong>,\n"
+"                        From <strong>\"%(old_address)s\"</strong> to <strong>\"%(new_address)s\"</strong>,\n"
 "                        You should probably update the partner on this document."
 msgstr ""
-"כתובת המשלוח שונתה בהזמנת הלקוח<br/>\n"
-"                        מ <strong>\"%s\"</strong> ל <strong>\"%s\"</strong>,\n"
-"                        כנראה שתעדכן את הלקוח/ספק במסמך זה."
 
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/product_catalog/sale_order_line/sale_order_line.js:0
-#, python-format
 msgid ""
 "The ordered quantity cannot be decreased below the amount already delivered."
 " Instead, create a return in your inventory."
 msgstr ""
+"לא ניתן להקטין את הכמות שהוזמנה מתחת לכמות שכבר נמסרה. במקום זאת, צור החזר "
+"במלאי שלך."
 
 #. module: sale_stock
 #. odoo-python
 #: code:addons/sale_stock/models/sale_order_line.py:0
-#, python-format
 msgid ""
 "The ordered quantity of a sale order line cannot be decreased below the "
 "amount already delivered. Instead, create a return in your inventory."
@@ -700,9 +715,13 @@ msgstr ""
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "This product is replenished on demand."
 msgstr "מוצר זה מחודש לפי דרישה."
+
+#. module: sale_stock
+#: model:ir.model.fields,field_description:sale_stock.field_sale_order_line__is_storable
+msgid "Track Inventory"
+msgstr "עקוב אחר מלאי"
 
 #. module: sale_stock
 #: model:ir.model,name:sale_stock.model_stock_picking
@@ -722,7 +741,6 @@ msgstr "משתמש"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/widgets/qty_at_date_widget.xml:0
-#, python-format
 msgid "View Forecast"
 msgstr "צפה בתחזית"
 
@@ -741,7 +759,6 @@ msgstr "מחסן"
 #. module: sale_stock
 #. odoo-python
 #: code:addons/sale_stock/models/sale_order.py:0
-#, python-format
 msgid "Warning!"
 msgstr "אזהרה!"
 
@@ -754,6 +771,19 @@ msgstr "כאשר כל המוצרים מוכנים"
 #: model_terms:ir.ui.view,arch_db:sale_stock.res_config_settings_view_form_stock
 msgid "When to start shipping"
 msgstr "מתי להתחיל לשלוח"
+
+#. module: sale_stock
+#. odoo-python
+#: code:addons/sale_stock/models/sale_order.py:0
+msgid ""
+"You must have a warehouse for line using a delivery in different company."
+msgstr ""
+
+#. module: sale_stock
+#. odoo-python
+#: code:addons/sale_stock/models/sale_order.py:0
+msgid "You must set a warehouse on your sale order to proceed."
+msgstr "עליך להגדיר מחסן בהזמנת המכירה שלך כדי להמשיך."
 
 #. module: sale_stock
 #: model_terms:ir.ui.view,arch_db:sale_stock.exception_on_so
@@ -784,6 +814,5 @@ msgstr "מעובד במקום"
 #. module: sale_stock
 #. odoo-javascript
 #: code:addons/sale_stock/static/src/xml/delay_alert.xml:0
-#, python-format
 msgid "will be late."
 msgstr ""

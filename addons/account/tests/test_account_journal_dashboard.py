@@ -11,6 +11,10 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
 
     @freeze_time("2019-01-22")
     def test_customer_invoice_dashboard(self):
+        # This test is defined in the account_3way_match module with different values, so we skip it when the module is installed
+        if self.env['ir.module.module'].search([('name', '=', 'account_3way_match')]).state == 'installed':
+            self.skipTest("This test won't work if account_3way_match is installed")
+
         journal = self.company_data['default_journal_sale']
 
         invoice = self.env['account.move'].create({
@@ -62,6 +66,24 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
         self.assertEqual(dashboard_data['number_waiting'], 1)
         self.assertIn('81.72', dashboard_data['sum_waiting'])
 
+        # Check partial on invoice
+        partial_payment = self.env['account.payment'].create({
+            'amount': 13.3,
+            'payment_type': 'inbound',
+            'partner_type': 'customer',
+            'partner_id': self.partner_a.id,
+        })
+        partial_payment.action_post()
+
+        (invoice + partial_payment.move_id).line_ids.filtered(lambda line: line.account_type == 'asset_receivable').reconcile()
+
+        dashboard_data = journal._get_journal_dashboard_data_batched()[journal.id]
+        self.assertEqual(dashboard_data['number_draft'], 1)
+        self.assertIn('13.3', dashboard_data['sum_draft'])
+
+        self.assertEqual(dashboard_data['number_waiting'], 1)
+        self.assertIn('68.42', dashboard_data['sum_waiting'])
+
         # Check waiting payment
         refund.action_post()
 
@@ -70,9 +92,9 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
         self.assertIn('0.00', dashboard_data['sum_draft'])
 
         self.assertEqual(dashboard_data['number_waiting'], 2)
-        self.assertIn('68.42', dashboard_data['sum_waiting'])
+        self.assertIn('55.12', dashboard_data['sum_waiting'])
 
-        # Check partial
+        # Check partial on refund
         payment = self.env['account.payment'].create({
             'amount': 10.0,
             'payment_type': 'outbound',
@@ -90,11 +112,11 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
         self.assertIn('0.00', dashboard_data['sum_draft'])
 
         self.assertEqual(dashboard_data['number_waiting'], 2)
-        self.assertIn('78.42', dashboard_data['sum_waiting'])
+        self.assertIn('65.12', dashboard_data['sum_waiting'])
 
         dashboard_data = journal._get_journal_dashboard_data_batched()[journal.id]
         self.assertEqual(dashboard_data['number_late'], 2)
-        self.assertIn('78.42', dashboard_data['sum_late'])
+        self.assertIn('65.12', dashboard_data['sum_late'])
 
     def test_sale_purchase_journal_for_purchase(self):
         """
@@ -105,7 +127,11 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
             4) Journal in company currency, bills in company currency -> dashboard data should be displayed in company currency
             5) Journal in company currency, bills in foreign currency -> dashboard data should be displayed in company currency
         """
-        foreign_currency = self.currency_data['currency']
+        # This test is defined in the account_3way_match module with different values, so we skip it when the module is installed
+        if self.env['ir.module.module'].search([('name', '=', 'account_3way_match')]).state == 'installed':
+            self.skipTest("This test won't work if account_3way_match is installed")
+
+        foreign_currency = self.other_currency
         company_currency = self.company_data['currency']
 
         setup_values = [
@@ -138,7 +164,11 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
                 self.assertDashboardPurchaseSaleData(purchase_journal, *expected_vals)
 
     def test_sale_purchase_journal_for_multi_currency_sale(self):
-        currency = self.currency_data['currency']
+        # This test is defined in the account_3way_match module with different values, so we skip it when the module is installed
+        if self.env['ir.module.module'].search([('name', '=', 'account_3way_match')]).state == 'installed':
+            self.skipTest("This test won't work if account_3way_match is installed")
+
+        currency = self.other_currency
         company_currency = self.company_data['currency']
 
         invoice = self.env['account.move'].create({
@@ -174,90 +204,21 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
 
     @freeze_time("2023-03-15")
     def test_purchase_journal_numbers_and_sums(self):
+        # This test is defined in the account_3way_match module with different values, so we skip it when the module is installed
+        if self.env['ir.module.module'].search([('name', '=', 'account_3way_match')]).state == 'installed':
+            self.skipTest("This test won't work if account_3way_match is installed")
+
         company_currency = self.company_data['currency']
         journal = self.company_data['default_journal_purchase']
 
-        #Setup multiple payments term
-        twentyfive_now_term = self.env['account.payment.term'].create({
-            'name': '25% now, rest in 30 days',
-            'note': 'Pay 25% on invoice date and 75% 30 days later',
-            'line_ids': [
-                (0, 0, {
-                    'value': 'percent',
-                    'value_amount': 25.00,
-                    'delay_type': 'days_after',
-                    'nb_days': 0,
-                }),
-                (0, 0, {
-                    'value': 'percent',
-                    'value_amount': 75.00,
-                    'delay_type': 'days_after',
-                    'nb_days': 30,
-                }),
-            ],
-        })
-
-        self.env['account.move'].create({
-            'move_type': 'in_invoice',
-            'journal_id': journal.id,
-            'partner_id': self.partner_a.id,
-            'invoice_date': '2023-04-01',
-            'date': '2023-03-15',
-            'invoice_payment_term_id': twentyfive_now_term.id,
-            'invoice_line_ids': [(0, 0, {
-                'product_id': self.product_a.id,
-                'quantity': 1,
-                'name': 'product test 1',
-                'price_unit': 4000,
-                'tax_ids': [],
-            })]
-        }).action_post()
-        # This bill has two amls of 10$. Both are waiting for payment and due in 16 and 46 days.
-        # number_waiting += 2, sum_waiting += -4000$, number_late += 0, sum_late += 0$
-
-        self.env['account.move'].create({
-            'move_type': 'in_invoice',
-            'journal_id': journal.id,
-            'partner_id': self.partner_a.id,
-            'invoice_date': '2023-03-01',
-            'date': '2023-03-15',
-            'invoice_payment_term_id': twentyfive_now_term.id,
-            'invoice_line_ids': [(0, 0, {
-                'product_id': self.product_a.id,
-                'quantity': 1,
-                'name': 'product test 1',
-                'price_unit': 400,
-                'tax_ids': [],
-            })]
-        }).action_post()
-        # This bill has two amls of 100$. One which is late and due 14 days prior and one which is waiting for payment and due in 15 days.
-        # number_waiting += 2, sum_waiting += -400$, number_late += 1, sum_late += -100$
-
-        self.env['account.move'].create({
-            'move_type': 'in_invoice',
-            'journal_id': journal.id,
-            'partner_id': self.partner_a.id,
-            'invoice_date': '2023-02-01',
-            'date': '2023-03-15',
-            'invoice_payment_term_id': twentyfive_now_term.id,
-            'invoice_line_ids': [(0, 0, {
-                'product_id': self.product_a.id,
-                'quantity': 1,
-                'name': 'product test 1',
-                'price_unit': 40,
-                'tax_ids': [],
-            })]
-        }).action_post()
-        # This bill has two amls of 1000$. Both of them are late and due 45 and 15 days prior.
-        # number_waiting += 2, sum_waiting += -40$, number_late += 2, sum_late += -40$
-
+        self._create_test_vendor_bills(journal)
         dashboard_data = journal._get_journal_dashboard_data_batched()[journal.id]
-        # Expected behavior is to have six amls waiting for payment for a total amount of 4440$
-        # three of which would be late for a total amount of 140$
-        self.assertEqual(6, dashboard_data['number_waiting'])
+        # Expected behavior is to have three moves waiting for payment for a total amount of 4440$ one of which would be late
+        # for a total amount of 40$ (second move has one of three lines late but that's not enough to make the move late)
+        self.assertEqual(3, dashboard_data['number_waiting'])
         self.assertEqual(format_amount(self.env, 4440, company_currency), dashboard_data['sum_waiting'])
-        self.assertEqual(3, dashboard_data['number_late'])
-        self.assertEqual(format_amount(self.env, 140, company_currency), dashboard_data['sum_late'])
+        self.assertEqual(1, dashboard_data['number_late'])
+        self.assertEqual(format_amount(self.env, 40, company_currency), dashboard_data['sum_late'])
 
     def test_gap_in_sequence_warning(self):
         journal = self.company_data['default_journal_sale']
@@ -282,9 +243,9 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
         self.assertFalse(journal._query_has_sequence_holes())  # no gap, no gap warning, and draft moves shouldn't trigger the warning
 
         moves[2:4].button_draft()
-        self.assertFalse(journal._query_has_sequence_holes())  # no gap (with draft moves using sequence numbers), no gap warning
+        self.assertTrue(journal._query_has_sequence_holes())  # gap due to draft moves using sequence numbers, gap warning
         moves[3].unlink()
-        self.assertTrue(journal.has_sequence_holes)  # gap due to missing sequence, gap warning
+        self.assertTrue(journal._query_has_sequence_holes())  # gap due to missing sequence, gap warning
 
         moves[2].action_post()
         self.company_data['company'].write({'fiscalyear_lock_date': gap_date + relativedelta(days=1)})
@@ -317,7 +278,7 @@ class TestAccountJournalDashboard(TestAccountJournalDashboardCommon):
     def test_bank_journal_different_currency(self):
         """Test that the misc operations amount on the dashboard is correct
         for a bank account in another currency."""
-        foreign_currency = self.currency_data['currency']
+        foreign_currency = self.other_currency
         bank_journal = self.company_data['default_journal_bank'].copy({'currency_id': foreign_currency.id})
 
         self.assertNotEqual(bank_journal.currency_id, bank_journal.company_id.currency_id)

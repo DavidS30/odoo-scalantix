@@ -12,6 +12,12 @@ import { LunchSearchModel } from './search_model';
 
 
 export class LunchListRenderer extends LunchRendererMixin(ListRenderer) {
+    static template = "lunch.ListRenderer";
+    static components = {
+        ...LunchListRenderer.components,
+        LunchDashboard,
+    };
+
     setup() {
         super.setup();
         const { locationId } = this.env.searchModel.lunchState;
@@ -25,11 +31,6 @@ export class LunchListRenderer extends LunchRendererMixin(ListRenderer) {
     }
 }
 
-LunchListRenderer.template = 'lunch.ListRenderer';
-LunchListRenderer.components = {
-    ...LunchListRenderer.components,
-    LunchDashboard,
-}
 
 registry.category('views').add('lunch_list', {
     ...listView,

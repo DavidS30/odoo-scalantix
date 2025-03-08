@@ -4,6 +4,7 @@
 from . import test_controller_args
 from . import test_custom_snippet
 from . import test_error
+from . import test_form
 from . import test_fuzzy
 from . import test_image_upload_progress
 from . import test_is_multilang
@@ -19,5 +20,7 @@ from . import test_reset_views
 from . import test_restricted_editor
 from . import test_session
 from . import test_settings
+from . import test_snippet_background_video
 from . import test_views_during_module_operation
 from . import test_website_controller_page
+from . import test_website_page_properties

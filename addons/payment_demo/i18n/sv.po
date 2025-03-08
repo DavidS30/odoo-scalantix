@@ -3,22 +3,21 @@
 # 	* payment_demo
 # 
 # Translators:
-# Chrille Hedberg <hedberg.chrille@gmail.com>, 2023
-# Bengt Evertsson <zyberfart@gmail.com>, 2023
-# Haojun Zou <apollo_zhj@msn.com>, 2023
-# Kim Asplund <kim.asplund@gmail.com>, 2023
-# Lasse L, 2023
-# Martin Trigaux, 2023
-# Anders Wallenquist <anders.wallenquist@vertel.se>, 2023
+# Lasse L, 2024
+# Anders Wallenquist <anders.wallenquist@vertel.se>, 2024
 # Simon S, 2024
+# Martin Trigaux, 2024
+# Haojun Zou <apollo_zhj@msn.com>, 2024
+# Kim Asplund <kim.asplund@gmail.com>, 2024
+# Bengt Evertsson <zyberfart@gmail.com>, 2024
 # Jakob Krabbe <jakob.krabbe@vertel.se>, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-13 10:28+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"POT-Creation-Date: 2024-09-26 08:56+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
 "Last-Translator: Jakob Krabbe <jakob.krabbe@vertel.se>, 2024\n"
 "Language-Team: Swedish (https://app.transifex.com/odoo/teams/41243/sv/)\n"
 "MIME-Version: 1.0\n"
@@ -37,8 +36,8 @@ msgid ""
 "                    <option value=\"pending\" title=\"Payment processing\">\n"
 "                        Pending\n"
 "                    </option>\n"
-"                    <option value=\"cancel\" title=\"Payment canceled by customer\">\n"
-"                        Canceled\n"
+"                    <option value=\"cancel\" title=\"Payment cancelled by customer\">\n"
+"                        Cancelled\n"
 "                    </option>\n"
 "                    <option value=\"error\" title=\"Processing error\">\n"
 "                        Error\n"
@@ -46,16 +45,16 @@ msgid ""
 "                </select>"
 msgstr ""
 "<select id=\"simulated_payment_state\" class=\"form-select\">\n"
-"                    <option value=\"done\" title=\"Framgångsrik betalning\">\n"
-"                        Framgångsrik\n"
+"                    <option value=\"done\" title=\"Successful payment\">\n"
+"                        Framgång\n"
 "                    </option>\n"
-"                    <option value=\"pending\" title=\"Betalningsbehandling\">\n"
-"                        Avvaktande\n"
+"                    <option value=\"pending\" title=\"Payment processing\">\n"
+"                        Väntande\n"
 "                    </option>\n"
-"                    <option value=\"cancel\" title=\"Betalning avbruten av kund\">\n"
+"                    <option value=\"cancel\" title=\"Payment cancelled by customer\">\n"
 "                        Avbruten\n"
 "                    </option>\n"
-"                    <option value=\"error\" title=\"Behandlingsfel\">\n"
+"                    <option value=\"error\" title=\"Processing error\">\n"
 "                        Fel\n"
 "                    </option>\n"
 "                </select>"
@@ -158,6 +157,7 @@ msgstr "Bekräftad"
 
 #. module: payment_demo
 #: model:ir.model.fields.selection,name:payment_demo.selection__payment_provider__code__demo
+#: model:payment.method,name:payment_demo.payment_method_demo
 msgid "Demo"
 msgstr "Demo"
 
@@ -169,7 +169,6 @@ msgstr "Demo Express Checkout"
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_provider.py:0
-#, python-format
 msgid "Demo providers should never be enabled."
 msgstr "Demoleverantörer ska aldrig aktiveras."
 
@@ -181,14 +180,12 @@ msgstr "Fel"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
-#, python-format
 msgid "No delivery method is available."
 msgstr "Ingen leveransmetod är tillgänglig."
 
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "No transaction found matching reference %s."
 msgstr "Ingen transaktion hittades som matchar referensen %s."
 
@@ -220,7 +217,6 @@ msgstr "Betalningstransaktion"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/payment_demo_mixin.js:0
-#, python-format
 msgid "Payment processing failed"
 msgstr "Betalningshanteringen misslyckades"
 
@@ -235,10 +231,10 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:payment_demo.token_inline_form
 msgid ""
 "Payments made with this payment method will be automatically "
-"<b>canceled</b>."
+"<b>cancelled</b>."
 msgstr ""
-"Betalningar som görs med denna betalningsmetod kommer automatiskt att "
-"<b>annulleras</b>."
+"Betalningar som görs med denna betalningsmetod kommer att bli automatiskt "
+"<b>avbruten </b>."
 
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.token_inline_form
@@ -259,7 +255,7 @@ msgstr ""
 #. module: payment_demo
 #: model:ir.model.fields.selection,name:payment_demo.selection__payment_token__demo_simulated_state__pending
 msgid "Pending"
-msgstr "Avvaktande"
+msgstr "Väntande"
 
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.payment_transaction_form
@@ -291,7 +287,6 @@ msgstr "Den tekniska koden för denna betalningsleverantör."
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "The transaction is not linked to a token."
 msgstr "Transaktionen är inte kopplad till en token."
 
@@ -303,7 +298,6 @@ msgstr "Opublicerad"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
-#, python-format
 msgid "Validation Error"
 msgstr "Verifieringsfel"
 
@@ -315,6 +309,5 @@ msgstr "XXXX XXXX XXXX XXXX XXXX"
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "You selected the following demo payment status: %s"
 msgstr "Du valde följande betalningsstatus för demo: %s"

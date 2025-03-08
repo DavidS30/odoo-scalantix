@@ -43,7 +43,7 @@ class HrEmployee(models.Model):
         }
 
     def _is_leave_user(self):
-        return self == self.env.user.employee_id and self.user_has_groups('hr_holidays.group_hr_holidays_user')
+        return self == self.env.user.employee_id and self.env.user.has_group('hr_holidays.group_hr_holidays_user')
 
     def get_mandatory_days(self, start_date, end_date):
         all_days = {}
@@ -80,6 +80,14 @@ class HrEmployee(models.Model):
             'startType': "datetime",
             'title': bh.name,
         }, public_holidays))
+
+    @api.model
+    def get_allocation_requests_amount(self):
+        employee = self._get_contextual_employee()
+        return self.env['hr.leave.allocation'].search_count([
+            ('employee_id', '=', employee.id),
+            ('state', '=', 'confirm'),
+        ])
 
     def _get_public_holidays(self, date_start, date_end):
         domain = [
@@ -162,7 +170,7 @@ class HrEmployee(models.Model):
             ('employee_id', 'in', employees.ids),
             ('holiday_status_id', 'in', leave_types.ids),
             ('state', '=', 'validate'),
-        ]).filtered(lambda al: al.active or not al.employee_id.active)
+        ])
         allocations_per_employee_type = defaultdict(lambda: defaultdict(lambda: self.env['hr.leave.allocation']))
         for allocation in allocations:
             allocations_per_employee_type[allocation.employee_id][allocation.holiday_status_id] |= allocation
@@ -221,7 +229,7 @@ class HrEmployee(models.Model):
             if allocation.allocation_type == 'accrual':
                 future_leaves = allocation._get_future_leaves_on(target_date)
             max_leaves = allocation.number_of_hours_display\
-                if allocation.type_request_unit in ['hour']\
+                if allocation.holiday_status_id.request_unit in ['hour']\
                 else allocation.number_of_days_display
             max_leaves += future_leaves
             allocation_data.update({
@@ -248,7 +256,7 @@ class HrEmployee(models.Model):
                     leave_duration_field = 'number_of_days'
                     leave_unit = 'days'
                 else:
-                    leave_duration_field = 'number_of_hours_display'
+                    leave_duration_field = 'number_of_hours'
                     leave_unit = 'hours'
 
                 leave_type_data = allocations_leaves_consumed[employee][leave_type]
@@ -307,9 +315,9 @@ class HrEmployee(models.Model):
                             }
                     else:
                         if leave_unit == 'hours':
-                            allocated_time = leave.number_of_hours_display
+                            allocated_time = leave.number_of_hours
                         else:
-                            allocated_time = leave.number_of_days_display
+                            allocated_time = leave.number_of_days
                         leave_type_data[False]['virtual_leaves_taken'] += allocated_time
                         leave_type_data[False]['virtual_remaining_leaves'] = 0
                         leave_type_data[False]['remaining_leaves'] = 0

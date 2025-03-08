@@ -3,10 +3,12 @@
 import json
 
 import odoo
-from odoo.tools import mute_logger, date_utils
-from odoo.addons.base.tests.common import HttpCaseWithUserDemo
+from odoo.tests import tagged, users
+from odoo.tools import mute_logger
+from odoo.addons.base.tests.common import HttpCase, HttpCaseWithUserDemo
+from odoo.addons.mail.tests.common import MailCommon, mail_new_test_user
 from odoo.http import STATIC_CACHE_LONG
-from odoo import Command, http
+from odoo import Command, fields, http
 
 
 @odoo.tests.tagged("-at_install", "post_install")
@@ -48,23 +50,21 @@ class TestMessageController(HttpCaseWithUserDemo):
     @mute_logger("odoo.addons.http_routing.models.ir_http", "odoo.http")
     def test_channel_message_attachments(self):
         self.authenticate(None, None)
-        self.opener.cookies[
-            self.guest._cookie_name
-        ] = f"{self.guest.id}{self.guest._cookie_separator}{self.guest.access_token}"
+        self.opener.cookies[self.guest._cookie_name] = self.guest._format_auth_cookie()
         # test message post: token error
         res1 = self.url_open(
             url="/mail/message/post",
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "post_data": {
                             "body": "test",
                             "attachment_ids": [self.attachments[0].id],
-                            "attachment_tokens": ["wrong token"],
                         },
                     },
+                    "attachment_tokens": ["wrong token"],
                 }
             ),
             headers={"Content-Type": "application/json"},
@@ -81,24 +81,39 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "post_data": {
                             "body": "test",
                             "attachment_ids": [self.attachments[0].id],
-                            "attachment_tokens": [self.attachments[0].access_token],
                             "message_type": "comment",
                         },
+                        "attachment_tokens": [self.attachments[0].access_token],
                     },
                 }
             ),
             headers={"Content-Type": "application/json"},
         )
         self.assertEqual(res2.status_code, 200)
-        message_format1 = res2.json()["result"]
+        data1 = res2.json()["result"]
         self.assertEqual(
-            message_format1["attachments"],
-            json.loads(json.dumps(self.attachments[0]._attachment_format(), default=date_utils.json_default)),
+            data1["ir.attachment"],
+            [
+                    {
+                    "checksum": False,
+                    "create_date": fields.Datetime.to_string(self.attachments[0].create_date),
+                    "id": self.attachments[0].id,
+                    "filename": "File 1",
+                    "name": "File 1",
+                    "size": 0,
+                    "res_name": "Test channel",
+                    "mimetype": "application/octet-stream",
+                    "thread": {"id": self.channel.id, "model": "discuss.channel"},
+                    "voice": False,
+                    'type': 'binary',
+                    'url': False,
+                },
+            ],
             "guest should be allowed to add attachment with token when posting message",
         )
         # test message update: token error
@@ -107,7 +122,7 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "message_id": message_format1["id"],
+                        "message_id": data1["mail.message"][0]["id"],
                         "body": "test",
                         "attachment_ids": [self.attachments[1].id],
                         "attachment_tokens": ["wrong token"],
@@ -128,7 +143,7 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "message_id": message_format1["id"],
+                        "message_id": data1["mail.message"][0]["id"],
                         "body": "test",
                         "attachment_ids": [self.attachments[1].id],
                         "attachment_tokens": [self.attachments[1].access_token],
@@ -138,10 +153,39 @@ class TestMessageController(HttpCaseWithUserDemo):
             headers={"Content-Type": "application/json"},
         )
         self.assertEqual(res4.status_code, 200)
-        message_format2 = res4.json()["result"]
+        data2 = res4.json()["result"]
         self.assertEqual(
-            message_format2["attachments"],
-            json.loads(json.dumps(self.attachments.sorted("id")._attachment_format(), default=date_utils.json_default)),
+            data2["ir.attachment"],
+            [
+                {
+                    "checksum": False,
+                    "create_date": fields.Datetime.to_string(self.attachments[0].create_date),
+                    "id": self.attachments[0].id,
+                    "filename": "File 1",
+                    "name": "File 1",
+                    "size": 0,
+                    "res_name": "Test channel",
+                    "mimetype": "application/octet-stream",
+                    "thread": {"id": self.channel.id, "model": "discuss.channel"},
+                    "voice": False,
+                    'type': 'binary',
+                    'url': False,
+                },
+                {
+                    "checksum": False,
+                    "create_date": fields.Datetime.to_string(self.attachments[1].create_date),
+                    "id": self.attachments[1].id,
+                    "filename": "File 2",
+                    "name": "File 2",
+                    "size": 0,
+                    "res_name": "Test channel",
+                    "mimetype": "application/octet-stream",
+                    "thread": {"id": self.channel.id, "model": "discuss.channel"},
+                    "voice": False,
+                    'type': 'binary',
+                    'url': False,
+                },
+            ],
             "guest should be allowed to add attachment with token when updating message",
         )
         # test message update: own attachment ok
@@ -150,7 +194,7 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "message_id": message_format2["id"],
+                        "message_id": data2["mail.message"][0]["id"],
                         "body": "test",
                         "attachment_ids": [self.attachments[1].id],
                     },
@@ -159,10 +203,39 @@ class TestMessageController(HttpCaseWithUserDemo):
             headers={"Content-Type": "application/json"},
         )
         self.assertEqual(res5.status_code, 200)
-        message_format3 = res5.json()["result"]
+        data3 = res5.json()["result"]
         self.assertEqual(
-            message_format3["attachments"],
-            json.loads(json.dumps(self.attachments.sorted("id")._attachment_format(), default=date_utils.json_default)),
+            data3["ir.attachment"],
+            [
+                {
+                    "checksum": False,
+                    "create_date": fields.Datetime.to_string(self.attachments[0].create_date),
+                    "id": self.attachments[0].id,
+                    "filename": "File 1",
+                    "name": "File 1",
+                    "size": 0,
+                    "res_name": "Test channel",
+                    "mimetype": "application/octet-stream",
+                    "thread": {"id": self.channel.id, "model": "discuss.channel"},
+                    "voice": False,
+                    'type': 'binary',
+                    'url': False,
+                },
+                {
+                    "checksum": False,
+                    "create_date": fields.Datetime.to_string(self.attachments[1].create_date),
+                    "id": self.attachments[1].id,
+                    "filename": "File 2",
+                    "name": "File 2",
+                    "size": 0,
+                    "res_name": "Test channel",
+                    "mimetype": "application/octet-stream",
+                    "thread": {"id": self.channel.id, "model": "discuss.channel"},
+                    "voice": False,
+                    'type': 'binary',
+                    'url': False,
+                },
+            ],
             "guest should be allowed to add own attachment without token when updating message",
         )
 
@@ -212,15 +285,13 @@ class TestMessageController(HttpCaseWithUserDemo):
     @mute_logger("odoo.addons.http_routing.models.ir_http", "odoo.http")
     def test_mail_partner_from_email_authenticated(self):
         self.authenticate(None, None)
-        self.opener.cookies[
-            self.guest._cookie_name
-        ] = f"{self.guest.id}{self.guest._cookie_separator}{self.guest.access_token}"
+        self.opener.cookies[self.guest._cookie_name] = self.guest._format_auth_cookie()
         res1 = self.url_open(
             url="/mail/partner/from_email",
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "emails": ["john@test.be"],
                     },
@@ -239,12 +310,12 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "post_data": {
                             "body": "test",
-                            "partner_emails": ["john@test.be"],
                         },
+                        "partner_emails": ["john@test.be"],
                     },
                 }
             ),
@@ -262,7 +333,7 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "emails": ["john@test.be"],
                         'additional_values': {"john@test.be": {'phone': '123456789'}},
@@ -283,7 +354,7 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "emails": ["john@test.be"],
                     },
@@ -305,12 +376,15 @@ class TestMessageController(HttpCaseWithUserDemo):
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "post_data": {
                             "body": "test",
-                            "partner_emails": ["john2@test.be"],
-                            "partner_additional_values": {"john2@test.be": {'phone': '123456789'}},
+                        },
+                        "partner_emails": ["john2@test.be", "john3@test.be"],  # Both emails in one request
+                        "partner_additional_values": {
+                            "john2@test.be": {'phone': '123456789'},  # Original partner
+                            "john3 <john3@test.be>": {'phone': '987654321'}  # Name-Addr formatted partner
                         },
                     },
                 }
@@ -323,18 +397,23 @@ class TestMessageController(HttpCaseWithUserDemo):
             self.env["res.partner"].search_count([('email', '=', "john2@test.be"), ('phone', '=', "123456789")]),
             "authenticated users can create a partner from an email from message_post",
         )
+        self.assertEqual(
+            1,
+            self.env["res.partner"].search_count([('email', '=', "john3@test.be"), ('phone', '=', "987654321")]),
+            "additional_values should be handled correctly when using keys in name_addr format",
+        )
         # should not create another partner with same email
         res6 = self.url_open(
             url="/mail/message/post",
             data=json.dumps(
                 {
                     "params": {
-                        "thread_model": self.channel._name,
+                        "thread_model": "discuss.channel",
                         "thread_id": self.channel.id,
                         "post_data": {
                             "body": "test",
-                            "partner_emails": ["john2@test.be"],
                         },
+                        "partner_emails": ["john2@test.be"],
                     },
                 }
             ),
@@ -359,32 +438,32 @@ class TestMessageController(HttpCaseWithUserDemo):
         partner = self.env["res.users"].browse(test_user.uid).partner_id
         self.channel.add_members(testuser.partner_id.ids)
         res = self.url_open(
-            url=f"/discuss/channel/{self.channel.id}/avatar_128?unique={self.channel._get_avatar_cache_key()}"
+            url=f"/web/image/?field=avatar_128&id={self.channel.id}&model=discuss.channel&unique={self.channel.avatar_cache_key}"
         )
         self.assertIn(f"max-age={STATIC_CACHE_LONG}", res.headers["Cache-Control"])
 
         res = self.url_open(
-            url=f"/discuss/channel/{self.channel.id}/avatar_128"
+            url=f"/web/image/?field=avatar_128&id={self.channel.id}&model=discuss.channel"
         )
         self.assertIn("no-cache", res.headers["Cache-Control"])
 
         res = self.url_open(
-            url=f"/discuss/channel/{self.channel.id}/partner/{partner.id}/avatar_128?unique={partner.write_date.isoformat()}"
+            url=f"/web/image?field=avatar_128&id={partner.id}&model=res.partner&unique={fields.Datetime.to_string(partner.write_date)}"
         )
         self.assertIn(f"max-age={STATIC_CACHE_LONG}", res.headers["Cache-Control"])
 
         res = self.url_open(
-            url=f"/discuss/channel/{self.channel.id}/partner/{partner.id}/avatar_128"
+            url=f"/web/image?field=avatar_128&id={partner.id}&model=res.partner"
         )
         self.assertIn("no-cache", res.headers["Cache-Control"])
 
         res = self.url_open(
-            url=f"/discuss/channel/{self.channel.id}/guest/{self.guest.id}/avatar_128?unique={self.guest.write_date.isoformat()}"
+            url=f"/web/image?field=avatar_128&id={self.guest.id}&model=mail.guest&unique={fields.Datetime.to_string(partner.write_date)}"
         )
         self.assertIn(f"max-age={STATIC_CACHE_LONG}", res.headers["Cache-Control"])
 
         res = self.url_open(
-            url=f"/discuss/channel/{self.channel.id}/guest/{self.guest.id}/avatar_128"
+            url=f"/web/image?field=avatar_128&id={self.guest.id}&model=mail.guest"
         )
         self.assertIn("no-cache", res.headers["Cache-Control"])
 
@@ -393,14 +472,14 @@ class TestMessageController(HttpCaseWithUserDemo):
         archived_partner = self.env["res.partner"].create({"name": "partner", "active": False})
 
         # 1. posting a message
-        response = self.make_jsonrpc_request("/mail/message/post", {
+        data = self.make_jsonrpc_request("/mail/message/post", {
             "thread_model": "res.partner",
             "thread_id": archived_partner.id,
             "post_data": {
                 "body": "A great message",
             }
         })
-        self.assertIn("A great message", response['body'])
+        self.assertIn("A great message", data["mail.message"][0]["body"])
 
         # 2. attach a file
         response = self.url_open(
@@ -413,3 +492,41 @@ class TestMessageController(HttpCaseWithUserDemo):
             files={"ufile": b""},
         )
         self.assertEqual(response.status_code, 200)
+
+
+@tagged("mail_message")
+class TestMessageLinks(MailCommon, HttpCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.user_employee_1 = mail_new_test_user(cls.env, login='tao1', groups='base.group_user', name='Tao Lee')
+        cls.public_channel = cls.env['discuss.channel'].channel_create(name='Public Channel1', group_id=None)
+        cls.private_group = cls.env['discuss.channel'].create_group(partners_to=cls.user_employee_1.partner_id.ids, name="Group")
+
+    @users('employee')
+    def test_message_link_by_employee(self):
+        channel_message = self.public_channel.message_post(body='Public Channel Message', message_type='comment')
+        private_message_id = self.private_group.with_user(self.user_employee_1).message_post(
+            body='Private Message',
+            message_type='comment',
+        ).id
+        self.authenticate('employee', 'employee')
+        with self.subTest(channel_message=channel_message):
+            expected_url = self.base_url() + f'/odoo/action-mail.action_discuss?active_id={channel_message.res_id}&highlight_message_id={channel_message.id}'
+            res = self.url_open(f'/mail/message/{channel_message.id}')
+            self.assertEqual(res.url, expected_url)
+        with self.subTest(private_message_id=private_message_id):
+            res = self.url_open(f'/mail/message/{private_message_id}')
+            self.assertEqual(res.status_code, 401)
+
+    @users('employee')
+    def test_message_link_by_public(self):
+        message = self.public_channel.message_post(
+            body='Public Channel Message',
+            message_type='comment',
+            subtype_xmlid='mail.mt_comment'
+        )
+        res = self.url_open(f'/mail/message/{message.id}')
+        self.assertEqual(res.status_code, 200)

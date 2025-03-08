@@ -9,12 +9,17 @@ from odoo.tests.common import new_test_user
 class TestProduct(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref=None):
-        super().setUpClass(chart_template_ref)
+    def setUpClass(cls):
+        super().setUpClass()
         cls.internal_user = new_test_user(
             cls.env,
             login="internal_user",
             groups="base.group_user",
+        )
+        cls.account_manager_user = new_test_user(
+            cls.env,
+            login="account_manager_user",
+            groups="account.group_account_manager",
         )
 
     def test_internal_user_can_read_product_with_tax_and_tags(self):
@@ -52,3 +57,10 @@ class TestProduct(AccountTestInvoicingCommon):
             'taxes_id': self.company_data['company'].account_sale_tax_id.ids,
             'supplier_taxes_id': self.company_data['company'].account_purchase_tax_id.ids,
         }])
+
+    def test_account_manager_user_can_create_product(self):
+        """Test that a user with group_account_manager can create a product."""
+        product = self.env['product.product'].with_user(self.account_manager_user).create({
+            'name': 'Test Accountant', 'type': 'consu', 'list_price': 50.0,
+        })
+        self.assertTrue(product)

@@ -6,6 +6,7 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 
 export class ApplicantCharField extends CharField {
+    static template = "hr_recruitment.ApplicantCharField";
     setup() {
         super.setup();
 
@@ -14,11 +15,11 @@ export class ApplicantCharField extends CharField {
 
     onClick() {
         const record = this.props.record.data;
-        if (record.res_id !== undefined && record.res_model == 'hr.applicant') {
+        if (record.res_id && record.res_model == 'hr.applicant') {
             this.action.doAction({
                 type: 'ir.actions.act_window',
                 res_model: 'hr.applicant',
-                res_id: record.res_id,
+                res_id: record.res_id.resId,
                 views: [[false, "form"]],
                 view_mode: "form",
                 target: "current",
@@ -26,7 +27,6 @@ export class ApplicantCharField extends CharField {
         }
     }
 }
-ApplicantCharField.template = "hr_recruitment.ApplicantCharField";
 
 export const applicantCharField = {
     ...charField,

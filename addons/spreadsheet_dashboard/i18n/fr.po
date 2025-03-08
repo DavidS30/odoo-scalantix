@@ -3,16 +3,16 @@
 # 	* spreadsheet_dashboard
 # 
 # Translators:
-# Jolien De Paepe, 2023
 # Wil Odoo, 2024
+# Manon Rondou, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-01-05 12:32+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2024\n"
+"POT-Creation-Date: 2024-10-25 07:49+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Manon Rondou, 2024\n"
 "Language-Team: French (https://app.transifex.com/odoo/teams/41243/fr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -23,7 +23,6 @@ msgstr ""
 #. module: spreadsheet_dashboard
 #. odoo-python
 #: code:addons/spreadsheet_dashboard/models/spreadsheet_dashboard.py:0
-#, python-format
 msgid "%s (copy)"
 msgstr "%s (copie)"
 
@@ -40,23 +39,25 @@ msgstr "Admin"
 #. module: spreadsheet_dashboard
 #. odoo-javascript
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/dashboard_action.xml:0
-#, python-format
 msgid "An error occured while loading the dashboard"
 msgstr "Une erreur s'est produite lors du chargement du tableau de bord"
 
 #. module: spreadsheet_dashboard
 #. odoo-javascript
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/mobile_search_panel/mobile_search_panel.xml:0
-#, python-format
 msgid "BACK"
 msgstr "RETOUR"
 
 #. module: spreadsheet_dashboard
 #. odoo-javascript
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/mobile_search_panel/mobile_search_panel.js:0
-#, python-format
 msgid "Choose a dashboard...."
 msgstr "Choisissez un tableau de bord..."
+
+#. module: spreadsheet_dashboard
+#: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__company_id
+msgid "Company"
+msgstr "Société"
 
 #. module: spreadsheet_dashboard
 #: model:ir.ui.menu,name:spreadsheet_dashboard.spreadsheet_dashboard_menu_configuration
@@ -85,7 +86,6 @@ msgstr "Créé le"
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_group__dashboard_ids
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_share__dashboard_id
-#: model:ir.module.category,name:spreadsheet_dashboard.dashboard_management
 msgid "Dashboard"
 msgstr "Tableau de bord"
 
@@ -103,6 +103,11 @@ msgstr "Groupe du tableau de bord"
 #: model_terms:ir.ui.view,arch_db:spreadsheet_dashboard.spreadsheet_dashboard_container_view_list
 msgid "Dashboards"
 msgstr "Tableaux de bord"
+
+#. module: spreadsheet_dashboard
+#: model_terms:ir.ui.view,arch_db:spreadsheet_dashboard.spreadsheet_dashboard_view_list
+msgid "Data"
+msgstr "Données"
 
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__display_name
@@ -144,6 +149,11 @@ msgid "ID"
 msgstr "ID"
 
 #. module: spreadsheet_dashboard
+#: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__is_published
+msgid "Is Published"
+msgstr "Est publié"
+
+#. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__write_uid
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_group__write_uid
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_share__write_uid
@@ -160,7 +170,6 @@ msgstr "Mis à jour le"
 #. module: spreadsheet_dashboard
 #. odoo-javascript
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/dashboard_action.xml:0
-#, python-format
 msgid "Loading..."
 msgstr "En cours de chargement..."
 
@@ -168,6 +177,16 @@ msgstr "En cours de chargement..."
 #: model:spreadsheet.dashboard.group,name:spreadsheet_dashboard.spreadsheet_dashboard_group_logistics
 msgid "Logistics"
 msgstr "Logistique"
+
+#. module: spreadsheet_dashboard
+#: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__main_data_model_ids
+msgid "Main Data Model"
+msgstr "Modèle de données principal"
+
+#. module: spreadsheet_dashboard
+#: model:spreadsheet.dashboard.group,name:spreadsheet_dashboard.spreadsheet_dashboard_group_marketing
+msgid "Marketing"
+msgstr "Marketing"
 
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__name
@@ -179,20 +198,23 @@ msgstr "Nom"
 #. module: spreadsheet_dashboard
 #. odoo-javascript
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/dashboard_action.xml:0
-#, python-format
 msgid "No available dashboard"
 msgstr "Aucun tableau de bord disponible"
 
 #. module: spreadsheet_dashboard
 #. odoo-javascript
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/mobile_figure_container/mobile_figure_container.xml:0
-#, python-format
 msgid ""
 "Only chart figures are displayed in small screens but this dashboard doesn't"
 " contain any"
 msgstr ""
 "Seuls les chiffres du graphique sont affichés sur de petits écrans, mais ce "
 "tableau de bord n'en contient aucun"
+
+#. module: spreadsheet_dashboard
+#: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_group__published_dashboard_ids
+msgid "Published Dashboard"
+msgstr "Tableau de bord publié"
 
 #. module: spreadsheet_dashboard
 #: model:spreadsheet.dashboard.group,name:spreadsheet_dashboard.spreadsheet_dashboard_group_sales
@@ -222,6 +244,12 @@ msgid "Spreadsheet Data"
 msgstr "Données de la feuille de calcul"
 
 #. module: spreadsheet_dashboard
+#: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__spreadsheet_file_name
+#: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_share__spreadsheet_file_name
+msgid "Spreadsheet File Name"
+msgstr "Nom du fichier de feuille de calcul"
+
+#. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__spreadsheet_binary_data
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_share__spreadsheet_binary_data
 msgid "Spreadsheet file"
@@ -244,11 +272,6 @@ msgid "URL"
 msgstr "URL"
 
 #. module: spreadsheet_dashboard
-#: model:ir.module.category,description:spreadsheet_dashboard.dashboard_management
-msgid "User access level for Dashboard module"
-msgstr "Niveau d'accès de l'utilisateur pour le module Tableaux de bord"
-
-#. module: spreadsheet_dashboard
 #: model:spreadsheet.dashboard.group,name:spreadsheet_dashboard.spreadsheet_dashboard_group_website
 msgid "Website"
 msgstr "Site Web"
@@ -256,7 +279,6 @@ msgstr "Site Web"
 #. module: spreadsheet_dashboard
 #. odoo-python
 #: code:addons/spreadsheet_dashboard/models/spreadsheet_dashboard_group.py:0
-#, python-format
 msgid "You cannot delete %s as it is used in another module."
 msgstr ""
 "Vous ne pouvez pas supprimer %s, car il est utilisé dans un autre module."
@@ -264,6 +286,5 @@ msgstr ""
 #. module: spreadsheet_dashboard
 #. odoo-python
 #: code:addons/spreadsheet_dashboard/models/spreadsheet_dashboard_share.py:0
-#, python-format
 msgid "You don't have access to this dashboard. "
 msgstr "Vous n'avez pas accès à ce tableau de bord."

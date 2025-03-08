@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+import base64
+import logging
+
+import psycopg2.errors
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
-from psycopg2 import OperationalError
-import base64
-import logging
 
 _logger = logging.getLogger(__name__)
 
@@ -232,14 +233,11 @@ class AccountEdiDocument(models.Model):
                     if attachments_potential_unlink:
                         self._cr.execute('SELECT * FROM ir_attachment WHERE id IN %s FOR UPDATE NOWAIT', [tuple(attachments_potential_unlink.ids)])
 
-            except OperationalError as e:
-                if e.pgcode == '55P03':
-                    _logger.debug('Another transaction already locked documents rows. Cannot process documents.')
-                    if not with_commit:
-                        raise UserError(_('This document is being sent by another process already. '))
-                    continue
-                else:
-                    raise e
+            except psycopg2.errors.LockNotAvailable:
+                _logger.debug('Another transaction already locked documents rows. Cannot process documents.')
+                if not with_commit:
+                    raise UserError(_('This document is being sent by another process already. ')) from None
+                continue
             self._process_job(job)
             if with_commit and len(jobs_to_process) > 1:
                 self.env.cr.commit()
@@ -252,7 +250,11 @@ class AccountEdiDocument(models.Model):
 
         :param job_count: Limit explicitely the number of web service calls. If not provided, process all.
         '''
-        edi_documents = self.search([('state', 'in', ('to_send', 'to_cancel')), ('move_id.state', '=', 'posted')])
+        edi_documents = self.search([
+            ('state', 'in', ('to_send', 'to_cancel')),
+            ('move_id.state', '=', 'posted'),
+            ('blocking_level', '!=', 'error'),
+        ])
         nb_remaining_jobs = edi_documents._process_documents_web_services(job_count=job_count)
 
         # Mark the CRON to be triggered again asap since there is some remaining jobs to process.

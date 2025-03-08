@@ -111,6 +111,15 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
             ),
         }]
 
+    def _get_partner_party_legal_entity_vals_list(self, partner):
+        # EXTEND 'account.edi.xml.ubl_20'
+        partners_party_legal = super()._get_partner_party_legal_entity_vals_list(partner)
+        for partner_party_legal in partners_party_legal:
+            if partner_party_legal['commercial_partner'].country_code != 'SA':
+                partner_party_legal['company_id'] = False
+
+        return partners_party_legal
+
     def _l10n_sa_get_payment_means_code(self, invoice):
         """ Return payment means code to be used to set the value on the XML file """
         return 'unknown'
@@ -185,12 +194,15 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
             the buyer VAT registration number or buyer group VAT registration number must not exist in the Invoice
         """
         if role != 'customer' or partner.country_id.code == 'SA':
-            return super()._get_partner_party_tax_scheme_vals_list(partner, role)
+            vals_list = super()._get_partner_party_tax_scheme_vals_list(partner, role)
+            for vals in vals_list:
+                vals['tax_scheme_vals'] = {'id': 'VAT'}
+            return vals_list
         return []
 
     def _apply_invoice_tax_filter(self, base_line, tax_values):
         """ Override to filter out withholding tax """
-        tax_id = self.env['account.tax'].browse(tax_values['id'])
+        tax_id = tax_values['tax']
         res = not tax_id.l10n_sa_is_retention
         # If the move that is being sent is not a down payment invoice, and the sale module is installed
         # we need to make sure the line is neither retention, nor a down payment line
@@ -209,7 +221,7 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
         downpayment_lines = False if invoice._is_downpayment() else invoice.line_ids.filtered(lambda l: l._get_downpayment_lines())
         if downpayment_lines:
             tax_vals = invoice._prepare_invoice_aggregated_taxes(
-                filter_tax_values_to_apply=lambda l, t: not self.env['account.tax'].browse(t['id']).l10n_sa_is_retention
+                filter_tax_values_to_apply=lambda l, t: not self.env['account.tax'].browse(t.get('id')).l10n_sa_is_retention
             )
             base_amount = abs(sum(tax_vals['tax_details_per_record'][l]['base_amount_currency'] for l in downpayment_lines))
             tax_amount = abs(sum(tax_vals['tax_details_per_record'][l]['tax_amount_currency'] for l in downpayment_lines))
@@ -249,12 +261,12 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
             'allowance_total_amount': allowance_total_amount
         }
 
-    def _get_tax_category_list(self, invoice, taxes):
+    def _get_tax_category_list(self, customer, supplier, taxes):
         """ Override to filter out withholding taxes """
         non_retention_taxes = taxes.filtered(lambda t: not t.l10n_sa_is_retention)
-        return super()._get_tax_category_list(invoice, non_retention_taxes)
+        return super()._get_tax_category_list(customer, supplier, non_retention_taxes)
 
-    def _get_document_allowance_charge_vals_list(self, invoice):
+    def _get_document_allowance_charge_vals_list(self, invoice, taxes_vals=None):
         """
         Charge Reasons & Codes (As per ZATCA):
         https://unece.org/fileadmin/DAM/trade/untdid/d16b/tred/tred5189.htm
@@ -264,6 +276,8 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
         res = super()._get_document_allowance_charge_vals_list(invoice)
         for line in invoice.invoice_line_ids.filtered(lambda l: l._is_global_discount_line()):
             taxes = line.tax_ids.flatten_taxes_hierarchy().filtered(lambda t: t.amount_type != 'fixed')
+            customer = invoice.commercial_partner_id
+            supplier = invoice.company_id.partner_id.commercial_partner_id
             res.append({
                 'charge_indicator': 'false',
                 'allowance_charge_reason_code': "95",
@@ -275,7 +289,7 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
                     'id': tax['id'],
                     'percent': tax['percent'],
                     'tax_scheme_vals': {'id': 'VAT'},
-                } for tax in self._get_tax_category_list(line.move_id, taxes)],
+                } for tax in self._get_tax_category_list(customer, supplier, taxes)],
             })
         return res
 
@@ -369,9 +383,11 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
     def _get_invoice_line_vals(self, line, line_id, taxes_vals):
         """ Override to include/update values specific to ZATCA's UBL 2.1 specs """
 
-        def grouping_key_generator(base_line, tax_values):
-            tax = tax_values['tax_repartition_line'].tax_id
-            tax_category_vals = next(iter(self._get_tax_category_list(line.move_id, tax)), {})
+        def grouping_key_generator(base_line, tax_data):
+            tax = tax_data['tax']
+            customer = line.move_id.commercial_partner_id
+            supplier = line.move_id.company_id.partner_id.commercial_partner_id
+            tax_category_vals = next(iter(self._get_tax_category_list(customer, supplier, tax)), {})
             grouping_key = {
                 'tax_category_id': tax_category_vals.get('id'),
                 'tax_category_percent': tax_category_vals.get('percent'),
@@ -431,7 +447,7 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
         }]
         return res
 
-    def _get_tax_unece_codes(self, invoice, tax):
+    def _get_tax_unece_codes(self, customer, supplier, tax):
         """ Override to include/update values specific to ZATCA's UBL 2.1 specs """
 
         def _exemption_reason(code, reason):
@@ -444,7 +460,6 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
                 )
             }
 
-        supplier = invoice.company_id.partner_id.commercial_partner_id
         if supplier.country_id.code == 'SA':
             if not tax or tax.amount == 0:
                 exemption_codes = dict(tax._fields["l10n_sa_exemption_reason_code"]._description_selection(self.env))
@@ -460,7 +475,7 @@ class AccountEdiXmlUBL21Zatca(models.AbstractModel):
                     'tax_exemption_reason_code': None,
                     'tax_exemption_reason': None,
                 }
-        return super()._get_tax_unece_codes(invoice, tax)
+        return super()._get_tax_unece_codes(customer, supplier, tax)
 
     def _get_invoice_payment_terms_vals_list(self, invoice):
         """ Override to include/update values specific to ZATCA's UBL 2.1 specs """

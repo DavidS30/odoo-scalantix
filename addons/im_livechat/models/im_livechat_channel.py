@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
-import base64
+
+from datetime import timedelta
 import random
 import re
-from operator import itemgetter
 
-from odoo import api, Command, fields, models, modules, _
+from odoo import api, Command, fields, models, _
+from odoo.addons.mail.tools.discuss import Store
 from odoo.addons.bus.websocket import WebsocketConnectionHandler
 
 
@@ -61,12 +61,12 @@ class ImLivechatChannel(models.Model):
 
     def _are_you_inside(self):
         for channel in self:
-            channel.are_you_inside = bool(self.env.uid in [u.id for u in channel.user_ids])
+            channel.are_you_inside = self.env.user in channel.user_ids
 
     @api.depends('user_ids.im_status')
     def _compute_available_operator_ids(self):
         for record in self:
-            record.available_operator_ids = record.user_ids.filtered(lambda user: user.im_status == 'online')
+            record.available_operator_ids = record.user_ids.filtered(lambda user: user._is_user_available())
 
     @api.depends('rule_ids.chatbot_script_id')
     def _compute_chatbot_script_count(self):
@@ -103,11 +103,13 @@ class ImLivechatChannel(models.Model):
     # --------------------------
     def action_join(self):
         self.ensure_one()
-        return self.write({'user_ids': [(4, self._uid)]})
+        self.user_ids = [Command.link(self.env.user.id)]
+        self.env.user._bus_send_store(self, fields=["are_you_inside", "name"])
 
     def action_quit(self):
         self.ensure_one()
-        return self.write({'user_ids': [(3, self._uid)]})
+        self.user_ids = [Command.unlink(self.env.user.id)]
+        self.env.user._bus_send_store(self, fields=["are_you_inside", "name"])
 
     def action_view_rating(self):
         """ Action to display the rating relative to the channel, so all rating of the
@@ -148,7 +150,15 @@ class ImLivechatChannel(models.Model):
                 return False
         # partner to add to the discuss.channel
         operator_partner_id = user_operator.partner_id.id if user_operator else chatbot_script.operator_partner_id.id
-        members_to_add = [Command.create({'partner_id': operator_partner_id, 'is_pinned': False})]
+        members_to_add = [
+            Command.create({
+                # making sure the unpin_dt is always later than the last_interest_dt
+                # so that the channel is always unpinned at first
+                'last_interest_dt': fields.Datetime.now() - timedelta(seconds=30),
+                'partner_id': operator_partner_id,
+                'unpin_dt': fields.Datetime.now(),
+            })
+        ]
         visitor_user = False
         if user_id:
             visitor_user = self.env['res.users'].browse(user_id)
@@ -237,6 +247,9 @@ class ImLivechatChannel(models.Model):
         """
         if not self.available_operator_ids:
             return False
+        # FIXME: remove inactive call sessions so operators no longer in call are available
+        # sudo: required to use garbage collecting function.
+        self.env["discuss.channel.rtc.session"].sudo()._gc_inactive_sessions()
         self.env.cr.execute("""
             WITH operator_rtc_session AS (
                 SELECT COUNT(DISTINCT s.id) as nbr, member.partner_id as partner_id
@@ -316,14 +329,16 @@ class ImLivechatChannel(models.Model):
         info = {}
         info['available'] = self.chatbot_script_count or len(self.available_operator_ids) > 0
         info['server_url'] = self.get_base_url()
+        info["websocket_worker_version"] = WebsocketConnectionHandler._VERSION
         if info['available']:
             info['options'] = self._get_channel_infos()
-            info["options"]["websocket_worker_version"] = WebsocketConnectionHandler._VERSION
-            info['options']['current_partner_id'] = (
-                self.env.user.partner_id.id if not self.env.user._is_public() else None
-            )
             info['options']["default_username"] = username
         return info
+
+    def _to_store(self, store: Store, /, *, fields=None):
+        if fields is None:
+            fields = []
+        store.add(self._name, self._read_format(fields))
 
 
 class ImLivechatChannelRule(models.Model):
@@ -371,8 +386,15 @@ class ImLivechatChannelRule(models.Model):
             for rule in rules:
                 # url might not be set because it comes from referer, in that
                 # case match the first rule with no regex_url
-                if re.search(rule.regex_url or '', url or ''):
-                    return rule
+                if not re.search(rule.regex_url or "", url or ""):
+                    continue
+                if rule.chatbot_script_id and (
+                    not rule.chatbot_script_id.active or not rule.chatbot_script_id.script_step_ids
+                ):
+                    continue
+                if rule.chatbot_only_if_no_operator and rule.channel_id.available_operator_ids:
+                    continue
+                return rule
             return False
         # first, search the country specific rules (the first match is returned)
         if country_id: # don't include the country in the research if geoIP is not installed

@@ -10,8 +10,10 @@ from threading import Event
 from unittest.mock import patch
 from weakref import WeakSet
 
+from odoo import http
 from odoo.api import Environment
 from odoo.tests import common, new_test_user
+from odoo.tools import mute_logger
 from .common import WebsocketCase
 from .. import websocket as websocket_module
 from ..models.bus import dispatch
@@ -181,6 +183,22 @@ class TestWebsocketCaryall(WebsocketCase):
         self.assertEqual(notifications[0]['message']['type'], 'notif_type')
         self.assertEqual(notifications[0]['message']['payload'], 'another_message')
 
+    def test_trigger_notification_unsupported_language(self):
+        websocket = self.websocket_connect()
+        # set session lang to what a websitor visitor could have (based on their
+        # preferred language), this could be a unknown language (ex. territorial
+        # specific) or a known language that is uninstalled; in all cases this
+        # should not crash the notif. dispatching.
+        self.session.context['lang'] = 'fr_LU'
+        http.root.session_store.save(self.session)
+        self.subscribe(websocket, ['my_channel'], self.env['bus.bus']._bus_last_id())
+        self.env['bus.bus']._sendone('my_channel', 'notif_type', 'message')
+        self.trigger_notification_dispatching(["my_channel"])
+        notifications = json.loads(websocket.recv())
+        self.assertEqual(1, len(notifications))
+        self.assertEqual(notifications[0]['message']['type'], 'notif_type')
+        self.assertEqual(notifications[0]['message']['payload'], 'message')
+
     def test_subscribe_higher_last_notification_id(self):
         server_last_notification_id = self.env['bus.bus'].sudo().search([], limit=1, order='id desc').id or 0
         client_last_notification_id = server_last_notification_id + 1
@@ -204,10 +222,8 @@ class TestWebsocketCaryall(WebsocketCase):
         websocket = self.websocket_connect()
         with patch.object(IrWebsocket, "_build_bus_channel_list", return_value=[channel]):
             self.subscribe(websocket, [], self.env['bus.bus']._bus_last_id())
-            self.env["bus.bus"]._sendmany([
-                (channel, "notif_on_global_channel", "message"),
-                ((channel, "PRIVATE"), "notif_on_private_channel", "message"),
-            ])
+            channel._bus_send("notif_on_global_channel", "message")
+            channel._bus_send("notif_on_private_channel", "message", subchannel="PRIVATE")
             self.trigger_notification_dispatching([channel, (channel, "PRIVATE")])
             notifications = json.loads(websocket.recv())
             self.assertEqual(len(notifications), 1)
@@ -216,10 +232,8 @@ class TestWebsocketCaryall(WebsocketCase):
 
         with patch.object(IrWebsocket, "_build_bus_channel_list", return_value=[(channel, "PRIVATE")]):
             self.subscribe(websocket, [], self.env['bus.bus']._bus_last_id())
-            self.env["bus.bus"]._sendmany([
-                (channel, "notif_on_global_channel", "message"),
-                ((channel, "PRIVATE"), "notif_on_private_channel", "message"),
-            ])
+            channel._bus_send("notif_on_global_channel", "message")
+            channel._bus_send("notif_on_private_channel", "message", subchannel="PRIVATE")
             self.trigger_notification_dispatching([channel, (channel, "PRIVATE")])
             notifications = json.loads(websocket.recv())
             self.assertEqual(len(notifications), 1)
@@ -245,7 +259,9 @@ class TestWebsocketCaryall(WebsocketCase):
             self.assertNotEqual(websocket._session.uid, user_session.uid)
             serve_forever_called_event.set()
 
-        with patch.object(WebsocketConnectionHandler, '_serve_forever', side_effect=serve_forever) as mock:
+        with patch.object(
+            WebsocketConnectionHandler, '_serve_forever', side_effect=serve_forever
+        ) as mock, mute_logger('odoo.addons.bus.websocket'):
             ws = self.websocket_connect(
                 cookie=f'session_id={user_session.sid};',
                 origin="http://example.com"
@@ -255,6 +271,13 @@ class TestWebsocketCaryall(WebsocketCase):
                 'The set-cookie response header must be the origin request session rather than the websocket session'
             )
             serve_forever_called_event.wait(timeout=5)
+            self.assertTrue(mock.called)
+
+    def test_trigger_on_websocket_closed(self):
+        with patch('odoo.addons.bus.models.ir_websocket.IrWebsocket._on_websocket_closed') as mock:
+            ws = self.websocket_connect()
+            ws.close(CloseCode.CLEAN)
+            self.wait_remaining_websocket_connections()
             self.assertTrue(mock.called)
 
     def test_disconnect_when_version_outdated(self):
@@ -277,16 +300,9 @@ class TestWebsocketCaryall(WebsocketCase):
             self.assert_close_with_code(websocket, CloseCode.CLEAN, "OUTDATED_VERSION")
         # Version not passed, User-Agent not present, should not be considered
         # as outdated
-        with patch.object(WebsocketConnectionHandler, "_VERSION", None), patch.object(
+        with patch.object(WebsocketConnectionHandler, "_VERSION", "17.0-1"), patch.object(
             self, "_WEBSOCKET_URL", self._BASE_WEBSOCKET_URL
         ):
             websocket = self.websocket_connect()
             websocket.ping()
             websocket.recv_data_frame(control_frame=True)  # pong
-
-    def test_trigger_on_websocket_closed(self):
-        with patch('odoo.addons.bus.models.ir_websocket.IrWebsocket._on_websocket_closed') as mock:
-            ws = self.websocket_connect()
-            ws.close(CloseCode.CLEAN)
-            self.wait_remaining_websocket_connections()
-            self.assertTrue(mock.called)

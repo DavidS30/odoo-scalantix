@@ -10,8 +10,8 @@ from odoo.tests import tagged, Form
 class TestSubcontractingDropshippingValuation(ValuationReconciliationTestCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref=None):
-        super().setUpClass(chart_template_ref=chart_template_ref)
+    def setUpClass(cls):
+        super().setUpClass()
 
         categ_form = Form(cls.env['product.category'])
         categ_form.name = 'fifo auto'
@@ -27,10 +27,10 @@ class TestSubcontractingDropshippingValuation(ValuationReconciliationTestCommon)
         categ_form.property_valuation = 'real_time'
         cls.categ_avco_auto = categ_form.save()
 
+        (cls.product_a | cls.product_b).is_storable = True
+
         cls.dropship_route = cls.env.ref('stock_dropshipping.route_drop_shipping')
         cls.dropship_subcontractor_route = cls.env.ref('mrp_subcontracting_dropshipping.route_subcontracting_dropshipping')
-
-        (cls.product_a | cls.product_b).type = 'product'
 
         cls.bom_a = cls.env['mrp.bom'].create({
             'product_tmpl_id': cls.product_a.product_tmpl_id.id,
@@ -106,14 +106,11 @@ class TestSubcontractingDropshippingValuation(ValuationReconciliationTestCommon)
         ])
 
         # return to subcontracting location
-        sbc_location = self.env.company.subcontracting_location_id
         return_form = Form(self.env['stock.return.picking'].with_context(active_id=delivery.id, active_model='stock.picking'))
-        return_form.location_id = sbc_location
         with return_form.product_return_moves.edit(0) as line:
             line.quantity = 1
         return_wizard = return_form.save()
-        return_id, _ = return_wizard._create_returns()
-        return_picking = self.env['stock.picking'].browse(return_id)
+        return_picking = return_wizard._create_return()
         return_picking.move_ids.quantity = 1
         return_picking.move_ids.picked = True
         return_picking.button_validate()
@@ -128,16 +125,14 @@ class TestSubcontractingDropshippingValuation(ValuationReconciliationTestCommon)
         # return to stock location
         warehouse = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1)
         stock_location = warehouse.lot_stock_id
-        stock_location.return_location = True
         return_form = Form(self.env['stock.return.picking'].with_context(active_id=delivery.id, active_model='stock.picking'))
-        return_form.location_id = stock_location
         with return_form.product_return_moves.edit(0) as line:
             line.quantity = 1
         return_wizard = return_form.save()
-        return_id, _ = return_wizard._create_returns()
-        return_picking = self.env['stock.picking'].browse(return_id)
+        return_picking = return_wizard._create_return()
         return_picking.move_ids.quantity = 1
         return_picking.move_ids.picked = True
+        return_picking.location_dest_id = stock_location
         return_picking.button_validate()
 
         amls = self.env['account.move.line'].search([('id', 'not in', all_amls_ids)])
@@ -187,12 +182,14 @@ class TestSubcontractingDropshippingValuation(ValuationReconciliationTestCommon)
         purchase_order.button_confirm()
         dropship_transfer = purchase_order.picking_ids[0]
         dropship_transfer.move_ids[0].quantity = 50
-        dropship_transfer.with_context(cancel_backorder=False)._action_done()
+        res = dropship_transfer.button_validate()
+        wizard = Form(self.env[res['res_model']].with_context(res['context'])).save()
+        wizard.process()
         account_move_1 = sale_order._create_invoices()
         account_move_1.action_post()
         dropship_backorder = dropship_transfer.backorder_ids[0]
         dropship_backorder.move_ids[0].quantity = 50
-        dropship_backorder._action_done()
+        dropship_backorder.button_validate()
         account_move_2 = sale_order._create_invoices()
         account_move_2.action_post()
 
@@ -281,13 +278,13 @@ class TestSubcontractingDropshippingValuation(ValuationReconciliationTestCommon)
         # 2x product_c = 100 * 2 = 200
         #                        = 840
         self.assertRecordValues(
-            account_move.line_ids,
+            account_move.line_ids.sorted('balance'),
             [
-                {'name': 'product_a',                       'debit': 0.0,       'credit': 1800.0},
-                {'name': '15% (Copy)',                      'debit': 0.0,       'credit': 270.0},
-                {'name': 'INV/2024/00001 installment #1',   'debit': 621.0,     'credit': 0.0},
-                {'name': 'INV/2024/00001 installment #2',   'debit': 1449.0,    'credit': 0.0},
-                {'name': 'product_a',                       'debit': 0.0,       'credit': 840 * 2},
-                {'name': 'product_a',                       'debit': 840 * 2,   'credit': 0.0},
+                {'name': 'product_a',                           'debit': 0.0,       'credit': 1800.0},
+                {'name': 'product_a',                           'debit': 0.0,       'credit': 1680.0},
+                {'name': '15% (Copy)',                          'debit': 0.0,       'credit': 270.0},
+                {'name': f'{account_move.name} installment #1', 'debit': 621.0,     'credit': 0.0},
+                {'name': f'{account_move.name} installment #2', 'debit': 1449.0,    'credit': 0.0},
+                {'name': 'product_a',                           'debit': 1680.0,    'credit': 0.0},
             ]
         )

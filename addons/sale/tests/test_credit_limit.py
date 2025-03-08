@@ -1,5 +1,7 @@
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
+
 from odoo.fields import Command
-from odoo.tests import tagged
+from odoo.tests import Form, tagged, users
 
 from .common import TestSaleCommon
 
@@ -29,15 +31,26 @@ class TestSaleOrderCreditLimit(TestSaleCommon):
             'currency_id': buck_currency.id,
         })
 
+        cls.company_data_2 = cls.setup_other_company()
+
+        cls.sales_user = cls.company_data['default_user_salesman']
+        cls.sales_user.write({
+            'login': "notaccountman",
+            'email': "bad@accounting.com",
+        })
+
+        cls.empty_order = cls.env['sale.order'].create({
+            'partner_id': cls.partner_a.id,
+        })
+
     def test_credit_limit_multi_company(self):
         # multi-company setup
         company2 = self.company_data_2['company']
 
-        # Activate the Credit Limit feature and set a value for partner_a.
-        self.env.company.account_use_credit_limit = True
-        self.partner_a.credit_limit = 1000.0
+        # Activate the Credit Limit feature
+        company2.account_use_credit_limit = True
 
-        # Create and confirm a SO for another company
+        # Create and confirm a SO for that company
         sale_order = company2.env['sale.order'].create({
             'company_id': company2.id,
             'partner_id': self.partner_a.id,
@@ -47,10 +60,10 @@ class TestSaleOrderCreditLimit(TestSaleCommon):
             'order_line': [Command.create({
                 'product_id': self.company_data_2['product_order_no'].id,
                 'price_unit': 1000.0,
-            })]
+            })],
         })
 
-        self.assertEqual(self.partner_a.credit_to_invoice, 0.0)
+        self.assertEqual(self.partner_a.with_company(company2).credit_to_invoice, 0.0)
         sale_order.action_confirm()
 
         self.partner_a.invalidate_recordset(['credit', 'credit_to_invoice'])
@@ -99,7 +112,6 @@ class TestSaleOrderCreditLimit(TestSaleCommon):
         }).create({
             'advance_payment_method': 'percentage',
             'amount': 50,
-            'deposit_account_id': self.company_data['default_account_revenue'].id,
         }).create_invoices()
 
         invoice = sale_order.invoice_ids
@@ -144,8 +156,8 @@ class TestSaleOrderCreditLimit(TestSaleCommon):
             'credit_to_invoice': 0.0,
         }])
 
-        order = self.env['sale.order'].create({
-            'partner_id': self.partner_a.id,
+        order = self.empty_order
+        order.write({
             'pricelist_id': self.buck_pricelist.id,
             'order_line': [
                 Command.create({
@@ -328,3 +340,27 @@ class TestSaleOrderCreditLimit(TestSaleCommon):
             'credit': 2000.0,
             'credit_to_invoice': 1000.0,
         }])
+
+    @users('notaccountman')
+    def test_credit_limit_access(self):
+        """Ensure credit warning gets displayed without Accounting access."""
+        self.empty_order.sudo().user_id = self.env.user
+        self.empty_order.sudo().partner_id.credit_limit = self.product_a.list_price
+
+        for group in self.partner_a._fields['credit'].groups.split(','):
+            self.assertFalse(self.env.user.has_group(group))
+
+        with Form(self.empty_order.with_env(self.env)) as order_form:
+            with order_form.order_line.new() as sol:
+                sol.product_id = self.product_a
+                sol.tax_id.clear()
+            self.assertFalse(
+                order_form.partner_credit_warning,
+                "No credit warning should be displayed (yet)",
+            )
+            with order_form.order_line.edit(0) as sol:
+                sol.tax_id.add(self.tax_sale_a)
+            self.assertTrue(
+                order_form.partner_credit_warning,
+                "Credit warning should be displayed",
+            )

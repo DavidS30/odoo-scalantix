@@ -1,10 +1,11 @@
 import json
-from unittest.mock import patch
-from odoo.tools import config, mute_logger
+from odoo.tools import mute_logger
+from odoo.tests import tagged
 from odoo.addons.test_http.controllers import CT_JSON
 from .test_common import TestHttpBase
 
 
+@tagged('post_install', '-at_install')
 class TestHttpErrorHttp(TestHttpBase):
     @mute_logger('odoo.http')  # UserError("Walter is AFK")
     def test_httperror0_exceptions_as_404(self):
@@ -29,6 +30,7 @@ class TestHttpErrorHttp(TestHttpBase):
             self.assertIn("Walter is AFK", res.text, "The real UserError message should be kept")
 
 
+@tagged('post_install', '-at_install')
 class TestHttpJsonError(TestHttpBase):
 
     jsonrpc_error_structure = {
@@ -81,3 +83,27 @@ class TestHttpJsonError(TestHttpBase):
         self.assertEqual(error_data['message'], 'Unknown destination')
         self.assertEqual(error_data['arguments'], ['Unknown destination'])
         self.assertEqual(error_data['context'], {})
+
+    @mute_logger('odoo.http')
+    def test_error_call_kw_model_not_found(self):
+        res = self.db_url_open('/web/dataset/call_kw/lorem.ipsum/get_views',
+            data=json.dumps({
+                "id": 4,
+                "jsonrpc": "2.0",
+                "method": "call",
+                "params": {
+                    "model": "lorem.ipsum",
+                    "method": "get_views",
+                    "args": [],
+                }}),
+            headers=CT_JSON
+        )
+        res.raise_for_status()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.headers.get('Content-Type', ''), 'application/json; charset=utf-8')
+
+        payload = res.json()
+        self.assertIsErrorPayload(payload)
+
+        self.assertEqual(payload['error']['code'], 404)

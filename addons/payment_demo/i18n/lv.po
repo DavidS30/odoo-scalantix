@@ -3,19 +3,19 @@
 # 	* payment_demo
 # 
 # Translators:
-# Arnis Putniņš <arnis@allegro.lv>, 2023
-# Martin Trigaux, 2023
-# ievaputnina <ievai.putninai@gmail.com>, 2023
-# JanisJanis <jbojars@gmail.com>, 2023
-# Armīns Jeltajevs <armins.jeltajevs@gmail.com>, 2024
+# Arnis Putniņš <arnis@allegro.lv>, 2024
+# ievaputnina <ievai.putninai@gmail.com>, 2024
+# JanisJanis <jbojars@gmail.com>, 2024
+# Martin Trigaux, 2024
+# Armīns Jeltajevs <armins.jeltajevs@gmail.com>, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-13 10:28+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Armīns Jeltajevs <armins.jeltajevs@gmail.com>, 2024\n"
+"POT-Creation-Date: 2024-09-26 08:56+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Armīns Jeltajevs <armins.jeltajevs@gmail.com>, 2025\n"
 "Language-Team: Latvian (https://app.transifex.com/odoo/teams/41243/lv/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -33,14 +33,28 @@ msgid ""
 "                    <option value=\"pending\" title=\"Payment processing\">\n"
 "                        Pending\n"
 "                    </option>\n"
-"                    <option value=\"cancel\" title=\"Payment canceled by customer\">\n"
-"                        Canceled\n"
+"                    <option value=\"cancel\" title=\"Payment cancelled by customer\">\n"
+"                        Cancelled\n"
 "                    </option>\n"
 "                    <option value=\"error\" title=\"Processing error\">\n"
 "                        Error\n"
 "                    </option>\n"
 "                </select>"
 msgstr ""
+"<select id=\"simulated_payment_state\" class=\"form-select\">\n"
+"                    <option value=\"done\" title=\"Successful payment\">\n"
+"                        Veiksmīgi\n"
+"                    </option>\n"
+"                    <option value=\"pending\" title=\"Payment processing\">\n"
+"                        Gaida\n"
+"                    </option>\n"
+"                    <option value=\"cancel\" title=\"Payment cancelled by customer\">\n"
+"                        Atcelts\n"
+"                    </option>\n"
+"                    <option value=\"error\" title=\"Processing error\">\n"
+"                        Kļūda\n"
+"                    </option>\n"
+"                </select>"
 
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.express_inline_form
@@ -75,12 +89,12 @@ msgstr ""
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.payment_details
 msgid "<small>Payment Details (test data)</small>"
-msgstr ""
+msgstr "<small>Maksājuma informācija (paraugu dati)</small>"
 
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.payment_details
 msgid "<small>Payment Status</small>"
-msgstr ""
+msgstr "<small>Maksājuma statuss</small>"
 
 #. module: payment_demo
 #: model_terms:ir.ui.view,arch_db:payment_demo.express_inline_form
@@ -100,7 +114,7 @@ msgstr "Atcelt"
 #. module: payment_demo
 #: model:ir.model.fields.selection,name:payment_demo.selection__payment_token__demo_simulated_state__cancel
 msgid "Canceled"
-msgstr "Atcelts"
+msgstr "Atcelt"
 
 #. module: payment_demo
 #: model:ir.model.fields,field_description:payment_demo.field_payment_transaction__capture_manually
@@ -137,6 +151,7 @@ msgstr "Apstiprināts"
 
 #. module: payment_demo
 #: model:ir.model.fields.selection,name:payment_demo.selection__payment_provider__code__demo
+#: model:payment.method,name:payment_demo.payment_method_demo
 msgid "Demo"
 msgstr "Demo"
 
@@ -148,7 +163,6 @@ msgstr ""
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_provider.py:0
-#, python-format
 msgid "Demo providers should never be enabled."
 msgstr ""
 
@@ -160,14 +174,12 @@ msgstr "Kļūda"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
-#, python-format
 msgid "No delivery method is available."
 msgstr ""
 
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "No transaction found matching reference %s."
 msgstr "Nav atrasts darījums ar šādu atsauci %s."
 
@@ -184,7 +196,7 @@ msgstr ""
 #. module: payment_demo
 #: model:ir.model,name:payment_demo.model_payment_provider
 msgid "Payment Provider"
-msgstr "Maksājumu sniedzējs"
+msgstr "Maksājuma sniedzējs"
 
 #. module: payment_demo
 #: model:ir.model,name:payment_demo.model_payment_token
@@ -199,7 +211,6 @@ msgstr "Maksājuma darījums"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/payment_demo_mixin.js:0
-#, python-format
 msgid "Payment processing failed"
 msgstr "Maksājuma apstrāde izgāzās"
 
@@ -212,7 +223,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:payment_demo.token_inline_form
 msgid ""
 "Payments made with this payment method will be automatically "
-"<b>canceled</b>."
+"<b>cancelled</b>."
 msgstr ""
 
 #. module: payment_demo
@@ -255,12 +266,11 @@ msgstr ""
 #. module: payment_demo
 #: model:ir.model.fields,help:payment_demo.field_payment_provider__code
 msgid "The technical code of this payment provider."
-msgstr "Maksājumu sniedzēja tehniskais kodss."
+msgstr "Maksājumu sniedzēja tehniskais kods."
 
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "The transaction is not linked to a token."
 msgstr "Darījums nav saistīts ar atslēgkodu."
 
@@ -272,7 +282,6 @@ msgstr "Nepublicēts"
 #. module: payment_demo
 #. odoo-javascript
 #: code:addons/payment_demo/static/src/js/express_checkout_form.js:0
-#, python-format
 msgid "Validation Error"
 msgstr "Validācijas kļūda"
 
@@ -284,6 +293,5 @@ msgstr ""
 #. module: payment_demo
 #. odoo-python
 #: code:addons/payment_demo/models/payment_transaction.py:0
-#, python-format
 msgid "You selected the following demo payment status: %s"
 msgstr ""

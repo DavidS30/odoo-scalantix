@@ -2,6 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import fields, models
+from odoo.osv import expression
 from odoo.tools import float_round, groupby
 
 
@@ -116,19 +117,24 @@ class ProductProduct(models.Model):
                 total *= float_round(1 - byproduct_cost_share / 100, precision_rounding=0.0001)
             return bom.product_uom_id._compute_price(total / bom.product_qty, self.uom_id)
 
+    def _get_fifo_candidates_domain(self, company, lot=False):
+        fifo_candidates_domain = super()._get_fifo_candidates_domain(company, lot=lot)
+        if self in self.env.context.get('product_unbuild_map', ()):
+            fifo_candidates_domain = expression.AND([
+                fifo_candidates_domain,
+                [('stock_move_id', 'in', self.env.context['product_unbuild_map'][self].mo_id.move_finished_ids.ids)]
+            ])
+        return fifo_candidates_domain
+
 
 class ProductCategory(models.Model):
     _inherit = 'product.category'
 
     property_stock_account_production_cost_id = fields.Many2one(
-        'account.account', 'Production Account', company_dependent=True,
+        'account.account', 'Production Account', company_dependent=True, ondelete='restrict',
         domain="[('deprecated', '=', False)]", check_company=True,
         help="""This account will be used as a valuation counterpart for both components and final products for manufacturing orders.
                 If there are any workcenter/employee costs, this value will remain on the account once the production is completed.""")
 
-    def write(self, vals):
-        return super(ProductCategory, self.with_context(product_category_mrp_account_write=True)).write(vals)
-
     def _get_stock_account_property_field_names(self):
-        mrp_value = ['property_stock_account_production_cost_id'] if self.property_stock_account_production_cost_id or not self.env.context.get('product_category_mrp_account_write') else []
-        return super()._get_stock_account_property_field_names() + mrp_value
+        return super()._get_stock_account_property_field_names() + ['property_stock_account_production_cost_id']

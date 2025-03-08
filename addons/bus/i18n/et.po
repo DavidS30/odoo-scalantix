@@ -3,22 +3,19 @@
 # 	* bus
 # 
 # Translators:
-# JanaAvalah, 2023
-# Eneli Õigus <enelioigus@gmail.com>, 2023
-# Marek Pontus, 2023
-# Maidu Targama <m.targama@gmail.com>, 2023
-# Arma Gedonsky <armagedonsky@hot.ee>, 2023
-# Triine Aavik <triine@avalah.ee>, 2023
-# Leaanika Randmets, 2023
-# Martin Aavastik <martin@avalah.ee>, 2023
+# Leaanika Randmets, 2024
+# Martin Trigaux, 2024
+# Siim Raasuke, 2024
+# Stevin Lilla, 2024
+# Martin Aavastik <martin@avalah.ee>, 2024
 # Anna, 2024
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
+"POT-Creation-Date: 2025-01-27 13:03+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
 "Last-Translator: Anna, 2024\n"
 "Language-Team: Estonian (https://app.transifex.com/odoo/teams/41243/et/)\n"
 "MIME-Version: 1.0\n"
@@ -28,9 +25,24 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. module: bus
+#: model:ir.model,name:bus.model_res_groups
+msgid "Access Groups"
+msgstr "Ligipääsu grupid"
+
+#. module: bus
+#: model:ir.model,name:bus.model_ir_attachment
+msgid "Attachment"
+msgstr "Manus"
+
+#. module: bus
 #: model:ir.model.fields.selection,name:bus.selection__bus_presence__status__away
 msgid "Away"
 msgstr "Eemal"
+
+#. module: bus
+#: model:ir.model,name:bus.model_bus_listener_mixin
+msgid "Can send messages via bus.bus"
+msgstr "Saab sõnumeid saata bus.bus süsteemi kaudu"
 
 #. module: bus
 #: model:ir.model.fields,field_description:bus.field_bus_bus__channel
@@ -50,7 +62,7 @@ msgstr "Kontakt"
 #. module: bus
 #: model:ir.model.fields,field_description:bus.field_bus_bus__create_uid
 msgid "Created by"
-msgstr "Loodud (kelle poolt?)"
+msgstr "Loonud"
 
 #. module: bus
 #: model:ir.model.fields,field_description:bus.field_bus_bus__create_date
@@ -62,6 +74,11 @@ msgstr "Loodud"
 #: model:ir.model.fields,field_description:bus.field_bus_presence__display_name
 msgid "Display Name"
 msgstr "Kuvatav nimi"
+
+#. module: bus
+#: model:ir.model,name:bus.model_ir_http
+msgid "HTTP Routing"
+msgstr "HTTP Routing"
 
 #. module: bus
 #: model:ir.model.fields,field_description:bus.field_bus_bus__id
@@ -118,18 +135,33 @@ msgstr "Online"
 
 #. module: bus
 #. odoo-javascript
+#: code:addons/bus/static/src/outdated_page_watcher_service.js:0
 #: code:addons/bus/static/src/services/assets_watchdog_service.js:0
-#: code:addons/bus/static/src/services/assets_watchdog_service.js:0
-#, python-format
+#: code:addons/bus/static/src/services/bus_service.js:0
 msgid "Refresh"
 msgstr "Uuenda"
 
 #. module: bus
 #. odoo-javascript
+#: code:addons/bus/static/src/outdated_page_watcher_service.js:0
+#: code:addons/bus/static/src/services/bus_service.js:0
+msgid ""
+"Save your work and refresh to get the latest updates and avoid potential "
+"issues."
+msgstr ""
+
+#. module: bus
+#. odoo-javascript
 #: code:addons/bus/static/src/services/assets_watchdog_service.js:0
-#, python-format
 msgid "The page appears to be out of date."
 msgstr "Leht on aegunud. "
+
+#. module: bus
+#. odoo-javascript
+#: code:addons/bus/static/src/outdated_page_watcher_service.js:0
+#: code:addons/bus/static/src/services/bus_service.js:0
+msgid "The page is out of date"
+msgstr ""
 
 #. module: bus
 #: model:ir.model,name:bus.model_res_users
@@ -142,6 +174,11 @@ msgid "User Presence"
 msgstr "Kasutaja kohalolek"
 
 #. module: bus
+#: model:ir.model,name:bus.model_res_users_settings
+msgid "User Settings"
+msgstr "Kasutaja seaded"
+
+#. module: bus
 #: model:ir.model.fields,field_description:bus.field_bus_presence__user_id
 msgid "Users"
 msgstr "Kasutajad"
@@ -149,7 +186,6 @@ msgstr "Kasutajad"
 #. module: bus
 #. odoo-python
 #: code:addons/bus/controllers/home.py:0
-#, python-format
 msgid ""
 "Your password is the default (admin)! If this system is exposed to untrusted"
 " users it is important to change it immediately for security reasons. I will"

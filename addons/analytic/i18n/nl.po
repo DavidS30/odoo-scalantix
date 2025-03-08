@@ -3,17 +3,17 @@
 # 	* analytic
 # 
 # Translators:
-# Jolien De Paepe, 2024
-# Erwin van der Ploeg <erwin@odooexperts.nl>, 2024
 # Wil Odoo, 2024
+# Erwin van der Ploeg <erwin@odooexperts.nl>, 2025
+# Manon Rondou, 2025
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-13 10:27+0000\n"
-"PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2024\n"
+"POT-Creation-Date: 2025-01-27 13:03+0000\n"
+"PO-Revision-Date: 2024-09-25 09:41+0000\n"
+"Last-Translator: Manon Rondou, 2025\n"
 "Language-Team: Dutch (https://app.transifex.com/odoo/teams/41243/nl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -24,7 +24,6 @@ msgstr ""
 #. module: analytic
 #. odoo-python
 #: code:addons/analytic/models/analytic_account.py:0
-#, python-format
 msgid "%s (copy)"
 msgstr "%s (kopie)"
 
@@ -36,12 +35,11 @@ msgstr "<span class=\"o_stat_text\">Analytische rekeningen</span>"
 #. module: analytic
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_account_form
 msgid "<span class=\"o_stat_text\">Gross Margin</span>"
-msgstr "<span class=\"o_stat_text\">Brutomarge</span>"
+msgstr "<span class=\"o_stat_text\">Bruto marge</span>"
 
 #. module: analytic
 #. odoo-python
 #: code:addons/analytic/models/analytic_plan.py:0
-#, python-format
 msgid ""
 "A 'Project' plan needs to exist and its id needs to be set as "
 "`analytic.project_plan` in the system variables"
@@ -52,7 +50,6 @@ msgstr ""
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.js:0
-#, python-format
 msgid "Account field"
 msgstr "Rekeningveld"
 
@@ -79,7 +76,6 @@ msgstr "Actieve rekening"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
-#, python-format
 msgid "Add a Line"
 msgstr "Regel toevoegen"
 
@@ -108,14 +104,12 @@ msgstr "Bedrag"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.js:0
-#, python-format
 msgid "Amount field"
 msgstr "Bedragveld"
 
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
-#, python-format
 msgid "Analytic"
 msgstr "Analytisch"
 
@@ -123,6 +117,7 @@ msgstr "Analytisch"
 #: model:ir.model,name:analytic.model_account_analytic_account
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__name
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_line__auto_account_id
+#: model:ir.model.fields,field_description:analytic.field_analytic_plan_fields_mixin__auto_account_id
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_account_form
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_account_search
 msgid "Analytic Account"
@@ -157,7 +152,6 @@ msgstr "Analytisch verdeelmodel"
 #: model:ir.model,name:analytic.model_account_analytic_distribution_model
 #: model_terms:ir.ui.view,arch_db:analytic.account_analytic_distribution_model_form_view
 #: model_terms:ir.ui.view,arch_db:analytic.account_analytic_distribution_model_tree_view
-#, python-format
 msgid "Analytic Distribution Model"
 msgstr "Analytisch verdeelmodel"
 
@@ -165,12 +159,6 @@ msgstr "Analytisch verdeelmodel"
 #: model:ir.actions.act_window,name:analytic.action_analytic_distribution_model
 msgid "Analytic Distribution Models"
 msgstr "Analytische verdeelmodellen"
-
-#. module: analytic
-#: model:ir.model.fields,field_description:analytic.field_account_analytic_distribution_model__analytic_distribution_search
-#: model:ir.model.fields,field_description:analytic.field_analytic_mixin__analytic_distribution_search
-msgid "Analytic Distribution Search"
-msgstr "Zoek analytisch verdeelmodel"
 
 #. module: analytic
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_line_form
@@ -206,6 +194,11 @@ msgid "Analytic Plan"
 msgstr "Analytische dimensie"
 
 #. module: analytic
+#: model:ir.model,name:analytic.model_analytic_plan_fields_mixin
+msgid "Analytic Plan Fields"
+msgstr "Velden analytisch dimensie"
+
+#. module: analytic
 #: model:ir.model,name:analytic.model_account_analytic_applicability
 msgid "Analytic Plan's Applicabilities"
 msgstr "Toepassingen van analytische dimensies"
@@ -227,14 +220,12 @@ msgstr "Analytische nauwkeurigheid"
 #. module: analytic
 #. odoo-python
 #: code:addons/analytic/models/analytic_plan.py:0
-#, python-format
 msgid "Analytical Accounts"
 msgstr "Analytische rekeningen"
 
 #. module: analytic
 #. odoo-python
 #: code:addons/analytic/models/analytic_plan.py:0
-#, python-format
 msgid "Analytical Plans"
 msgstr "Analytische dimensies"
 
@@ -254,12 +245,18 @@ msgstr "Gearchiveerd"
 #. module: analytic
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_account_search
 msgid "Associated Partner"
-msgstr "Geassocieerde relatie"
+msgstr "Geassocieerde partner"
 
 #. module: analytic
 #: model:account.analytic.account,name:analytic.analytic_asustek
 msgid "Asustek"
 msgstr "Asustek"
+
+#. module: analytic
+#. odoo-python
+#: code:addons/analytic/models/analytic_line.py:0
+msgid "At least one analytic account must be set"
+msgstr "Er moet minstens een analytische rekening zijn ingesteld"
 
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__message_attachment_count
@@ -280,7 +277,6 @@ msgstr "Saldo:"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.js:0
-#, python-format
 msgid "Business domain"
 msgstr "Zakelijk domein"
 
@@ -322,7 +318,6 @@ msgstr "Klik om een nieuw analytische dimensie toe te voegen."
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
-#, python-format
 msgid "Close"
 msgstr "Afsluiten"
 
@@ -362,7 +357,7 @@ msgstr "Voorwaarden waaraan moet worden voldaan"
 #. module: analytic
 #: model:ir.model,name:analytic.model_res_config_settings
 msgid "Config Settings"
-msgstr "Configuratie instellingen"
+msgstr "Configuratie-instellingen"
 
 #. module: analytic
 #: model:ir.model.fields,help:analytic.field_account_analytic_line__product_uom_category_id
@@ -469,7 +464,6 @@ msgstr "Desertic - Hispafuentes"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.js:0
-#, python-format
 msgid "Disable save"
 msgstr "Schakel opslaan uit"
 
@@ -483,6 +477,12 @@ msgid "Display Name"
 msgstr "Schermnaam"
 
 #. module: analytic
+#: model:ir.model.fields,field_description:analytic.field_account_analytic_distribution_model__distribution_analytic_account_ids
+#: model:ir.model.fields,field_description:analytic.field_analytic_mixin__distribution_analytic_account_ids
+msgid "Distribution Analytic Account"
+msgstr "Distributie analytisch account"
+
+#. module: analytic
 #: model_terms:ir.ui.view,arch_db:analytic.account_analytic_distribution_model_form_view
 msgid "Distribution to apply"
 msgstr "Toe te passen verdeling"
@@ -493,6 +493,11 @@ msgid "Domain"
 msgstr "Domein"
 
 #. module: analytic
+#: model:account.analytic.account,name:analytic.analytic_rd_finance
+msgid "Finance"
+msgstr "Boekhouding"
+
+#. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__message_follower_ids
 msgid "Followers"
 msgstr "Volgers"
@@ -500,19 +505,18 @@ msgstr "Volgers"
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__message_partner_ids
 msgid "Followers (Partners)"
-msgstr "Volgers (Relaties)"
+msgstr "Volgers (Partners)"
 
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.js:0
-#, python-format
 msgid "Force applicability"
 msgstr "Forceer toepasbaarheid"
 
 #. module: analytic
 #: model:ir.actions.act_window,name:analytic.account_analytic_line_action
 msgid "Gross Margin"
-msgstr "Brutomarge"
+msgstr "Bruto marge"
 
 #. module: analytic
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_account_search
@@ -524,6 +528,11 @@ msgstr "Groeperen op..."
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__has_message
 msgid "Has Message"
 msgstr "Heeft bericht"
+
+#. module: analytic
+#: model:account.analytic.account,name:analytic.analytic_rd_hr
+msgid "Human Resources"
+msgstr "Personeelszaken"
 
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__id
@@ -553,7 +562,7 @@ msgid ""
 "                your margins easily."
 msgstr ""
 "In Odoo worden verkooporders en projecten geïmplementeerd door gebruik\n"
-"te maken van analytische rekeningen. Je kunt kosten en inkomsten eenvoudig\n"
+"te maken van analytische rekeningen. Je kunt kosten en omzet eenvoudig\n"
 "vergelijken om je marges te analyseren."
 
 #. module: analytic
@@ -583,6 +592,11 @@ msgstr "Laatst bijgewerkt door"
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_plan__write_date
 msgid "Last Updated on"
 msgstr "Laatst bijgewerkt op"
+
+#. module: analytic
+#: model:account.analytic.account,name:analytic.analytic_rd_legal
+msgid "Legal"
+msgstr "Juridische afdeling"
 
 #. module: analytic
 #: model:account.analytic.account,name:analytic.analytic_think_big_systems
@@ -634,7 +648,6 @@ msgstr "Nevel"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
-#, python-format
 msgid "New Model"
 msgstr "Nieuw model"
 
@@ -651,7 +664,6 @@ msgstr "Nog geen activiteit voor deze rekening"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
-#, python-format
 msgid "No analytic plans found"
 msgstr "Geen analytische dimensies gevonden"
 
@@ -678,19 +690,17 @@ msgstr "Aantal berichten met leveringsfout"
 #. module: analytic
 #. odoo-python
 #: code:addons/analytic/models/analytic_mixin.py:0
-#, python-format
 msgid "One or more lines require a 100% analytic distribution."
 msgstr "Een of meerdere regels vereisen een 100% analytisch verdeelmodel."
 
 #. module: analytic
 #: model:account.analytic.account,name:analytic.analytic_internal
 msgid "Operating Costs"
-msgstr "Operatie kosten"
+msgstr "Operationele kosten"
 
 #. module: analytic
 #. odoo-python
 #: code:addons/analytic/models/analytic_mixin.py:0
-#, python-format
 msgid "Operation not supported"
 msgstr "Bewerking niet ondersteund"
 
@@ -724,17 +734,16 @@ msgstr "Bovenliggend pad"
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_distribution_model__partner_id
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_line__partner_id
 msgid "Partner"
-msgstr "Relatie"
+msgstr "Partner"
 
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_distribution_model__partner_category_id
 msgid "Partner Category"
-msgstr "Relatiecategorie"
+msgstr "Categorie Partner"
 
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.js:0
-#, python-format
 msgid "Percentage"
 msgstr "Percentage"
 
@@ -746,25 +755,30 @@ msgstr "Dimensie"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.js:0
-#, python-format
 msgid "Product field"
 msgstr "Productveld"
 
 #. module: analytic
-#: model:ir.model.fields,field_description:analytic.field_account_analytic_line__account_id
-msgid "Project Account"
-msgstr "Projectrekening"
+#: model:account.analytic.account,name:analytic.analytic_rd_production
+msgid "Production"
+msgstr "Productie"
 
 #. module: analytic
 #: model:account.analytic.plan,name:analytic.analytic_plan_projects
-msgid "Projects"
-msgstr "Projecten"
+msgid "Project"
+msgstr "Project"
+
+#. module: analytic
+#: model:ir.model.fields,field_description:analytic.field_account_analytic_line__account_id
+#: model:ir.model.fields,field_description:analytic.field_analytic_plan_fields_mixin__account_id
+msgid "Project Account"
+msgstr "Projectrekening"
 
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_line__unit_amount
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_line_tree
 msgid "Quantity"
-msgstr "Hoeveelheid"
+msgstr "Aantal"
 
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__code
@@ -803,7 +817,6 @@ msgstr "Hoofddimensie"
 #. module: analytic
 #. odoo-javascript
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
-#, python-format
 msgid "Save as new analytic distribution model"
 msgstr "Opslaan als nieuw analytisch verdeelmodel"
 
@@ -836,9 +849,9 @@ msgid ""
 "(e.g. create new customer invoice or Sales order if we select this partner, "
 "it will automatically take this as an analytic account)"
 msgstr ""
-"Selecteer een relatiecategorie waarvoor de analytisch verdeelmodel zal "
+"Selecteer een partnercategorie waarvoor de analytisch verdeelmodel zal "
 "worden gebruikt (bijv. maak een nieuwe klantfactuur of verkooporder aan als "
-"we deze relatie selecteren, neemt deze dit automatisch als een analytische "
+"we deze partner selecteren, neemt deze dit automatisch als een analytische "
 "rekening)"
 
 #. module: analytic
@@ -848,12 +861,13 @@ msgid ""
 "create new customer invoice or Sales order if we select this partner, it "
 "will automatically take this as an analytic account)"
 msgstr ""
-"Selecteer een relatie waarvoor de analytisch verdeelmodel zal worden "
-"gebruikt (bijv. Maak een nieuwe klantfactuur of verkooporder aan als we deze"
-" relatie selecteren, neemt deze dit automatisch als een analytische "
-"rekening)"
+"Selecteer een partner voor wie de analytische verdeling zal worden gebruikt "
+"(bijvoorbeeld, wanneer we deze partner selecteren voor een nieuwe "
+"klantfactuur of verkooporder, wordt dit automatisch als een analytische "
+"rekening toegewezen)."
 
 #. module: analytic
+#: model:ir.model.fields,field_description:analytic.field_account_analytic_distribution_model__sequence
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_plan__sequence
 msgid "Sequence"
 msgstr "Reeks"
@@ -900,14 +914,8 @@ msgid "User"
 msgstr "Gebruiker"
 
 #. module: analytic
-#: model_terms:ir.ui.view,arch_db:analytic.account_analytic_distribution_model_tree_view
-msgid "View"
-msgstr "Bekijk"
-
-#. module: analytic
 #. odoo-python
 #: code:addons/analytic/models/analytic_account.py:0
-#, python-format
 msgid ""
 "You can't set a different company on your analytic account since there are "
 "some analytic items linked to it."
@@ -917,8 +925,13 @@ msgstr ""
 
 #. module: analytic
 #. odoo-python
+#: code:addons/analytic/models/analytic_plan.py:0
+msgid "You cannot add a parent to the base plan '%s'"
+msgstr "Je kunt geen bovenliggend plan toevoegen aan het basisplan '%s'"
+
+#. module: analytic
+#. odoo-python
 #: code:addons/analytic/models/analytic_distribution_model.py:0
-#, python-format
 msgid ""
 "You defined a distribution with analytic account(s) belonging to a specific "
 "company but a model shared between companies or with a different company"

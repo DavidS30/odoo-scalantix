@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
-
 from random import randint
 
 from odoo import api, fields, models, _
@@ -31,10 +30,7 @@ class AccountAnalyticPlan(models.Model):
         ondelete='cascade',
         domain="['!', ('id', 'child_of', id)]",
     )
-    parent_path = fields.Char(
-        index='btree',
-        unaccent=False,
-    )
+    parent_path = fields.Char(index='btree')
     root_id = fields.Many2one(
         'account.analytic.plan',
         compute='_compute_root_id',
@@ -80,8 +76,6 @@ class AccountAnalyticPlan(models.Model):
             ('unavailable', 'Unavailable'),
         ],
         string="Default Applicability",
-        required=True,
-        default='optional',  # actually set in _auto_init because company dependent
         readonly=False,
         company_dependent=True,
     )
@@ -95,10 +89,10 @@ class AccountAnalyticPlan(models.Model):
     def _auto_init(self):
         super()._auto_init()
         def precommit():
-            self.env['ir.property']._set_default(
-                name='default_applicability',
-                model=self._name,
-                value='optional',
+            self.env['ir.default'].set(
+                self._name,
+                'default_applicability',
+                'optional',
             )
         self.env.cr.precommit.add(precommit)
 
@@ -122,10 +116,10 @@ class AccountAnalyticPlan(models.Model):
         return self.root_id._strict_column_name()
 
     def _inverse_name(self):
-        self._sync_plan_column()
+        self._sync_all_plan_column()
 
     def _inverse_parent_id(self):
-        self._sync_plan_column()
+        self._sync_all_plan_column()
 
     @api.depends('parent_id', 'parent_path')
     def _compute_root_id(self):
@@ -174,6 +168,12 @@ class AccountAnalyticPlan(models.Model):
         for plan in self:
             plan.children_count = len(plan.children_ids)
 
+    @api.onchange('parent_id')
+    def _onchange_parent_id(self):
+        project_plan, __ = self._get_all_plans()
+        if self._origin.id == project_plan.id:
+            raise UserError(_("You cannot add a parent to the base plan '%s'", project_plan.name))
+
     def action_view_analytical_accounts(self):
         result = {
             "type": "ir.actions.act_window",
@@ -219,7 +219,8 @@ class AccountAnalyticPlan(models.Model):
                 "name": plan.name,
                 "color": plan.color,
                 "applicability": plan._get_applicability(**kwargs) if plan in root_plans else 'optional',
-                "all_account_count": plan.all_account_count
+                "all_account_count": plan.all_account_count,
+                "column_name": plan._column_name(),
             }
             for plan in (root_plans + forced_plans).sorted('sequence')
         ]
@@ -250,16 +251,21 @@ class AccountAnalyticPlan(models.Model):
         self._find_plan_column().unlink()
         return super().unlink()
 
-    def _find_plan_column(self):
-        return self.env['ir.model.fields'].sudo().search([
-            ('name', 'in', [plan._strict_column_name() for plan in self]),
-            ('model', '=', 'account.analytic.line'),
-        ])
+    def _find_plan_column(self, model=False):
+        domain = [('name', 'in', [plan._strict_column_name() for plan in self])]
+        if model:
+            domain.append(('model', '=', model))
+        return self.env['ir.model.fields'].sudo().search(domain)
 
-    def _sync_plan_column(self):
-        # Create/delete a new field/column on analytic lines for this plan, and keep the name in sync.
+    def _sync_all_plan_column(self):
+        model_names = self.env.registry.descendants(['analytic.plan.fields.mixin'], '_inherit') - {'analytic.plan.fields.mixin'}
+        for model in model_names:
+            self._sync_plan_column(model)
+
+    def _sync_plan_column(self, model):
+        # Create/delete a new field/column on related models for this plan, and keep the name in sync.
         for plan in self:
-            prev = plan._find_plan_column()
+            prev = plan._find_plan_column(model)
             if plan.parent_id and prev:
                 prev.unlink()
             elif prev:
@@ -270,15 +276,18 @@ class AccountAnalyticPlan(models.Model):
                     'name': column,
                     'field_description': plan.name,
                     'state': 'manual',
-                    'model': 'account.analytic.line',
-                    'model_id': self.env['ir.model']._get_id('account.analytic.line'),
+                    'model': model,
+                    'model_id': self.env['ir.model']._get_id(model),
                     'ttype': 'many2one',
                     'relation': 'account.analytic.account',
-                    'store': True,
+                    'copied': True,
+                    'on_delete': 'restrict',
                 })
-                tablename = self.env['account.analytic.line']._table
-                indexname = make_index_name(tablename, column)
-                create_index(self.env.cr, indexname, tablename, [column], 'btree', f'{column} IS NOT NULL')
+                Model = self.env[model]
+                if Model._auto:
+                    tablename = Model._table
+                    indexname = make_index_name(tablename, column)
+                    create_index(self.env.cr, indexname, tablename, [column], 'btree', f'{column} IS NOT NULL')
 
 
 class AccountAnalyticApplicability(models.Model):

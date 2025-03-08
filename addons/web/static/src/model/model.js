@@ -1,8 +1,7 @@
-/** @odoo-module **/
-
+import { user } from "@web/core/user";
 import { useBus, useService } from "@web/core/utils/hooks";
+import { useSetupAction } from "@web/search/action_hook";
 import { SEARCH_KEYS } from "@web/search/with_search/with_search";
-import { useSetupView } from "@web/views/view_hook";
 import { buildSampleORM } from "./sample_server";
 
 import { EventBus, onWillStart, onWillUpdateProps, status, useComponent } from "@odoo/owl";
@@ -143,7 +142,6 @@ export function useModelWithSampleData(ModelClass, params, options = {}) {
     model.useSampleModel = useSampleModel;
     const orm = model.orm;
     let sampleORM = localState.sampleORM;
-    const user = useService("user");
     let started = false;
 
     async function load(props) {
@@ -179,7 +177,7 @@ export function useModelWithSampleData(ModelClass, params, options = {}) {
         load(nextProps);
     });
 
-    useSetupView({
+    useSetupAction({
         getGlobalState() {
             if (component.props.useSampleModel) {
                 return { useSampleModel };
@@ -191,4 +189,40 @@ export function useModelWithSampleData(ModelClass, params, options = {}) {
     });
 
     return model;
+}
+
+export function _makeFieldFromPropertyDefinition(name, definition, relatedPropertyField) {
+    return {
+        ...definition,
+        name,
+        propertyName: definition.name,
+        relation: definition.comodel,
+        relatedPropertyField,
+    };
+}
+
+export async function addPropertyFieldDefs(orm, resModel, context, fields, groupBy) {
+    const proms = [];
+    for (const gb of groupBy) {
+        if (gb in fields) {
+            continue;
+        }
+        const [fieldName] = gb.split(".");
+        const field = fields[fieldName];
+        if (field?.type === "properties") {
+            proms.push(
+                orm
+                    .call(resModel, "get_property_definition", [gb], {
+                        context,
+                    })
+                    .then((definition) => {
+                        fields[gb] = _makeFieldFromPropertyDefinition(gb, definition, field);
+                    })
+                    .catch(() => {
+                        fields[gb] = _makeFieldFromPropertyDefinition(gb, {}, field);
+                    })
+            );
+        }
+    }
+    return Promise.all(proms);
 }

@@ -9,7 +9,7 @@ class AccountChartTemplate(models.AbstractModel):
     @template('mx')
     def _get_mx_template_data(self):
         return {
-            'code_digits': '3',
+            'code_digits': '9',
             'display_invoice_amount_total_words': True,
             'property_account_receivable_id': 'cuenta105_01',
             'property_account_payable_id': 'cuenta201_01',
@@ -18,7 +18,6 @@ class AccountChartTemplate(models.AbstractModel):
             'property_stock_account_input_categ_id': 'cuenta205_06_01',
             'property_stock_account_output_categ_id': 'cuenta107_05_01',
             'property_stock_valuation_account_id': 'cuenta115_01',
-            'property_cash_basis_base_account_id': 'cuenta801_01_99',
         }
 
     @template('mx', 'res.company')
@@ -37,8 +36,10 @@ class AccountChartTemplate(models.AbstractModel):
                 'account_journal_early_pay_discount_loss_account_id': 'cuenta9993',
                 'account_journal_early_pay_discount_gain_account_id': 'cuenta9994',
                 'tax_cash_basis_journal_id': 'cbmx',
+                'tax_calculation_rounding_method': 'round_globally',
                 'account_sale_tax_id': 'tax12',
                 'account_purchase_tax_id': 'tax14',
+                'account_cash_basis_base_account_id': 'cuenta801_01_99',
             },
         }
 

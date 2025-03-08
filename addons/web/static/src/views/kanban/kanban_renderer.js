@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import { _t } from "@web/core/l10n/translation";
 import { Dropdown } from "@web/core/dropdown/dropdown";
 import { DropdownItem } from "@web/core/dropdown/dropdown_item";
@@ -14,8 +12,8 @@ import { KanbanColumnQuickCreate } from "./kanban_column_quick_create";
 import { KanbanHeader } from "./kanban_header";
 import { KanbanRecord } from "./kanban_record";
 import { KanbanRecordQuickCreate } from "./kanban_record_quick_create";
-
-import { Component, onPatched, onWillDestroy, onWillPatch, useRef, useState } from "@odoo/owl";
+import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Component, onWillDestroy, useRef, useState } from "@odoo/owl";
 import { evaluateExpr } from "@web/core/py_js/py";
 
 const DRAGGABLE_GROUP_TYPES = ["many2one"];
@@ -53,7 +51,6 @@ export class KanbanRenderer extends Component {
         "deleteRecord",
         "openRecord",
         "readonly",
-        "evalViewModifier",
         "forceGlobalClick?",
         "noContentHelp?",
         "scrollTop?",
@@ -132,7 +129,11 @@ export class KanbanRenderer extends Component {
         }
 
         useBounceButton(this.rootRef, (clickedEl) => {
-            if (!this.props.list.count || this.props.list.model.useSampleModel) {
+            if (
+                this.props.list.isGrouped
+                    ? !this.props.list.recordCount
+                    : !this.props.list.count || this.props.list.model.useSampleModel
+            ) {
                 return clickedEl.matches(
                     [
                         ".o_kanban_renderer",
@@ -170,12 +171,16 @@ export class KanbanRenderer extends Component {
                     return;
                 }
 
+                if (this.props.archInfo.canOpenRecords) {
+                    target.click();
+                    return;
+                }
+
                 // Open first link
-                const firstLink = target.querySelector(".oe_kanban_global_click, a, button");
-                if (firstLink && firstLink instanceof HTMLElement) {
+                const firstLink = target.querySelector("a, button");
+                if (firstLink) {
                     firstLink.click();
                 }
-                return;
             },
             { area: () => this.rootRef.el }
         );
@@ -195,14 +200,6 @@ export class KanbanRenderer extends Component {
         useHotkey("ArrowDown", ({ area }) => this.focusNextCard(area, "down"), arrowsOptions);
         useHotkey("ArrowLeft", ({ area }) => this.focusNextCard(area, "left"), arrowsOptions);
         useHotkey("ArrowRight", ({ area }) => this.focusNextCard(area, "right"), arrowsOptions);
-
-        let previousScrollTop = 0;
-        onWillPatch(() => {
-            previousScrollTop = this.rootRef.el.scrollTop;
-        });
-        onPatched(() => {
-            this.rootRef.el.scrollTop = previousScrollTop;
-        });
     }
 
     // ------------------------------------------------------------------------
@@ -372,6 +369,19 @@ export class KanbanRenderer extends Component {
     // Edition methods
     // ------------------------------------------------------------------------
 
+    async archiveRecord(record, active) {
+        if (active) {
+            this.dialog.add(ConfirmationDialog, {
+                body: _t("Are you sure that you want to archive this record?"),
+                confirmLabel: _t("Archive"),
+                confirm: () => record.archive(),
+                cancel: () => {},
+            });
+        } else {
+            return record.unarchive();
+        }
+    }
+
     async validateQuickCreate(recordId, mode, group) {
         this.props.quickCreateState.groupId = false;
         if (mode === "add") {
@@ -480,10 +490,6 @@ export class KanbanRenderer extends Component {
                 await this.props.list.moveRecord(dataRecordId, dataGroupId, refId, targetGroupId);
             } finally {
                 this.toggleProcessing(dataRecordId, false);
-            }
-            if (dataGroupId !== targetGroupId) {
-                const group = this.props.list.groups.find((g) => g.id === dataGroupId);
-                this.props.progressBarState?.updateAggreagteGroup(group);
             }
         }
     }

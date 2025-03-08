@@ -5,6 +5,11 @@ import { useState } from "@odoo/owl";
 
 
 export class ProductCatalogSearchPanel extends SearchPanel {
+    static subTemplates = {
+        ...SearchPanel.subTemplates,
+        filtersGroup: "ProductCatalogSearchPanel.FiltersGroup",
+    };
+
     setup() {
         super.setup();
 
@@ -32,7 +37,7 @@ export class ProductCatalogSearchPanel extends SearchPanel {
                 let currentAttr = sections.get(name);
                 currentAttr.get('ids').push(id);
                 currentAttr.set('count', currentAttr.get('count') + count);
-            } else {
+            } else if (count > 0) {
                 let newAttr = new Map();
                 newAttr.set('ids', [id]);
                 newAttr.set('count', count);
@@ -48,9 +53,4 @@ export class ProductCatalogSearchPanel extends SearchPanel {
             this.toggleFilterValue(filterId, id, { currentTarget });
         })
     }
-}
-
-ProductCatalogSearchPanel.subTemplates = {
-    ...SearchPanel.subTemplates,
-    filtersGroup: "ProductCatalogSearchPanel.FiltersGroup",
 }

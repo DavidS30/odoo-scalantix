@@ -7,26 +7,13 @@ from odoo.tests import tagged
 
 
 @tagged('post_install', 'post_install_l10n', '-at_install')
-class OssTemplateTestCase(AccountTestInvoicingCommon):
+class TestOSSBelgium(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref=None):
-        try:
-            super().setUpClass(chart_template_ref=chart_template_ref)
-        except ValueError as e:
-            if e.args[0] == f"External ID not found in the system: {chart_template_ref}":
-                cls.skipTest(cls, reason=f"The {chart_template_ref} CoA is required for this testSuite but the corresponding localization module isn't installed")
-            else:
-                raise e
-
-@tagged('post_install', 'post_install_l10n', '-at_install')
-class TestOSSBelgium(OssTemplateTestCase):
-
-    @classmethod
-    def setUpClass(cls, chart_template_ref='be_comp'):
-        super().setUpClass(chart_template_ref)
+    @AccountTestInvoicingCommon.setup_country('be')
+    def setUpClass(cls):
+        super().setUpClass()
         cls.root_company = cls.company_data['company']
-        cls.root_company.country_id = cls.env.ref('base.be')
         cls.root_company.child_ids = [Command.create({'name': 'Branch A'})]
         cls.cr.precommit.run()  # load the CoA
         cls.child_company = cls.root_company.child_ids
@@ -40,7 +27,7 @@ class TestOSSBelgium(OssTemplateTestCase):
         self.env.user.company_id, self.env.user.company_ids = self.sub_child_company, self.sub_child_company
 
         another_eu_country_code = (self.env.ref('base.europe').country_ids - self.sub_child_company.country_id)[0].code
-        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%{another_eu_country_code}%')], limit=1)
+        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%"{another_eu_country_code}"%')], limit=1)
         self.assertTrue(tax_oss)
         self.assertEqual(tax_oss.company_id, self.root_company)
 
@@ -62,7 +49,7 @@ class TestOSSBelgium(OssTemplateTestCase):
         self.sub_child_company._map_eu_taxes()
         # get an eu country which isn't the current one:
         another_eu_country_code = (self.env.ref('base.europe').country_ids - self.company_data['company'].country_id)[0].code
-        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%{another_eu_country_code}%')], limit=1)
+        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%"{another_eu_country_code}"%')], limit=1)
 
         for doc_type, report_expression_xml_id in (
                 ("invoice", "l10n_be.tax_report_line_47_tag"),
@@ -81,12 +68,12 @@ class TestOSSBelgium(OssTemplateTestCase):
 
 
 @tagged('post_install', 'post_install_l10n', '-at_install')
-class TestOSSSpain(OssTemplateTestCase):
+class TestOSSSpain(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref='es_full'):
-        super().setUpClass(chart_template_ref)
-        cls.company_data['company'].country_id = cls.env.ref('base.es')
+    @AccountTestInvoicingCommon.setup_country('es')
+    def setUpClass(cls):
+        super().setUpClass()
         cls.company_data['company']._map_eu_taxes()
 
     def test_country_tag_from_spain(self):
@@ -96,7 +83,7 @@ class TestOSSSpain(OssTemplateTestCase):
         """
         # get an eu country which isn't the current one:
         another_eu_country_code = (self.env.ref('base.europe').country_ids - self.company_data['company'].country_id)[0].code
-        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%{another_eu_country_code}%')], limit=1)
+        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%"{another_eu_country_code}"%')], limit=1)
 
         for doc_type, tag_xml_id in (
                 ("invoice", "l10n_es.mod_303_casilla_124_balance"),
@@ -114,18 +101,17 @@ class TestOSSSpain(OssTemplateTestCase):
 
 
 @tagged('post_install', 'post_install_l10n', '-at_install')
-class TestOSSUSA(OssTemplateTestCase):
+class TestOSSUSA(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref=None):
-        super().setUpClass(chart_template_ref)
-        cls.company_data['company'].country_id = cls.env.ref('base.us')
+    def setUpClass(cls):
+        super().setUpClass()
         cls.company_data['company']._map_eu_taxes()
 
     def test_no_oss_tax(self):
         # get an eu country which isn't the current one:
         another_eu_country_code = (self.env.ref('base.europe').country_ids - self.company_data['company'].country_id)[0].code
-        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%{another_eu_country_code}%')], limit=1)
+        tax_oss = self.env['account.tax'].search([('name', 'ilike', f'%"{another_eu_country_code}"%')], limit=1)
 
         self.assertFalse(len(tax_oss), "OSS tax shouldn't be instanced on a US company")
 
@@ -146,6 +132,7 @@ class TestOSSUSA(OssTemplateTestCase):
         self.env.user.company_id, self.env.user.company_ids = self.sub_child_company, self.sub_child_company
 
         foreign_country = self.env.ref('base.be')
+        foreign_state = self.env.ref('base.state_be_1')
         self.sub_child_company.country_id = foreign_country
         self.sub_child_company.account_fiscal_country_id = self.sub_child_company.country_id
         self.sub_child_company.vat = "BE0477472701"
@@ -154,6 +141,7 @@ class TestOSSUSA(OssTemplateTestCase):
             "name": "sub branch BE foreign VAT",
             "auto_apply": True,
             "country_id": foreign_country.id,
+            "state_ids": foreign_state.ids,
             "foreign_vat": "BE0477472701",
             "company_id": self.sub_child_company.id,
         })
@@ -170,7 +158,7 @@ class TestOSSUSA(OssTemplateTestCase):
 
 
 @tagged('post_install', 'post_install_l10n', '-at_install')
-class TestOSSMap(OssTemplateTestCase):
+class TestOSSMap(AccountTestInvoicingCommon):
 
     def test_oss_eu_tag_map(self):
         """ Checks that the xml_id referenced in the map are correct.

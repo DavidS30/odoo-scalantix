@@ -83,6 +83,66 @@ class TestWarehouseMrp(common.TestMrpCommon):
         self.assertTrue(self.warehouse_1.manu_type_id.active)
         self.assertIn(manu_route, warehouse_1_stock_manager._get_all_routes())
 
+    def test_manufacturing_rule_other_dest(self):
+        """ Ensures that a manufacturing rule can define a destination the rule itself and have it
+            applied instead of the one from the operation type if location_dest_from_rule is set.
+        """
+        freezer_loc = self.env['stock.location'].create({
+            'name': 'Freezer',
+            'location_id': self.warehouse_1.view_location_id.id,
+        })
+        route = self.env['stock.route'].create({
+            'name': 'Manufacture then freeze',
+            'rule_ids': [
+                Command.create({
+                    'name': 'Freezer -> Stock',
+                    'action': 'pull',
+                    'procure_method': 'make_to_order',
+                    'picking_type_id': self.warehouse_1.int_type_id.id,
+                    'location_src_id': freezer_loc.id,
+                    'location_dest_id': self.warehouse_1.lot_stock_id.id,
+                    'location_dest_from_rule': True,
+                }),
+                Command.create({
+                    'name': 'Manufacture',
+                    'action': 'manufacture',
+                    'picking_type_id': self.warehouse_1.manu_type_id.id,
+                    'location_src_id': self.warehouse_1.lot_stock_id.id,
+                    'location_dest_id': freezer_loc.id,
+                    'location_dest_from_rule': True,
+                }),
+            ],
+        })
+        # Remove the classic Manufacture route if it exists and replace it by the new one
+        self.product_4.route_ids = [
+            Command.link(route.id),
+            Command.unlink(self.warehouse_1.manufacture_pull_id.id),
+        ]
+
+        # Create a procurement to resupply the Stock, taking from the Freezer.
+        pgroup = self.env['procurement.group'].create({'name': 'test-manu-to-freeze'})
+        self.env['procurement.group'].run([
+            pgroup.Procurement(
+                self.product_4,
+                5.0,
+                self.product_4.uom_id,
+                self.warehouse_1.lot_stock_id,
+                'test_other_dest',
+                'test_other_dest',
+                self.warehouse_1.company_id,
+                {
+                    'warehouse_id': self.warehouse_1,
+                    'group_id': pgroup,
+                }
+            )
+        ])
+
+        # Make sure the production is delivering the goods in the location set on the rule.
+        production = self.env['mrp.production'].search([('product_id', '=', self.product_4.id)])
+        self.assertEqual(len(production), 1)
+        self.assertEqual(production.picking_type_id.default_location_dest_id, self.warehouse_1.lot_stock_id)
+        self.assertEqual(production.location_dest_id, freezer_loc)
+
     def test_multi_warehouse_resupply(self):
         """ test a multi warehouse flow give a correct date delay
             product_6 is sold from warehouse_1, its component (product_4) is
@@ -146,12 +206,10 @@ class TestWarehouseMrp(common.TestMrpCommon):
         lot_product_4 = self.env['stock.lot'].create({
             'name': '0000000000001',
             'product_id': self.product_4.id,
-            'company_id': self.env.company.id,
         })
         lot_product_2 = self.env['stock.lot'].create({
             'name': '0000000000002',
             'product_id': self.product_2.id,
-            'company_id': self.env.company.id,
         })
 
         # Inventory for Stick
@@ -213,7 +271,7 @@ class TestWarehouseMrp(common.TestMrpCommon):
         """
         self.laptop.tracking = 'serial'
         mo_laptop = self.new_mo_laptop()
-        serial = self.env['stock.lot'].create({'product_id': self.laptop.id, 'company_id': self.env.company.id})
+        serial = self.env['stock.lot'].create({'product_id': self.laptop.id})
 
         mo_form = Form(mo_laptop)
         mo_form.qty_producing = 1
@@ -232,7 +290,7 @@ class TestWarehouseMrp(common.TestMrpCommon):
         warehouse = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1)
         warehouse.write({'manufacture_steps': 'pbm'})
 
-        self.product_1.type = 'product'
+        self.product_1.is_storable = True
         self.env['stock.quant']._update_available_quantity(self.product_1, self.stock_location, 100)
 
         mo_form = Form(self.env['mrp.production'])
@@ -249,9 +307,7 @@ class TestWarehouseMrp(common.TestMrpCommon):
             'result_package_id': package.id,
         })
 
-        res_dict = picking.button_validate()
-        wizard = Form(self.env[res_dict['res_model']].with_context(res_dict['context'])).save()
-        wizard.process()
+        Form.from_action(self.env, picking.button_validate()).save().process()
 
         backorder = picking.backorder_ids
         backorder.move_line_ids.quantity = 80
@@ -269,7 +325,7 @@ class TestKitPicking(common.TestMrpCommon):
         def create_product(name):
             p = Form(cls.env['product.product'])
             p.name = name
-            p.detailed_type = 'product'
+            p.is_storable = True
             return p.save()
 
         # Create a kit 'kit_parent' :
@@ -441,7 +497,7 @@ class TestKitPicking(common.TestMrpCommon):
         self.bom_4.type = 'phantom'
         kit = self.bom_4.product_id
         compo = self.bom_4.bom_line_ids.product_id
-        product = self.env['product.product'].create({'name': 'Super Product', 'type': 'product'})
+        product = self.env['product.product'].create({'name': 'Super Product', 'is_storable': True})
 
         receipt = self.env['stock.picking'].create({
             'picking_type_id': in_type.id,
@@ -483,7 +539,7 @@ class TestKitPicking(common.TestMrpCommon):
         uom_unit = self.env.ref('uom.product_uom_unit')
         kit, kit_component_1, kit_component_2, not_kit_1, not_kit_2 = self.env['product.product'].create([{
             'name': name,
-            'type': 'product',
+            'is_storable': True,
             'uom_id': uom_unit.id,
         } for name in ['Kit', 'Kit Component 1', 'Kit Component 2', 'Not Kit 1', 'Not Kit 2']])
 
@@ -524,7 +580,7 @@ class TestKitPicking(common.TestMrpCommon):
         delivery.move_line_ids.filtered(lambda ml: ml.product_id == not_kit_1).quantity = 4
         delivery.move_line_ids.filtered(lambda ml: ml.product_id == not_kit_2).quantity = 2
         backorder_wizard_dict = delivery.button_validate()
-        backorder_wizard_form = Form(self.env[backorder_wizard_dict['res_model']].with_context(backorder_wizard_dict['context']))
+        backorder_wizard_form = Form.from_action(self.env, backorder_wizard_dict)
         backorder_wizard_form.save().process_cancel_backorder()
 
         aggregate_not_kit_values = delivery.move_line_ids._get_aggregated_product_quantities()
@@ -539,22 +595,22 @@ class TestKitPicking(common.TestMrpCommon):
         """
         Scrap a consumable kit with one product not available in stock
         """
-        self._test_scrap_kit_not_available('consu')
+        self._test_scrap_kit_not_available(False)
 
     def test_scrap_storable_kit_not_available(self):
         """
         Scrap a storable kit with one product not available in stock
         """
-        self._test_scrap_kit_not_available('product')
+        self._test_scrap_kit_not_available(True)
 
-    def _test_scrap_kit_not_available(self, kit_type):
+    def _test_scrap_kit_not_available(self, storable):
         bom = self.bom_4
         bom.type = 'phantom'
 
         kit = bom.product_id
         component = bom.bom_line_ids.product_id
-        kit.type = kit_type
-        component.type = 'product'
+        kit.is_storable = storable
+        component.is_storable = True
 
         scrap = self.env['stock.scrap'].create({
             'product_id': kit.id,
@@ -563,9 +619,7 @@ class TestKitPicking(common.TestMrpCommon):
             'bom_id': bom.id,
         })
 
-        res = scrap.action_validate()
-        wizard = Form(self.env[res['res_model']].with_context(**res['context'])).save()
-        wizard.action_done()
+        Form.from_action(self.env, scrap.action_validate()).save().action_done()
 
         self.assertEqual(scrap.state, 'done')
         self.assertRecordValues(scrap.move_ids, [

@@ -115,6 +115,7 @@ patch(BarcodeParser.prototype, {
         const rules = this.nomenclature.rules.filter(rule => rule.encoding === 'gs1-128');
         const separatorReg = `(?:${FNC1_CHAR}+)?`;
         barcode = this._convertGS1Separators(barcode);
+        barcode = this.cleanBarcode(barcode);
 
         while (barcode.length > 0) {
             const barcodeLength = barcode.length;
@@ -145,11 +146,24 @@ patch(BarcodeParser.prototype, {
      * @override
      * @returns {Object|Array|null} If nomenclature is GS1, returns an array or null
      */
-    parse_barcode(barcode) {
+    parseBarcodeNomenclature(barcode) {
         if (this.nomenclature && this.nomenclature.is_gs1_nomenclature) {
             return this.gs1_decompose_extanded(barcode);
         }
-        return super.parse_barcode(...arguments);
+        return super.parseBarcodeNomenclature(...arguments);
+    },
+
+    /**
+     * Makes all needed operations to clean and prepare the barcode.
+     * @param {string} barcode
+     * @returns {string}
+     */
+    cleanBarcode(barcode) {
+        if (barcode[0] === FNC1_CHAR) {
+            // If first character is the separator, remove it to be able to parse the barcode.
+            barcode = barcode.slice(1);
+        }
+        return barcode;
     },
 
     /**

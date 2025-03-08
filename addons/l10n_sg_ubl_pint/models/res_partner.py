@@ -5,17 +5,16 @@ from odoo import models, fields
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    ubl_cii_format = fields.Selection(selection_add=[('pint_sg', "PINT Singapore")])
+    invoice_edi_format = fields.Selection(selection_add=[('pint_sg', "PINT Singapore")])
 
-    def _get_edi_builder(self):
+    def _get_edi_builder(self, invoice_edi_format):
         # EXTENDS 'account_edi_ubl_cii'
-        if self.ubl_cii_format == 'pint_sg':
+        if invoice_edi_format == 'pint_sg':
             return self.env['account.edi.xml.pint_sg']
-        return super()._get_edi_builder()
+        return super()._get_edi_builder(invoice_edi_format)
 
-    def _compute_ubl_cii_format(self):
+    def _get_ubl_cii_formats_info(self):
         # EXTENDS 'account_edi_ubl_cii'
-        super()._compute_ubl_cii_format()
-        for partner in self:
-            if partner.country_code == 'SG':
-                partner.ubl_cii_format = 'pint_sg'
+        formats_info = super()._get_ubl_cii_formats_info()
+        formats_info['pint_sg'] = {'countries': ['SG'], 'on_peppol': True, 'sequence': 90}  # has priority over UBL_SG from 'account_edi_ubl_cii'
+        return formats_info

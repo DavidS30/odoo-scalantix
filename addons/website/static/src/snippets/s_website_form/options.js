@@ -6,8 +6,11 @@ import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_d
 import weUtils from "@web_editor/js/common/utils";
 import "@website/js/editor/snippets.options";
 import { unique } from "@web/core/utils/arrays";
+import { redirect } from "@web/core/utils/urls";
 import { _t } from "@web/core/l10n/translation";
+import { memoize } from "@web/core/utils/functions";
 import { renderToElement } from "@web/core/utils/render";
+import { escape } from "@web/core/utils/strings";
 import { formatDate, formatDateTime } from "@web/core/l10n/dates";
 import wUtils from '@website/js/utils';
 
@@ -38,6 +41,41 @@ function _getDomain(formEl, name, type, relation) {
     return field && field.domain;
 }
 
+const authorizedFieldsCache = {
+    data: {},
+    /**
+     * Returns the fields definitions for a form
+     *
+     * @param {HTMLElement} formEl
+     * @param {Object} orm
+     * @returns {Promise}
+     */
+    get(formEl, orm) {
+        // Combine model and fields into cache key.
+        const model = formEl.dataset.model_name;
+        const propertyOrigins = {};
+        const parts = [model];
+        for (const hiddenInputEl of [...formEl.querySelectorAll("input[type=hidden]")].sort(
+            (firstEl, secondEl) => firstEl.name.localeCompare(secondEl.name)
+        )) {
+            // Pushing using the name order to avoid being impacted by the
+            // order of hidden fields within the DOM.
+            parts.push(hiddenInputEl.name);
+            parts.push(hiddenInputEl.value);
+            propertyOrigins[hiddenInputEl.name] = hiddenInputEl.value;
+        }
+        const cacheKey = parts.join("/");
+        if (!(cacheKey in this.data)) {
+            this.data[cacheKey] = orm.call("ir.model", "get_authorized_fields", [
+                model,
+                propertyOrigins,
+            ]);
+        }
+        return this.data[cacheKey];
+    },
+};
+
+
 const FormEditor = options.Class.extend({
     init() {
         this._super(...arguments);
@@ -64,14 +102,28 @@ const FormEditor = options.Class.extend({
         if (field.records) {
             return field.records;
         }
-        // Set selection as records to avoid added conplexity
-        if (field.type === 'selection') {
+        if (field._property && field.type === "tags") {
+            // Convert tags to records to avoid added complexity.
+            // Tag ids need to escape "," to be able to recover their value on
+            // the server side if they contain ",".
+            field.records = field.tags.map(tag => ({
+                id: tag[0].replaceAll("\\", "\\/").replaceAll(",", "\\,"),
+                display_name: tag[1],
+            }));
+        } else if (field._property && field.comodel) {
+            field.records = await this.orm.searchRead(field.comodel, field.domain || [], ["display_name"]);
+        } else if (field.type === "selection") {
+            // Set selection as records to avoid added complexity.
             field.records = field.selection.map(el => ({
                 id: el[0],
                 display_name: el[1],
             }));
         } else if (field.relation && field.relation !== 'ir.attachment') {
-            field.records = await this.orm.searchRead(field.relation, field.domain || [], ["display_name"]);
+            const fieldNames = field.fieldName ? [field.fieldName] : ["display_name"];
+            field.records = await this.orm.searchRead(field.relation, field.domain || [], fieldNames);
+            if (field.fieldName) {
+                field.records.forEach(r => r["display_name"] = r[field.fieldName]);
+            }
         }
         return field.records;
     },
@@ -110,7 +162,7 @@ const FormEditor = options.Class.extend({
      */
     _getDefaultFormat: function () {
         return {
-            labelWidth: this.$target[0].querySelector('.s_website_form_label').style.width,
+            labelWidth: this.$target[0].querySelector('.s_website_form_label')?.style.width || "200px",
             labelPosition: 'left',
             multiPosition: 'horizontal',
             requiredMark: this._isRequiredMark(),
@@ -126,19 +178,24 @@ const FormEditor = options.Class.extend({
         return this.$target[0].dataset.mark;
     },
     /**
-     * Replace all `"` character by `&quot;`, all `'` character by `&apos;` and
-     * all "`" character by `&lsquo;`. This is needed in order to be able to
-     * perform querySelector of this type: `querySelector(`[name="${name}"]`)`.
-     * It also encodes the "\\" sequence to avoid having to escape it when doing
-     * a `querySelector`.
+     * Replace all `"` character by `&quot;`.
      *
      * @param {string} name
+     * @returns {string}
      */
     _getQuotesEncodedName(name) {
-        return name.replaceAll(/"/g, character => `&quot;`)
-                   .replaceAll(/'/g, character => `&apos;`)
-                   .replaceAll(/`/g, character => `&lsquo;`)
-                   .replaceAll("\\", character => `&bsol;`);
+        // Browsers seem to be encoding the double quotation mark character as
+        // `%22` (URI encoded version) when used inside an input's name. It is
+        // actually quite weird as a sent `<input name='Hello "world" %22'/>`
+        // will actually be received as `Hello %22world%22 %22` on the server,
+        // making it impossible to know which is actually a real double
+        // quotation mark and not the "%22" string. Values do not have this
+        // problem: `Hello "world" %22` would be received as-is on the server.
+        // In the future, we should consider not using label values as input
+        // names anyway; the idea was bad in the first place. We should probably
+        // assign random field names (as we do for IDs) and send a mapping
+        // with the labels, as values (TODO ?).
+        return name.replaceAll(/"/g, character => `&quot;`);
     },
     /**
      * @private
@@ -163,7 +220,7 @@ const FormEditor = options.Class.extend({
         if (!field.id) {
             field.id = weUtils.generateHTMLId();
         }
-        const params = { field: { ...field } };
+        const params = { field: { ...field }, defaultName: escape(_t("Field")) };
         if (["url", "email", "tel"].includes(field.type)) {
             params.field.inputType = field.type;
         }
@@ -182,7 +239,8 @@ const FormEditor = options.Class.extend({
             params.default_description = _t("Separate email addresses with a comma.");
         }
         const template = document.createElement('template');
-        template.content.append(renderToElement("website.form_field_" + field.type, params));
+        const renderType = field.type === "tags" ? "many2many" : field.type;
+        template.content.append(renderToElement("website.form_field_" + renderType, params));
         if (field.description && field.description !== true) {
             $(template.content.querySelector('.s_website_form_field_description')).replaceWith(field.description);
         }
@@ -376,28 +434,35 @@ options.registry.WebsiteFormEditor = FormEditor.extend({
         // e.g. User should not be enable to change existing job application form
         // to opportunity form in 'Apply job' page.
         this.modelCantChange = this.$target.attr('hide-change-model') !== undefined;
-        if (this.modelCantChange) {
-            return _super(...arguments);
-        }
-
-        // Get list of website_form compatible models.
-        this.models = await this.orm.call("ir.model", "get_compatible_form_models");
+        this.models = await this._fetchModels();
 
         const targetModelName = this.$target[0].dataset.model_name || 'mail.mail';
         this.activeForm = this.models.find(m => m.model === targetModelName);
-        currentActionName = this.activeForm.website_form_label;
-        // Create the Form Action select
-        this.selectActionEl = document.createElement('we-select');
-        this.selectActionEl.setAttribute('string', 'Action');
-        this.selectActionEl.dataset.noPreview = 'true';
-        this.models.forEach(el => {
-            const option = document.createElement('we-button');
-            option.textContent = el.website_form_label;
-            option.dataset.selectAction = el.id;
-            this.selectActionEl.append(option);
-        });
+        currentActionName = this.activeForm && this.activeForm.website_form_label
 
+        this._makeSelectAction();
         return _super(...arguments);
+    },
+
+    _fetchModels() {
+        // Get list of website_form compatible models.
+        return this.orm.call("ir.model", "get_compatible_form_models");
+    },
+
+    _makeSelectAction() {
+        if (!this.modelCantChange) {
+            // Create the Form Action select
+            this.selectActionEl = document.createElement('we-select');
+            this.selectActionEl.setAttribute('string', 'Action');
+            this.selectActionEl.dataset.noPreview = 'true';
+            this.models.forEach(el => {
+                const option = document.createElement('we-button');
+                option.textContent = el.website_form_label;
+                option.dataset.selectAction = el.id;
+                this.selectActionEl.append(option);
+            });
+            return this.selectActionEl;
+        }
     },
     /**
      * @override
@@ -406,8 +471,17 @@ options.registry.WebsiteFormEditor = FormEditor.extend({
         const proms = [this._super(...arguments)];
         // Disable text edition
         this.$target.attr('contentEditable', false);
-        // Make button, description, and recaptcha editable
-        this.$target.find('.s_website_form_send, .s_website_form_field_description, .s_website_form_recaptcha').attr('contentEditable', true);
+        // Identify editable elements of the form: buttons, description,
+        // recaptcha and columns which are not fields.
+        const formEditableSelector = [
+            ".s_website_form_send",
+            ".s_website_form_field_description",
+            ".s_website_form_recaptcha",
+            ".row > div:not(.s_website_form_field, .s_website_form_submit, .s_website_form_field *, .s_website_form_submit *)",
+        ].map(selector => `:scope ${selector}`).join(", ");
+        for (const formEditableEl of this.$target[0].querySelectorAll(formEditableSelector)) {
+            formEditableEl.contentEditable = "true";
+        }
         // Get potential message
         this.$message = this.$target.parent().find('.s_website_form_end_message');
         this.showEndMessage = false;
@@ -480,7 +554,7 @@ options.registry.WebsiteFormEditor = FormEditor.extend({
         if (name === 'field_mark') {
             this._setLabelsMark();
         } else if (name === 'add_field') {
-            const field = this._getCustomField('char', 'Custom Text');
+            const field = this._getCustomField('char', _t("Custom Text"));
             field.formatInfo = data.formatInfo;
             field.formatInfo.requiredMark = this._isRequiredMark();
             field.formatInfo.optionalMark = this._isOptionalMark();
@@ -502,11 +576,26 @@ options.registry.WebsiteFormEditor = FormEditor.extend({
      * ie: The Job you apply for if the form is on that job's page.
      */
     addActionField: function (previewMode, value, params) {
+        // Remove old property fields.
+        authorizedFieldsCache.get(this.$target[0], this.orm).then((fields) => {
+            for (const [fieldName, field] of Object.entries(fields)) {
+                if (field._property) {
+                    for (const inputEl of this.$target[0].querySelectorAll(`[name="${fieldName}"]`)) {
+                        inputEl.closest(".s_website_form_field").remove();
+                    }
+                }
+            }
+        });
         const fieldName = params.fieldName;
         if (params.isSelect === 'true') {
             value = parseInt(value);
         }
         this._addHiddenField(value, fieldName);
+        // Existing field editors need to be rebuilt with the correct list of
+        // available fields.
+        this.trigger_up('activate_snippet', {
+            $snippet: this.$target,
+        });
     },
     /**
      * Prompts the user to save changes before being redirected
@@ -534,6 +623,7 @@ options.registry.WebsiteFormEditor = FormEditor.extend({
                             reject();
                         },
                     });
+                    resolve();
                 },
                 cancel: () => resolve(),
             });
@@ -850,7 +940,7 @@ options.registry.WebsiteFormEditor = FormEditor.extend({
      * @param {string} action
      */
     _redirectToAction: function (action) {
-        window.location.replace(`/web#action=${encodeURIComponent(action)}`);
+        redirect(`/odoo/action-${encodeURIComponent(action)}`);
     },
 
     //--------------------------------------------------------------------------
@@ -869,8 +959,6 @@ options.registry.WebsiteFormEditor = FormEditor.extend({
     },
 });
 
-const authorizedFieldsCache = {};
-
 options.registry.WebsiteFieldEditor = FieldEditor.extend({
     /**
      * @override
@@ -878,40 +966,14 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
     init: function () {
         this._super.apply(this, arguments);
         this.rerender = true;
-    },
-    /**
-     * @override
-     */
-    willStart: async function () {
-        const _super = this._super.bind(this);
-        // Get the authorized existing fields for the form model
-        const model = this.formEl.dataset.model_name;
-        let getFields;
-        if (model in authorizedFieldsCache) {
-            getFields = authorizedFieldsCache[model];
-        } else {
-            getFields = this.orm.call("ir.model", "get_authorized_fields", [model]);
-            authorizedFieldsCache[model] = getFields;
-        }
-
-        this.existingFields = await getFields.then((fields) => {
-            this.fields = {};
-            for (const [fieldName, field] of Object.entries(fields)) {
-                field.name = fieldName;
-                const fieldDomain = _getDomain(this.formEl, field.name, field.type, field.relation);
-                field.domain = fieldDomain || field.domain || [];
-                this.fields[fieldName] = field;
-            }
-            // Create the buttons for the type we-select
-            return Object.keys(fields).map(key => {
-                const field = fields[key];
-                const button = document.createElement('we-button');
-                button.textContent = field.string;
-                button.dataset.existingField = field.name;
-                return button;
-            }).sort((a, b) => (a.textContent > b.textContent) ? 1 : (a.textContent < b.textContent) ? -1 : 0);
-        });
-        return _super(...arguments);
+        this._getVisibilityConditionCachedRecords = memoize(
+            (model, domain, fields, kwargs = {}) => {
+                return this.orm.searchRead(model, domain, fields, {
+                    ...kwargs,
+                    limit: 1000, // Safeguard to not crash DBs
+                });
+            },
+        );
     },
     /**
      * @override
@@ -925,16 +987,6 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
             await this._replaceField(field);
         }
         return _super(...arguments);
-    },
-    /**
-     * @override
-     */
-    cleanForSave: function () {
-        this.$target[0].querySelectorAll('#editable_select').forEach(el => el.remove());
-        const select = this._getSelect();
-        if (select) {
-            select.style.display = '';
-        }
     },
     /**
      * @override
@@ -974,11 +1026,11 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
      */
     onRemove() {
         const fieldName = this.$target[0].querySelector('.s_website_form_input').name;
-        const isMultipleField = this.formEl.querySelectorAll(`.s_website_form_input[name="${fieldName}"]`).length > 1;
+        const isMultipleField = this.formEl.querySelectorAll(`.s_website_form_input[name="${CSS.escape(fieldName)}"]`).length > 1;
         if (isMultipleField) {
             return;
         }
-        const dependentFieldContainerEl = this.formEl.querySelectorAll(`[data-visibility-dependency="${fieldName}"]`);
+        const dependentFieldContainerEl = this.formEl.querySelectorAll(`[data-visibility-dependency="${CSS.escape(fieldName)}"]`);
         for (const fieldContainerEl of dependentFieldContainerEl) {
             this._deleteConditionalVisibility(fieldContainerEl);
         }
@@ -1025,6 +1077,16 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         this.rerender = true;
     },
     /**
+     * Set the the selction type of existing fields (radio or dropdown).
+     *
+     * @see this.selectClass for parameters
+     */
+    async existingFieldSelectType(previewMode, value, params) {
+        const field = this._getActiveField();
+        field.type = value;
+        await this._replaceField(field);
+    },
+    /**
      * Set the name of the field on the label
      */
     setLabelText: function (previewMode, value, params) {
@@ -1040,7 +1102,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
             inputEls.forEach(el => el.name = value);
 
             // Synchronize the fields whose visibility depends on this field
-            const dependentEls = this.formEl.querySelectorAll(`.s_website_form_field[data-visibility-dependency="${previousInputName}"]`);
+            const dependentEls = this.formEl.querySelectorAll(`.s_website_form_field[data-visibility-dependency="${CSS.escape(previousInputName)}"]`);
             for (const dependentEl of dependentEls) {
                 if (!previewMode && this._findCircular(this.$target[0], dependentEl)) {
                     // For all the fields whose visibility depends on this
@@ -1121,7 +1183,21 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
      * Apply the we-list on the target and rebuild the input(s)
      */
     renderListItems: async function (previewMode, value, params) {
-        const valueList = JSON.parse(value);
+        let valueList = JSON.parse(value);
+        if (this._getSelect()) {
+            // Default entry only for fields rendered as select.
+            // Remove previous default.
+            valueList = valueList.filter(value => value.id !== "" || value.display_name !== "");
+            // Add default in first position if no default value is set.
+            const hasDefault = valueList.some(value => value.selected);
+            if (valueList.length && !hasDefault) {
+                valueList.unshift({
+                    id: "",
+                    display_name: "",
+                    selected: true,
+                });
+            }
+        }
 
         // Synchronize the possible values with the fields whose visibility
         // depends on the current field
@@ -1132,7 +1208,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
             const input = inputEls[i];
             if (newValuesText[i] && input.value && !newValuesText.includes(input.value)) {
                 for (const dependentEl of this.formEl.querySelectorAll(
-                        `[data-visibility-condition="${input.value}"][data-visibility-dependency="${inputName}"]`)) {
+                        `[data-visibility-condition="${CSS.escape(input.value)}"][data-visibility-dependency="${CSS.escape(inputName)}"]`)) {
                     dependentEl.dataset.visibilityCondition = newValuesText[i];
                 }
                 break;
@@ -1202,6 +1278,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
             case 'selectLabelPosition':
                 return this._getLabelPosition();
             case 'selectType':
+            case "existingFieldSelectType":
                 return this._getFieldType();
             case 'selectTextareaValue':
                 return this.$target[0].textContent;
@@ -1214,7 +1291,13 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
             case 'toggleRequired':
                 return this.$target[0].classList.contains(params.activeValue) ? params.activeValue : 'false';
             case 'renderListItems':
-                return JSON.stringify(this._getListItems());
+                // TODO In master use a parameter.
+                this.__getListItems_forWidgetState = true;
+                try {
+                    return JSON.stringify(this._getListItems());
+                } finally {
+                    delete this.__getListItems_forWidgetState;
+                }
             case 'setVisibilityDependency':
                 return this.$target[0].dataset.visibilityDependency || '';
         }
@@ -1227,18 +1310,18 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         const dependencyEl = this._getDependencyEl();
         switch (widgetName) {
             case 'hidden_condition_time_comparators_opt':
-                return dependencyEl && dependencyEl.dataset.target;
+                return dependencyEl?.classList.contains("datetimepicker-input");
             case 'hidden_condition_date_between':
-                return dependencyEl && dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#datepicker')
+                return dependencyEl?.closest(".s_website_form_date")
                 && ['between', '!between'].includes(this.$target[0].getAttribute('data-visibility-comparator'));
             case 'hidden_condition_datetime_between':
-                return dependencyEl && dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#datetimepicker')
+                return dependencyEl?.closest(".s_website_form_datetime")
                 && ['between', '!between'].includes(this.$target[0].dataset.visibilityComparator);
             case 'hidden_condition_additional_datetime':
-                return dependencyEl && dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#datetimepicker')
+                return dependencyEl?.closest(".s_website_form_datetime")
                 && !['set', '!set'].includes(this.$target[0].dataset.visibilityComparator);
             case 'hidden_condition_additional_date':
-                return dependencyEl && dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#datepicker')
+                return dependencyEl && dependencyEl?.closest(".s_website_form_date")
                 && !['set', '!set'].includes(this.$target[0].dataset.visibilityComparator);
             case 'hidden_condition_additional_text':
                 if (!this.$target[0].classList.contains('s_website_form_field_hidden_if') ||
@@ -1248,7 +1331,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
                 if (!dependencyEl) {
                     return true;
                 }
-                if (dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#date')) {
+                if (dependencyEl?.classList.contains("datetimepicker-input")) {
                     return false;
                 }
                 return (['text', 'email', 'tel', 'url', 'search', 'password', 'number'].includes(dependencyEl.type)
@@ -1258,24 +1341,29 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
             case 'hidden_condition_num_opt':
                 return dependencyEl && dependencyEl.type === 'number';
             case 'hidden_condition_text_opt':
-                if (!this.$target[0].classList.contains('s_website_form_field_hidden_if') || (dependencyEl &&
-                dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#date'))) {
+                if (!this.$target[0].classList.contains('s_website_form_field_hidden_if') ||
+                (dependencyEl?.classList.contains("datetimepicker-input"))) {
                     return false;
                 }
                 return !dependencyEl || (['text', 'email', 'tel', 'url', 'search', 'password'].includes(dependencyEl.type) ||
                 dependencyEl.nodeName === 'TEXTAREA');
             case 'hidden_condition_date_opt':
-                return dependencyEl && dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#datepicker');
+                return dependencyEl?.closest(".s_website_form_date");
             case 'hidden_condition_datetime_opt':
-                return dependencyEl && dependencyEl.dataset.target && dependencyEl.dataset.target.includes('#datetimepicker');
+                return dependencyEl?.closest(".s_website_form_datetime");
             case 'hidden_condition_file_opt':
                 return dependencyEl && dependencyEl.type === 'file';
+            case "hidden_condition_record_opt":
+                return dependencyEl?.closest(".s_website_form_field")?.dataset.type === "record";
             case 'hidden_condition_opt':
                 return this.$target[0].classList.contains('s_website_form_field_hidden_if');
             case 'char_input_type_opt':
                 return !this.$target[0].classList.contains('s_website_form_custom') &&
                     ['char', 'email', 'tel', 'url'].includes(this.$target[0].dataset.type) &&
                     !this.$target[0].classList.contains('s_website_form_model_required');
+            case "existing_field_select_type_opt":
+                return !this._isFieldCustom() &&
+                        ["selection", "many2one"].includes(this.$target[0].dataset.type);
             case 'multi_check_display_opt':
                 return !!this._getMultipleInputs();
             case 'required_opt':
@@ -1309,7 +1397,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
      */
     _getDependencyEl(fieldEl = this.$target[0]) {
         const dependencyName = fieldEl.dataset.visibilityDependency;
-        return this.formEl.querySelector(`.s_website_form_input[name="${dependencyName}"]`);
+        return this.formEl.querySelector(`.s_website_form_input[name="${CSS.escape(dependencyName)}"]`);
     },
     /**
      * @param {HTMLElement} dependentFieldEl
@@ -1327,7 +1415,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
             // Get all the fields that have the same label as the dependent
             // field.
             let dependentFieldEls = Array.from(this.formEl
-                .querySelectorAll(`.s_website_form_input[name="${dependentFieldName}"]`))
+                .querySelectorAll(`.s_website_form_input[name="${CSS.escape(dependentFieldName)}"]`))
                 .map((el) => el.closest(".s_website_form_field"));
             // Remove the duplicated fields. This could happen if the field has
             // multiple inputs ("Multiple Checkboxes" for example.)
@@ -1356,10 +1444,32 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
      * @override
      */
     _renderCustomXML: async function (uiFragment) {
+        // Get the authorized existing fields for the form model
+        // Do it on each render because of custom property fields which can
+        // change depending on the project selected.
+        this.existingFields = await authorizedFieldsCache.get(this.formEl, this.orm).then((fields) => {
+            this.fields = {};
+            for (const [fieldName, field] of Object.entries(fields)) {
+                field.name = fieldName;
+                const fieldDomain = _getDomain(this.formEl, field.name, field.type, field.relation);
+                field.domain = fieldDomain || field.domain || [];
+                this.fields[fieldName] = field;
+            }
+            // Create the buttons for the type we-select
+            return Object.keys(fields).map(key => {
+                const field = fields[key];
+                const button = document.createElement('we-button');
+                button.textContent = field.string;
+                button.dataset.existingField = field.name;
+                return button;
+            }).sort((a, b) => a.textContent.localeCompare(b.textContent, undefined, { numeric: true, sensitivity: "base" }));
+        });
         // Update available visibility dependencies
         const selectDependencyEl = uiFragment.querySelector('we-select[data-name="hidden_condition_opt"]');
         const existingDependencyNames = [];
-        for (const el of this.formEl.querySelectorAll('.s_website_form_field:not(.s_website_form_dnone)')) {
+        for (const el of this.formEl.querySelectorAll(
+            ".s_website_form_field:not(.s_website_form_dnone), .s_website_form_field[data-type]",
+        )) {
             const inputEl = el.querySelector('.s_website_form_input');
             if (el.querySelector('.s_website_form_label_content') && inputEl && inputEl.name
                     && inputEl.name !== this.$target[0].querySelector('.s_website_form_input').name
@@ -1375,9 +1485,21 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         const comparator = this.$target[0].dataset.visibilityComparator;
         const dependencyEl = this._getDependencyEl();
         if (dependencyEl) {
-            if ((['radio', 'checkbox'].includes(dependencyEl.type) || dependencyEl.nodeName === 'SELECT')) {
+            const containerEl = dependencyEl.closest(".s_website_form_field");
+            const fieldType = containerEl?.dataset.type;
+            if (
+                ["radio", "checkbox"].includes(dependencyEl.type) ||
+                dependencyEl.nodeName === "SELECT" ||
+                fieldType === "record"
+            ) {
                 // Update available visibility options
-                const selectOptEl = uiFragment.querySelectorAll('we-select[data-name="hidden_condition_no_text_opt"]')[1];
+                const selectOptName =
+                    fieldType === "record"
+                        ? "hidden_condition_record_opt"
+                        : "hidden_condition_no_text_opt";
+                const selectOptEl = uiFragment.querySelectorAll(
+                    `we-select[data-name="${selectOptName}"]`,
+                )[1];
                 const inputContainerEl = this.$target[0];
                 const dependencyEl = this._getDependencyEl();
                 if (dependencyEl.nodeName === 'SELECT') {
@@ -1390,12 +1512,34 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
                     if (!inputContainerEl.dataset.visibilityCondition) {
                         inputContainerEl.dataset.visibilityCondition = dependencyEl.querySelector('option').value;
                     }
+                } else if (fieldType === "record") {
+                    const model = containerEl.dataset.model;
+                    const idField = containerEl.dataset.idField || "id";
+                    const displayNameField = containerEl.dataset.displayNameField || "display_name";
+                    const records = await this._getVisibilityConditionCachedRecords(
+                        model,
+                        [],
+                        [idField, displayNameField],
+                    );
+                    for (const record of records) {
+                        const buttonEl = document.createElement("we-button");
+                        buttonEl.textContent = record[displayNameField];
+                        buttonEl.dataset.selectDataAttribute = record[idField];
+                        selectOptEl.append(buttonEl);
+                    }
+                    if (!inputContainerEl.dataset.visibilityCondition) {
+                        inputContainerEl.dataset.visibilityCondition = records[0]?.[idField];
+                    }
                 } else { // DependecyEl is a radio or a checkbox
                     const dependencyContainerEl = dependencyEl.closest('.s_website_form_field');
                     const inputsInDependencyContainer = dependencyContainerEl.querySelectorAll('.s_website_form_input');
                     for (const el of inputsInDependencyContainer) {
                         const button = document.createElement('we-button');
-                        button.textContent = el.value;
+                        button.textContent = inputsInDependencyContainer.length === 1
+                            ? el.value
+                            : dependencyContainerEl
+                                .querySelector(`label[for="${el.id}"]`)
+                                .textContent;
                         button.dataset.selectDataAttribute = el.value;
                         selectOptEl.append(button);
                     }
@@ -1427,7 +1571,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         const availableFields = this.existingFields.filter(el => !fieldsInForm.includes(el.dataset.existingField));
         if (availableFields.length) {
             const title = document.createElement('we-title');
-            title.textContent = 'Existing fields';
+            title.textContent = _t("Existing Fields");
             availableFields.unshift(title);
             availableFields.forEach(option => selectEl.append(option.cloneNode(true)));
         }
@@ -1442,9 +1586,13 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         const type = this._getFieldType();
 
         const list = document.createElement('we-list');
-        const optionText = select ? 'Option' : type === 'selection' ? 'Radio' : 'Checkbox';
-        list.setAttribute('string', `${optionText} List`);
-        list.dataset.addItemTitle = _t("Add new %s", optionText);
+        const listTitle = select
+            ? _t("Option List")
+            : type === "selection"
+            ? _t("Radio Button List")
+            : _t("Checkbox List");
+        list.setAttribute("string", listTitle);
+        list.dataset.addItemTitle = _t("Add option");
         list.dataset.renderListItems = '';
 
         list.dataset.hasDefault = ['one2many', 'many2many'].includes(type) ? 'multiple' : 'unique';
@@ -1485,7 +1633,9 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         const inputEl = this.$target[0].querySelector('input');
         const dataFillWith = inputEl ? inputEl.dataset.fillWith : undefined;
         const hasConditionalVisibility = this.$target[0].classList.contains('s_website_form_field_hidden_if');
-        const previousName = this.$target[0].querySelector('.s_website_form_input').name;
+        const previousInputEl = this.$target[0].querySelector('.s_website_form_input');
+        const previousName = previousInputEl.name;
+        const previousType = previousInputEl.type;
         [...this.$target[0].childNodes].forEach(node => node.remove());
         [...fieldEl.childNodes].forEach(node => this.$target[0].appendChild(node));
         [...fieldEl.attributes].forEach(el => this.$target[0].removeAttribute(el.nodeName));
@@ -1493,9 +1643,11 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         if (hasConditionalVisibility) {
             this.$target[0].classList.add('s_website_form_field_hidden_if', 'd-none');
         }
-        const dependentFieldEls = this.formEl.querySelectorAll(`.s_website_form_field[data-visibility-dependency="${previousName}"]`);
-        const newName = this.$target[0].querySelector('.s_website_form_input').name;
-        if (previousName !== newName && dependentFieldEls) {
+        const dependentFieldEls = this.formEl.querySelectorAll(`.s_website_form_field[data-visibility-dependency="${CSS.escape(previousName)}"]`);
+        const newFormInputEl = this.$target[0].querySelector('.s_website_form_input');
+        const newName = newFormInputEl.name;
+        const newType = newFormInputEl.type;
+        if ((previousName !== newName || previousType !== newType) && dependentFieldEls) {
             // In order to keep the visibility conditions consistent,
             // when the name has changed, it means that the type has changed so
             // all fields whose visibility depends on this field must be updated so that
@@ -1517,10 +1669,7 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
      _setVisibilityDependency(value) {
         delete this.$target[0].dataset.visibilityCondition;
         delete this.$target[0].dataset.visibilityComparator;
-        const previousDependency = this._getDependencyEl();
-        if (this.formEl.querySelector(`.s_website_form_input[name="${value}"]`).type !== (previousDependency && previousDependency.type)) {
-            this.rerender = true;
-        }
+        this.rerender = true;
         this.$target[0].dataset.visibilityDependency = value;
     },
     /**
@@ -1532,6 +1681,15 @@ options.registry.WebsiteFieldEditor = FieldEditor.extend({
         let options = [];
         if (select) {
             options = [...select.querySelectorAll('option')];
+            if (
+                this.__getListItems_forWidgetState &&
+                options.length &&
+                options[0].value === "" &&
+                options[0].textContent === "" &&
+                options[0].selected === true
+            ) {
+                options.shift();
+            }
         } else if (multipleInputs) {
             options = [...multipleInputs.querySelectorAll('.checkbox input, .radio input')];
         }
@@ -1568,7 +1726,7 @@ options.registry.AddFieldForm = FormEditor.extend({
      * New field is set as active
      */
     addField: async function (previewMode, value, params) {
-        const field = this._getCustomField('char', 'Custom Text');
+        const field = this._getCustomField('char', _t('Custom Text'));
         field.formatInfo = this._getDefaultFormat();
         const fieldEl = this._renderField(field);
         this.$target.find('.s_website_form_submit, .s_website_form_recaptcha').first().before(fieldEl);
@@ -1657,10 +1815,17 @@ options.registry.WebsiteFormFieldRequired = DisableOverlayButtonOption.extend({
      * @override
      */
     async _renderCustomXML(uiFragment) {
+        if (!currentActionName) {
+            return;
+        }
+
         const fieldName = this.$target[0]
             .querySelector("input.s_website_form_input").getAttribute("name");
         const spanEl = document.createElement("span");
-        spanEl.innerText = _t("The field '%s' is mandatory for the action '%s'.", fieldName, currentActionName);
+        spanEl.innerText = _t("The field “%(field)s” is mandatory for the action “%(action)s”.", {
+            field: fieldName,
+            action: currentActionName,
+        });
         uiFragment.querySelector("we-alert").appendChild(spanEl);
     },
 });

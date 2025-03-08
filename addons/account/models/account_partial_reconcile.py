@@ -125,7 +125,7 @@ class AccountPartialReconcile(models.Model):
         if moves_to_reverse:
             default_values_list = [{
                 'date': move._get_accounting_date(move.date, move._affect_tax_report()),
-                'ref': _('Reversal of: %s', move.name),
+                'ref': move.env._('Reversal of: %s', move.name),
             } for move in moves_to_reverse]
             moves_to_reverse._reverse_moves(default_values_list, cancel=True)
 
@@ -135,8 +135,23 @@ class AccountPartialReconcile(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         partials = super().create(vals_list)
+        self._pay_matched_payment(partials)
         self._update_matching_number(partials.debit_move_id + partials.credit_move_id)
         return partials
+
+    @api.model
+    def _pay_matched_payment(self, partials):
+        for partial in partials:
+            matched_payments = (partial.credit_move_id | partial.debit_move_id).move_id.matched_payment_ids
+            to_check_payments = matched_payments.filtered(lambda payment: not payment.outstanding_account_id and payment.state == 'in_process')
+            for payment in to_check_payments:
+                if payment.payment_type == 'inbound':
+                    amount = partial.debit_amount_currency
+                else:
+                    amount = -partial.credit_amount_currency
+                if not payment.currency_id.compare_amounts(payment.amount_signed, amount):
+                    payment.state = 'paid'
+                    break
 
     @api.model
     def _update_matching_number(self, amls):
@@ -485,13 +500,14 @@ class AccountPartialReconcile(models.Model):
                 partial = partial_values['partial']
 
                 # Init the journal entry.
-                lock_date = move.company_id._get_user_fiscal_lock_date()
-                move_date = partial.max_date if partial.max_date > (lock_date or date.min) else today
+                journal = partial.company_id.tax_cash_basis_journal_id
+                lock_date = move.company_id._get_user_fiscal_lock_date(journal)
+                move_date = partial.max_date if partial.max_date > lock_date else today
                 move_vals = {
                     'move_type': 'entry',
                     'date': move_date,
                     'ref': move.name,
-                    'journal_id': partial.company_id.tax_cash_basis_journal_id.id,
+                    'journal_id': journal.id,
                     'company_id': partial.company_id.id,
                     'line_ids': [],
                     'tax_cash_basis_rec_id': partial.id,

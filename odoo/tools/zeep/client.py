@@ -150,6 +150,7 @@ class SerialProxy(SimpleNamespace):
         return super().__setattr__(key, value)
 
     def __getitem__(self, key):
+        self.__check(key, None)
         return self.__getattribute__(key)
 
     # Not required as SimpleNamespace doesn't implement it by default, but this makes it explicit.
@@ -157,6 +158,7 @@ class SerialProxy(SimpleNamespace):
         raise NotImplementedError
 
     def __delitem__(self, key):
+        self.__check(key, None)
         self.__delattr__(key)
 
     def __iter__(self):
@@ -179,5 +181,5 @@ class SerialProxy(SimpleNamespace):
 
     @classmethod
     def __check(cls, key, value):
-        assert not key.startswith('_')
+        assert not key.startswith('_') or key.startswith('_value_')
         assert type(value) in SERIALIZABLE_TYPES + (SerialProxy,)

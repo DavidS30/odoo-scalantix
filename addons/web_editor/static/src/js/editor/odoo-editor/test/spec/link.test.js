@@ -10,15 +10,12 @@ import {
     click,
     deleteBackward,
     insertText,
-    insertParagraphBreak,
     insertLineBreak,
     testEditor,
-    createLink,
     undo,
     nextTick
 } from '../utils.js';
 
-const convertToLink = createLink;
 const unlink = async function (editor) {
     editor.execCommand('unlink');
 };
@@ -151,131 +148,6 @@ describe('Link', () => {
         testUrlRegex(`www.google.com/a!b/c?d,e,f#g!i`, { expectedUrl: 'www.google.com/a!b/c?d,e,f#g!i' });
         testUrlRegex(`www.google.com/a%b%c`, { expectedUrl: 'www.google.com/a%b%c' });
         testUrlRegex(`http://google.com?a.b.c&d!e#e'f`, { expectedUrl: "http://google.com?a.b.c&d!e#e'f" });
-    });
-    describe('insert Link', () => {
-        describe('range collapsed', () => {
-            it('should insert a link and preserve spacing', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a [] c</p>',
-                    stepFunction: createLink,
-                    // Two consecutive spaces like one so `a [] c` is
-                    // effectively the same as `a []c`.
-                    contentAfter: '<p>a <a href="#">link</a>[]c</p>',
-                });
-            });
-            it('should insert a link and write a character after the link', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[]c</p>',
-                    stepFunction: async editor => {
-                        await createLink(editor);
-                        await insertText(editor, 'b');
-                    },
-                    contentAfter: '<p>a<a href="#">link</a>b[]c</p>',
-                });
-            });
-            it('should write two characters after the link', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[]d</p>',
-                    stepFunction: async editor => {
-                        await createLink(editor);
-                        await insertText(editor, 'b');
-                        await insertText(editor, 'c');
-                    },
-                    contentAfter: '<p>a<a href="#">link</a>bc[]d</p>',
-                });
-            });
-            it('should insert a link and write a character after the link then create a new <p>', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[]c</p>',
-                    stepFunction: async editor => {
-                        await createLink(editor);
-                        await insertText(editor, 'b');
-                        await insertParagraphBreak(editor);
-                    },
-                    contentAfter: '<p>a<a href="#">link</a>b</p><p>[]c</p>',
-                });
-            });
-            it('should insert a link and write a character, a new <p> and another character', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[]d</p>',
-                    stepFunction: async editor => {
-                        await createLink(editor);
-                        await insertText(editor, 'b');
-                        await insertParagraphBreak(editor);
-                        await insertText(editor, 'c');
-                    },
-                    contentAfter: '<p>a<a href="#">link</a>b</p><p>c[]d</p>',
-                });
-            });
-            it('should insert a link and write a character at the end of the link then insert a <br>', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[]c</p>',
-                    stepFunction: async editor => {
-                        await createLink(editor);
-                        await insertText(editor, 'b');
-                        await insertLineBreak(editor);
-                    },
-                    // Writing at the end of a link writes outside the link.
-                    contentAfter: '<p>a<a href="#">link</a>b<br>[]c</p>',
-                });
-            });
-            it('should insert a link and write a character insert a <br> and another character', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[]d</p>',
-                    stepFunction: async editor => {
-                        await createLink(editor);
-                        await insertText(editor, 'b');
-                        await insertLineBreak(editor);
-                        await insertText(editor, 'c');
-                    },
-                    // Writing at the end of a link writes outside the link.
-                    contentAfter: '<p>a<a href="#">link</a>b<br>c[]d</p>',
-                });
-            });
-            it('should insert a <br> inside a link', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p><a href="#">a[]b</a></p>',
-                    stepFunction: async editor => {
-                        await insertLineBreak(editor);
-                    },
-                    contentAfter: '<p><a href="#">a<br>[]b</a></p>',
-                });
-            });
-        });
-        describe('range not collapsed', () => {
-            // This succeeds, but why would the cursor stay inside the link
-            // if the next text insert should be outside of the link (see next test)
-            it('should set the link on two existing characters and loose range', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[bc]d</p>',
-                    stepFunction: async editor => {
-                        await convertToLink(editor);
-                    },
-                    contentAfter: '<p>a<a href="#">bc</a>[]d</p>',
-                });
-            });
-            it('should set the link on two existing characters, lose range and add a character', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[bc]e</p>',
-                    stepFunction: async editor => {
-                        await convertToLink(editor);
-                        await insertText(editor, 'd');
-                    },
-                    contentAfter: '<p>a<a href="#">bc</a>d[]e</p>',
-                });
-            });
-            // This fails, but why would the cursor stay inside the link
-            // if the next text insert should be outside of the link (see previous test)
-            it('should replace selection by a link', async () => {
-                await testEditor(BasicEditor, {
-                    contentBefore: '<p>a[bc]d</p>',
-                    stepFunction: async editor => {
-                        await createLink(editor, '#');
-                    },
-                    contentAfter: '<p>a<a href="#">#</a>[]d</p>',
-                });
-            });
-        });
     });
     describe('edit link label', () => {
         describe('range collapsed', () => {
@@ -741,7 +613,7 @@ describe('Link', () => {
                 contentAfter: '<p><a href="#/">[]abc</a></p>',
             });
         });
-        it('should zwnbsp-pad simple text link', async () => {
+        describe('should zwnbsp-pad simple text link', () => {
             const removeZwnbsp = editor => {
                 for (const descendant of descendants(editor.editable)) {
                     if (descendant.nodeType === Node.TEXT_NODE && descendant.textContent === '\ufeff') {
@@ -749,74 +621,90 @@ describe('Link', () => {
                     }
                 }
             }
-            await testEditor(BasicEditor, {
-                contentBefore: '<p>a[]<a href="#/">bc</a>d</p>',
-                contentBeforeEdit: '<p>a[]\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeffd</p>',
-                stepFunction: async editor => {
-                    removeZwnbsp(editor);
-                    const p = editor.editable.querySelector('p');
-                    setSelection(p, 1, p, 1, false); // set the selection via the parent
-                    editor.sanitize(); // insert the zwnbsp again
-                },
-                contentAfterEdit: '<p>a[]\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeffd</p>',
+            it('should zwnbsp-pad simple text link (1)', async () => {
+                await testEditor(BasicEditor, {
+                    contentBefore: '<p>a[]<a href="#/">bc</a>d</p>',
+                    contentBeforeEdit: '<p>a[]\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeffd</p>',
+                    stepFunction: async editor => {
+                        removeZwnbsp(editor);
+                        const p = editor.editable.querySelector('p');
+                        setSelection(p, 1, p, 1, false); // set the selection via the parent
+                        editor.sanitize(); // insert the zwnbsp again
+                    },
+                    contentAfterEdit: '<p>a[]\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeffd</p>',
+                });
             });
-            await testEditor(BasicEditor, {
-                contentBefore: '<p>a<a href="#/">[]bc</a>d</p>',
-                contentBeforeEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeff[]bc\ufeff</a>\ufeffd</p>',
-                stepFunction: async editor => {
-                    removeZwnbsp(editor);
-                    const a = editor.editable.querySelector('a');
-                    setSelection(a, 0, a, 0, false); // set the selection via the parent
-                    await nextTick();
-                    editor.sanitize(); // insert the zwnbsp again
-                },
-                contentAfterEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">[]\ufeffbc\ufeff</a>\ufeffd</p>',
+            it('should zwnbsp-pad simple text link (2)', async () => {
+                await testEditor(BasicEditor, {
+                    contentBefore: '<p>a<a href="#/">[]bc</a>d</p>',
+                    contentBeforeEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeff[]bc\ufeff</a>\ufeffd</p>',
+                    stepFunction: async editor => {
+                        removeZwnbsp(editor);
+                        const a = editor.editable.querySelector('a');
+                        setSelection(a, 0, a, 0, false); // set the selection via the parent
+                        await nextTick();
+                        editor.sanitize(); // insert the zwnbsp again
+                    },
+                    contentAfterEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">[]\ufeffbc\ufeff</a>\ufeffd</p>',
+                });
             });
-            await testEditor(BasicEditor, {
-                contentBefore: '<p>a<a href="#/">b[]</a>d</p>',
-                contentBeforeEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffb[]\ufeff</a>\ufeffd</p>',
-                stepFunction: async editor => {
-                    const a = editor.editable.querySelector('a');
-                    // Insert an extra character as a text node so we can set
-                    // the selection between the characters while still
-                    // targetting their parent.
-                    a.appendChild(document.createTextNode('c'));
-                    removeZwnbsp(editor);
-                    setSelection(a, 1, a, 1, false); // set the selection via the parent
-                    await nextTick();
-                    editor.sanitize(); // insert the zwnbsp again
-                },
-                contentAfterEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffb[]c\ufeff</a>\ufeffd</p>',
+            it('should zwnbsp-pad simple text link (3)', async () => {
+                await testEditor(BasicEditor, {
+                    contentBefore: '<p>a<a href="#/">b[]</a>d</p>',
+                    contentBeforeEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffb[]\ufeff</a>\ufeffd</p>',
+                    stepFunction: async editor => {
+                        const a = editor.editable.querySelector('a');
+                        // Insert an extra character as a text node so we can set
+                        // the selection between the characters while still
+                        // targetting their parent.
+                        a.appendChild(document.createTextNode('c'));
+                        removeZwnbsp(editor);
+                        setSelection(a, 1, a, 1, false); // set the selection via the parent
+                        await nextTick();
+                        editor.sanitize(); // insert the zwnbsp again
+                    },
+                    contentAfterEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffb[]c\ufeff</a>\ufeffd</p>',
+                });
             });
-            await testEditor(BasicEditor, {
-                contentBefore: '<p>a<a href="#/">bc[]</a>d</p>',
-                contentBeforeEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffbc[]\ufeff</a>\ufeffd</p>',
-                stepFunction: async editor => {
-                    removeZwnbsp(editor);
-                    const a = editor.editable.querySelector('a');
-                    setSelection(a, 1, a, 1, false); // set the selection via the parent
-                    await nextTick();
-                    editor.sanitize(); // insert the zwnbsp again
-                },
-                contentAfterEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffbc\ufeff[]</a>\ufeffd</p>',
+            it('should zwnbsp-pad simple text link (4)', async () => {
+                await testEditor(BasicEditor, {
+                    contentBefore: '<p>a<a href="#/">bc[]</a>d</p>',
+                    contentBeforeEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffbc[]\ufeff</a>\ufeffd</p>',
+                    stepFunction: async editor => {
+                        removeZwnbsp(editor);
+                        const a = editor.editable.querySelector('a');
+                        setSelection(a, 1, a, 1, false); // set the selection via the parent
+                        await nextTick();
+                        editor.sanitize(); // insert the zwnbsp again
+                    },
+                    contentAfterEdit: '<p>a\ufeff<a href="#/" class="o_link_in_selection">\ufeffbc\ufeff[]</a>\ufeffd</p>',
+                });
             });
-            await testEditor(BasicEditor, {
-                contentBefore: '<p>a<a href="#/">bc</a>[]d</p>',
-                contentBeforeEdit: '<p>a\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeff[]d</p>',
-                stepFunction: async editor => {
-                    descendants(editor.editable).forEach(c => c.nodeType === Node.TEXT_NODE && c.textContent === '\ufeff' && c.remove()); // remove the zwnbsp
-                    const p = editor.editable.querySelector('p');
-                    setSelection(p, 2, p, 2, false); // set the selection via the parent
-                    await nextTick();
-                    editor.sanitize(); // insert the zwnbsp again
-                },
-                contentAfterEdit: '<p>a\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeff[]d</p>',
+            it('should zwnbsp-pad simple text link (5)', async () => {
+                await testEditor(BasicEditor, {
+                    contentBefore: '<p>a<a href="#/">bc</a>[]d</p>',
+                    contentBeforeEdit: '<p>a\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeff[]d</p>',
+                    stepFunction: async editor => {
+                        descendants(editor.editable).forEach(c => c.nodeType === Node.TEXT_NODE && c.textContent === '\ufeff' && c.remove()); // remove the zwnbsp
+                        const p = editor.editable.querySelector('p');
+                        setSelection(p, 2, p, 2, false); // set the selection via the parent
+                        await nextTick();
+                        editor.sanitize(); // insert the zwnbsp again
+                    },
+                    contentAfterEdit: '<p>a\ufeff<a href="#/">\ufeffbc\ufeff</a>\ufeff[]d</p>',
+                });
             });
         });
         it('should not zwnbsp-pad nav-link', async () => {
             await testEditor(BasicEditor, {
                 contentBefore: '<p>a<a href="#/" class="nav-link">[]b</a>c</p>',
                 contentBeforeEdit: '<p>a<a href="#/" class="nav-link">[]b</a>c</p>',
+            });
+        });
+        it('should not zwnbsp-pad link if parent is `contenteditable=false`', async () => {
+            await testEditor(BasicEditor, {
+                contentBefore: `<div contenteditable="false">a<a href="#/">[]b</a>c</div>`,
+                contentBeforeEdit: `<div contenteditable="false" data-oe-keep-contenteditable="">a<a href="#/">[]b</a>c</div>`,
             });
         });
         it('should not zwnbsp-pad in nav', async () => {
@@ -978,6 +866,35 @@ describe('Link', () => {
                 contentBeforeEdit: '<p>a\ufeff<a href="exist">\ufeff<span class="fa fa-star" contenteditable="false">\u200b</span>\ufeff</a>\ufeffb</p>',
                 contentAfterEdit: '<p>a\ufeff<a href="exist">\ufeff<span class="fa fa-star" contenteditable="false">\u200b</span>\ufeff</a>\ufeffb</p>',
                 contentAfter: '<p>a<a href="exist"><span class="fa fa-star"></span></a>b</p>',
+            });
+        });
+        it('should not convert to telephone url while inserting digits inside link', async () => {
+            await testEditor(BasicEditor, {
+                contentBefore: '<p><a href="#">[]</a></p>',
+                stepFunction: async editor => {
+                    await insertText(editor, '1');
+                    await insertText(editor, '2');
+                    await insertText(editor, '3');
+                },
+                contentAfter: '<p><a href="#">123[]</a></p>',
+            });
+        });
+        it('should update url if existing url is telephone url while inserting', async () => {
+            await testEditor(BasicEditor, {
+                contentBefore: '<p><a href="tel:123">123[]</a></p>',
+                stepFunction: async editor => {
+                    await insertText(editor, '4');
+                },
+                contentAfter: '<p><a href="tel:1234">1234[]</a></p>',
+            });
+        });
+        it('should convert url to telephone url if label starts with tel protocol', async () => {
+            await testEditor(BasicEditor, {
+                contentBefore: '<p><a href="#">tel://[]</a></p>',
+                stepFunction: async editor => {
+                    await insertText(editor, '1');
+                },
+                contentAfter: '<p><a href="tel://1">tel://1[]</a></p>',
             });
         });
         // it('should select and replace all text and add the next char in bold', async () => {

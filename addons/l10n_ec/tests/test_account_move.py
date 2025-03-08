@@ -1,6 +1,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import fields
+from odoo.addons.account_edi.tests.common import AccountEdiTestCommon
 from odoo.exceptions import UserError
 from odoo.tests import tagged, Form
 
@@ -11,8 +12,9 @@ from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 class TestEcAccountMove(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref='ec'):
-        super().setUpClass(chart_template_ref=chart_template_ref)
+    @AccountEdiTestCommon.setup_country('ec')
+    def setUpClass(cls):
+        super().setUpClass()
 
     def test_document_number_credit_note(self):
         """

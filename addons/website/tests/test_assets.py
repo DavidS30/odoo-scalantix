@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import re
 
@@ -20,8 +19,8 @@ class TestWebsiteAssets(odoo.tests.HttpCase):
         [w.write({'domain': f'inactive-{w.id}.test'}) for w in Website.search([])]
         # Don't use HOST, hardcode it so it doesn't get changed one day and make
         # the test useless
-        domain_1 = "http://127.0.0.1:%s" % config['http_port']
-        domain_2 = "http://localhost:%s" % config['http_port']
+        domain_1 = f"http://127.0.0.1:{self.http_port()}"
+        domain_2 = f"http://localhost:{self.http_port()}"
         Website.browse(1).domain = domain_1
 
         self.authenticate('admin', 'admin')
@@ -56,15 +55,15 @@ class TestWebsiteAssets(odoo.tests.HttpCase):
         #      "GET /web HTTP/1.1" 200 - 11 0.004 0.007   <--  11 Queries, ~10ms
         #      "GET /web HTTP/1.1" 200 - 11 0.003 0.005   <--  11 Queries, ~10ms
         #      "GET /web HTTP/1.1" 200 - 11 0.003 0.008   <--  11 Queries, ~10ms
-        self.url_open(domain_1 + '/web')
+        self.url_open(domain_1 + '/odoo')
         check_asset()
-        self.url_open(domain_2 + '/web')
+        self.url_open(domain_2 + '/odoo')
         check_asset()
-        self.url_open(domain_1 + '/web')
+        self.url_open(domain_1 + '/odoo')
         check_asset()
-        self.url_open(domain_2 + '/web')
+        self.url_open(domain_2 + '/odoo')
         check_asset()
-        self.url_open(domain_1 + '/web')
+        self.url_open(domain_1 + '/odoo')
         check_asset()
 
     def test_02_t_cache_invalidation(self):
@@ -233,7 +232,7 @@ class TestWebAssets(odoo.tests.HttpCase):
     def test_ensure_correct_website_asset(self):
         # when searching for an attachment, if the unique a wildcard, we want to ensute that we don't match a website one when seraching a no website one.
         # this test should also wheck that the clean_attachement does not erase a website_attachement after generating a base attachment
-        website_id = self.env['website'].search([], limit=1, order='id desc').id
+        website_id = self.env['website'].search([], limit=1, order='id asc').id
         unique = self.env['ir.qweb']._get_asset_bundle('web.assets_frontend').get_version('js')
         base_url = self.env['ir.asset']._get_asset_bundle_url('web.assets_frontend.min.js', '%', {})
         base_url_versioned = self.env['ir.asset']._get_asset_bundle_url('web.assets_frontend.min.js', unique, {})
@@ -252,7 +251,12 @@ class TestWebAssets(odoo.tests.HttpCase):
         )
 
         # generate base assets
-        self.assertEqual(self.url_open(base_url, allow_redirects=False).status_code, 200)
+        with self.assertLogs() as logs:
+            self.assertEqual(self.url_open(base_url, allow_redirects=False).status_code, 200)
+        self.assertEqual(
+            f'Found a similar attachment for /web/assets/{unique}/web.assets_frontend.min.js, copying from /web/assets/{website_id}/{unique}/web.assets_frontend.min.js',
+            logs.records[0].message,
+            'The attachment was expected to be linked to an existing one')
         self.assertEqual(
             self.env['ir.attachment'].search([('url', '=like', '%web.assets_frontend.min.js')]).mapped('url'),
             [base_url_versioned, website_url_versioned],

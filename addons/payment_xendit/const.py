@@ -6,8 +6,15 @@ SUPPORTED_CURRENCIES = [
     'PHP',
 ]
 
+# To correctly allow lowest decimal place rounding
+# https://docs.xendit.co/payment-link/payment-channels
+CURRENCY_DECIMALS = {
+    'IDR': 0,
+    'PHP': 0,
+}
+
 # The codes of the payment methods to activate when Xendit is activated.
-DEFAULT_PAYMENT_METHODS_CODES = [
+DEFAULT_PAYMENT_METHOD_CODES = {
     # Primary payment methods.
     'card',
     'dana',
@@ -17,7 +24,7 @@ DEFAULT_PAYMENT_METHODS_CODES = [
     # Brand payment methods.
     'visa',
     'mastercard',
-]
+}
 
 # Mapping of payment code to channel code according to Xendit API
 PAYMENT_METHODS_MAPPING = {
@@ -32,7 +39,7 @@ PAYMENT_METHODS_MAPPING = {
 PAYMENT_STATUS_MAPPING = {
     'draft': (),
     'pending': ('PENDING'),
-    'done': ('SUCCEEDED', 'PAID'),
+    'done': ('SUCCEEDED', 'PAID', 'CAPTURED'),
     'cancel': ('CANCELLED', 'EXPIRED'),
     'error': ('FAILED',)
 }

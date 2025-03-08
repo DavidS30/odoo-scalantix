@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import Command
-from odoo.tests.common import Form
+from odoo.tests import Form
 from odoo.addons.stock.tests.test_report import TestReportsCommon
+from odoo import Command
 
 
 class TestMrpStockReports(TestReportsCommon):
@@ -15,18 +15,19 @@ class TestMrpStockReports(TestReportsCommon):
         product_chocolate = self.env['product.product'].create({
             'name': 'Chocolate',
             'type': 'consu',
+            'standard_price': 10
         })
         product_chococake = self.env['product.product'].create({
             'name': 'Choco Cake',
-            'type': 'product',
+            'is_storable': True,
         })
         product_double_chococake = self.env['product.product'].create({
             'name': 'Double Choco Cake',
-            'type': 'product',
+            'is_storable': True,
         })
         byproduct = self.env['product.product'].create({
             'name': 'by-product',
-            'type': 'product',
+            'is_storable': True,
         })
 
         # Creates two BOM: one creating a regular slime, one using regular slimes.
@@ -40,7 +41,7 @@ class TestMrpStockReports(TestReportsCommon):
                 (0, 0, {'product_id': product_chocolate.id, 'product_qty': 4}),
             ],
             'byproduct_ids':
-                [(0, 0, {'product_id': byproduct.id, 'product_qty': 2})],
+                [(0, 0, {'product_id': byproduct.id, 'product_qty': 2, 'cost_share': 1.8})],
         })
         bom_double_chococake = self.env['mrp.bom'].create({
             'product_id': product_double_chococake.id,
@@ -101,9 +102,17 @@ class TestMrpStockReports(TestReportsCommon):
         mo_1.button_mark_done()
 
         self.env.flush_all()  # flush to correctly build report
-        report_values = self.env['report.mrp.report_mo_overview']._get_report_data(mo_1.id)['byproducts']['details'][0]
-        self.assertEqual(report_values['name'], byproduct.name)
-        self.assertEqual(report_values['quantity'], 18)
+        report_values = self.env['report.mrp.report_mo_overview']._get_report_data(mo_1.id)
+        self.assertEqual(report_values['byproducts']['details'][0]['name'], byproduct.name)
+        self.assertEqual(report_values['byproducts']['details'][0]['quantity'], 18)
+        # (Component price $10) * (4 unit to produce one finished) * (the mo qty = 10 units) = $400
+        self.assertEqual(report_values['components'][0]['summary']['mo_cost'], 400)
+        # cost_share of byproduct = 1.8 -> 1.8 / 100 -> 0.018 * 400 = 7.2
+        self.assertAlmostEqual(report_values['byproducts']['summary']['mo_cost'], 7.2)
+        byproduct_report_values = report_values['cost_breakdown'][1]
+        self.assertEqual(byproduct_report_values['name'], byproduct.name)
+        # 7.2 / 18 units = 0.4
+        self.assertAlmostEqual(byproduct_report_values['unit_avg_total_cost'], 0.4)
 
     def test_report_forecast_2_production_backorder(self):
         """ Creates a manufacturing order and produces half the quantity.
@@ -115,7 +124,7 @@ class TestMrpStockReports(TestReportsCommon):
         # Configures a product.
         product_apple_pie = self.env['product.product'].create({
             'name': 'Apple Pie',
-            'type': 'product',
+            'is_storable': True,
         })
         product_apple = self.env['product.product'].create({
             'name': 'Apple',
@@ -177,7 +186,7 @@ class TestMrpStockReports(TestReportsCommon):
         """
         product_banana = self.env['product.product'].create({
             'name': 'Banana',
-            'type': 'product',
+            'is_storable': True,
         })
         product_chocolate = self.env['product.product'].create({
             'name': 'Chocolate',
@@ -217,7 +226,7 @@ class TestMrpStockReports(TestReportsCommon):
 
         compo01, compo02 = self.env['product.product'].create([{
             'name': n,
-            'type': 'product',
+            'is_storable': True,
             'uom_id': self.env.ref('uom.product_uom_meter').id,
             'uom_po_id': self.env.ref('uom.product_uom_meter').id,
         } for n in ['Compo 01', 'Compo 02']])
@@ -338,8 +347,16 @@ class TestMrpStockReports(TestReportsCommon):
         })
         product_chococake = self.env['product.product'].create({
             'name': 'Choco Cake',
-            'type': 'product',
+            'is_storable': True,
         })
+        workcenter = self.env['mrp.workcenter'].create({
+            'name': 'workcenter test',
+            'costs_hour': 10,
+            'time_start': 10,
+            'time_stop': 10,
+            'time_efficiency': 90,
+        })
+
         self.env['mrp.bom'].create({
             'product_id': product_chococake.id,
             'product_tmpl_id': product_chococake.product_tmpl_id.id,
@@ -349,6 +366,14 @@ class TestMrpStockReports(TestReportsCommon):
             'bom_line_ids': [
                 (0, 0, {'product_id': product_chocolate.id, 'product_qty': 4}),
             ],
+            'operation_ids': [
+                Command.create({
+                    'name': 'Cutting Machine',
+                    'workcenter_id': workcenter.id,
+                    'time_cycle': 60,
+                    'sequence': 1
+                }),
+            ],
         })
         mo = self.env['mrp.production'].create({
             'name': 'MO',
@@ -357,11 +382,40 @@ class TestMrpStockReports(TestReportsCommon):
         })
 
         mo.action_confirm()
+        # check that the mo and bom cost are correctly calculated after mo confirmation
+        overview_values = self.env['report.mrp.report_mo_overview'].get_report_values(mo.id)
+        self.assertEqual(round(overview_values['data']['operations']['summary']['mo_cost'], 2), 14.45)
+        self.assertEqual(round(overview_values['data']['operations']['summary']['bom_cost'], 2), 14.44)
         mo.button_mark_done()
         mo.qty_produced = 0.
 
         overview_values = self.env['report.mrp.report_mo_overview'].get_report_values(mo.id)
         self.assertEqual(overview_values['data']['id'], mo.id, "computing overview value should work")
+
+    def test_overview_with_component_also_as_byproduct(self):
+        """ Check that opening he overview of an MO for which the BoM contains an element as both component and byproduct
+        does not cause an infinite recursion.
+        """
+        bom = self.env['mrp.bom'].create({
+            'product_tmpl_id': self.product.product_tmpl_id.id,
+            'product_qty': 1.0,
+            'bom_line_ids': [
+                Command.create({'product_id': self.product1.id, 'product_qty': 1.0}),
+                ],
+            'byproduct_ids': [
+                Command.create({'product_id': self.product1.id, 'product_qty': 1.0})
+                ]
+        })
+
+        mo = self.env['mrp.production'].create({
+            'product_id': self.product.id,
+            'bom_id': bom.id,
+            'product_qty': 1,
+        })
+
+        mo.action_confirm()
+        overview_values = self.env['report.mrp.report_mo_overview'].get_report_values(mo.id)
+        self.assertEqual(overview_values['data']['id'], mo.id, "Unexpected disparity between overview and MO data")
 
     def test_multi_step_component_forecast_availability(self):
         """
@@ -409,7 +463,8 @@ class TestMrpStockReports(TestReportsCommon):
         part, finished = self.env['product.product'].create([
             {
                 'name': name,
-                'type': 'product',
+                'type': 'consu',
+                'is_storable': True,
             } for name in ['Part', 'Finished']
         ])
         self.env['mrp.bom'].create([

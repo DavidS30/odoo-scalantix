@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
@@ -42,9 +40,6 @@ export class ImageUrlField extends Component {
 
     onLoadFailed() {
         this.state.src = this.constructor.fallbackSrc;
-        this.notification.add(_t("Could not display the specified image url."), {
-            type: "info",
-        });
     }
 }
 

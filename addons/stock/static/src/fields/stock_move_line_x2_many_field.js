@@ -41,7 +41,7 @@ export class SMLX2ManyField extends X2ManyField {
         context = {
             ...context,
             single_product: true,
-            tree_view_ref: "stock.view_stock_quant_tree_simple",
+            list_view_ref: "stock.view_stock_quant_tree_simple",
             search_default_on_hand: true,
             search_default_in_stock: true,
         };
@@ -51,9 +51,6 @@ export class SMLX2ManyField extends X2ManyField {
             ["product_id", "=", this.props.record.data.product_id[0]],
             ["location_id", "child_of", this.props.context.default_location_id],
         ];
-        if (this.props.domain) {
-            domain = [...domain, ...this.props.domain()];
-        }
         if (this.dirtyQuantsData.size) {
             const notFullyUsed = [];
             const fullyUsed = [];
@@ -92,8 +89,11 @@ export class SMLX2ManyField extends X2ManyField {
             "stock.move.line",
             "get_move_line_quant_match",
             [
-                dirtyMoveLines.map((rec) => rec.resId),
+                this.props.record.data.move_line_ids.records
+                    .filter((rec) => rec.resId)
+                    .map((rec) => rec.resId),
                 this.props.record.resId,
+                dirtyMoveLines.filter((rec) => rec.resId).map((rec) => rec.resId),
                 dirtyQuantMoveLines.map((ml) => ml.data.quant_id[0]),
             ],
             {}

@@ -10,8 +10,9 @@ from lxml import etree
 class TestUBLNL(TestUBLCommon):
 
     @classmethod
-    def setUpClass(cls, chart_template_ref="nl"):
-        super().setUpClass(chart_template_ref=chart_template_ref)
+    @TestUBLCommon.setup_country('nl')
+    def setUpClass(cls):
+        super().setUpClass()
 
         cls.partner_1 = cls.env['res.partner'].create({
             'name': "partner_1",
@@ -26,6 +27,7 @@ class TestUBLNL(TestUBLCommon):
             'peppol_eas': '0106',
             'peppol_endpoint': '77777677',
             'ref': 'ref_partner_1',
+            'invoice_edi_format': 'nlcius',
         })
 
         cls.partner_2 = cls.env['res.partner'].create({
@@ -39,6 +41,7 @@ class TestUBLNL(TestUBLCommon):
             'peppol_eas': '0106',
             'peppol_endpoint': '1234567',
             'ref': 'ref_partner_2',
+            'invoice_edi_format': 'nlcius',
         })
 
         cls.tax_19 = cls.env['account.tax'].create({
@@ -82,17 +85,6 @@ class TestUBLNL(TestUBLCommon):
             'amount': 10.0,
             'sequence': 1,
         })
-
-    @classmethod
-    def setup_company_data(cls, company_name, chart_template):
-        # OVERRIDE
-        # to force the company to be dutch
-        res = super().setup_company_data(
-            company_name,
-            chart_template=chart_template,
-            country_id=cls.env.ref("base.nl").id,
-        )
-        return res
 
     ####################################################
     # Test export - import
@@ -238,6 +230,13 @@ class TestUBLNL(TestUBLCommon):
 
     def test_import_invoice_xml(self):
         # test files https://github.com/peppolautoriteit-nl/validation ?
-        self._assert_imported_invoice_from_file(subfolder='tests/test_files/from_odoo',
-            filename='nlcius_out_invoice.xml', amount_total=3083.58, amount_tax=401.58,
-            list_line_subtotals=[1782, 1000, -100], currency_id=self.currency_data['currency'].id)
+        self._assert_imported_invoice_from_file(
+            subfolder='tests/test_files/from_odoo',
+            filename='nlcius_out_invoice.xml',
+            invoice_vals={
+                'currency_id': self.other_currency.id,
+                'amount_total': 3083.58,
+                'amount_tax': 401.58,
+                'invoice_lines': [{'price_subtotal': x} for x in (1782, 1000, -100)]
+            },
+        )

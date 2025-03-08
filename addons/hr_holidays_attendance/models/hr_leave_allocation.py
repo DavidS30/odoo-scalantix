@@ -24,19 +24,18 @@ class HolidaysAllocation(models.Model):
 
     overtime_deductible = fields.Boolean(compute='_compute_overtime_deductible')
     overtime_id = fields.Many2one('hr.attendance.overtime', string='Extra Hours', groups='hr_holidays.group_hr_holidays_user')
-    employee_overtime = fields.Float(related='employee_id.total_overtime')
-    hr_attendance_overtime = fields.Boolean(related='employee_company_id.hr_attendance_overtime')
+    employee_overtime = fields.Float(related='employee_id.total_overtime', groups='base.group_user')
 
     @api.depends('holiday_status_id')
     def _compute_overtime_deductible(self):
         for allocation in self:
-            allocation.overtime_deductible = allocation.hr_attendance_overtime and allocation.holiday_status_id.overtime_deductible
+            allocation.overtime_deductible = allocation.holiday_status_id.overtime_deductible
 
     @api.model_create_multi
     def create(self, vals_list):
         res = super().create(vals_list)
         for allocation in res:
-            if allocation.overtime_deductible and allocation.holiday_type == 'employee':
+            if allocation.overtime_deductible:
                 duration = allocation.number_of_hours_display
                 if duration > allocation.employee_id.total_overtime:
                     raise ValidationError(_('The employee does not have enough overtime hours to request this leave.'))
@@ -53,7 +52,9 @@ class HolidaysAllocation(models.Model):
         res = super().write(vals)
         if 'number_of_days' not in vals:
             return res
-        for allocation in self.filtered('overtime_id'):
+        if not self.env.user.has_group("hr_holidays.group_hr_holidays_user") and any(allocation.state not in ('draft', 'confirm') for allocation in self):
+            raise ValidationError(_('Only an Officer or Administrator is allowed to edit the allocation duration in this status.'))
+        for allocation in self.sudo().filtered('overtime_id'):
             employee = allocation.employee_id
             duration = allocation.number_of_hours_display
             overtime_duration = allocation.overtime_id.sudo().duration

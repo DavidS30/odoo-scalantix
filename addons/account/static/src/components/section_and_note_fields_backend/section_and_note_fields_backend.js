@@ -9,6 +9,8 @@ import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Component, useEffect } from "@odoo/owl";
 
 export class SectionAndNoteListRenderer extends ListRenderer {
+    static template = "account.sectionAndNoteListRenderer";
+
     /**
      * The purpose of this extension is to allow sections and notes in the one2many list
      * primarily used on Sales Orders and Invoices
@@ -19,14 +21,14 @@ export class SectionAndNoteListRenderer extends ListRenderer {
         super.setup();
         this.titleField = "name";
         useEffect(
-            () => this.focusToName(this.props.list.editedRecord),
-            () => [this.props.list.editedRecord]
+            (editedRecord) => this.focusToName(editedRecord),
+            () => [this.editedRecord]
         )
     }
 
     focusToName(editRec) {
         if (editRec && editRec.isNew && this.isSectionOrNote(editRec)) {
-            const col = this.state.columns.find((c) => c.name === this.titleField);
+            const col = this.columns.find((c) => c.name === this.titleField);
             this.focusCell(col, null);
         }
     }
@@ -68,22 +70,22 @@ export class SectionAndNoteListRenderer extends ListRenderer {
         });
     }
 }
-SectionAndNoteListRenderer.template = "account.sectionAndNoteListRenderer";
 
-export class SectionAndNoteFieldOne2Many extends X2ManyField {}
-SectionAndNoteFieldOne2Many.components = {
-    ...X2ManyField.components,
-    ListRenderer: SectionAndNoteListRenderer,
-};
+export class SectionAndNoteFieldOne2Many extends X2ManyField {
+    static components = {
+        ...X2ManyField.components,
+        ListRenderer: SectionAndNoteListRenderer,
+    };
+}
 
 export class SectionAndNoteText extends Component {
+    static template = "account.SectionAndNoteText";
     static props = { ...standardFieldProps };
 
     get componentToUse() {
         return this.props.record.data.display_type === 'line_section' ? CharField : TextField;
     }
 }
-SectionAndNoteText.template = "account.SectionAndNoteText";
 
 export class ListSectionAndNoteText extends SectionAndNoteText {
     get componentToUse() {

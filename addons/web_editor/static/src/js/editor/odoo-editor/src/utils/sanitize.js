@@ -8,7 +8,7 @@ import {
     isSelfClosingElement,
     moveNodes,
     preserveCursor,
-    isFontAwesome,
+    isIconElement,
     getDeepRange,
     isUnbreakable,
     isEditorTab,
@@ -24,6 +24,7 @@ import {
     getTraversedNodes,
     ZERO_WIDTH_CHARS_REGEX,
     isVisible,
+    cleanZWS,
 } from './utils.js';
 
 const NOT_A_NUMBER = /[^\d]/g;
@@ -56,7 +57,7 @@ export function areSimilarElements(node, node2) {
     if ([node, node2].some(n => hasPseudoElementContent(n, ':before') || hasPseudoElementContent(n, ':after'))) {
         return false; // The nodes have pseudo elements with content.
     }
-    if (isFontAwesome(node) || isFontAwesome(node2)) {
+    if (isIconElement(node) || isIconElement(node2)) {
         return false;
     }
     if (nodeName === 'LI' && node.classList.contains('oe-nested')) {
@@ -122,7 +123,11 @@ export function deduceURLfromText(text, link) {
    // Check for telephone url.
    match = label.match(PHONE_REGEX);
    if (match) {
-       return match[1] ? match[0] : 'tel://' + match[0];
+        if (match[1]) {
+            return match[0].replace(/\s+/g, "");
+        } else if (link?.href.startsWith("tel:")) {
+            return ("tel:" + match[0]).replace(/\s+/g, "");
+        }
    }
    return null;
 }
@@ -146,6 +151,20 @@ function sanitizeNode(node, root) {
     // contenteditable=false to avoid any hiccup.
     if (isArtificialVoidElement(node) && node.getAttribute('contenteditable') !== 'false') {
         node.setAttribute('contenteditable', 'false');
+    }
+
+    // Ensure zws and data-oe-zws-empty-inline flag is removed if content other
+    // than zws is present in the node.
+    if (
+        node.nodeType === Node.ELEMENT_NODE &&
+        node.hasAttribute("data-oe-zws-empty-inline") &&
+        node.textContent !== "\u200B"
+    ) {
+        const restoreCursor =
+            shouldPreserveCursor(node, root) && preserveCursor(root.ownerDocument);
+        cleanZWS(node);
+        delete node.dataset.oeZwsEmptyInline;
+        restoreCursor && restoreCursor();
     }
 
     // Remove empty class/style attributes.
@@ -241,7 +260,7 @@ function sanitizeNode(node, root) {
         li.classList.add('oe-nested');
         node = li;
         restoreCursor && restoreCursor();
-    } else if (isFontAwesome(node) && node.textContent !== '\u200B') {
+    } else if (isIconElement(node) && node.textContent !== '\u200B') {
         // Ensure a zero width space is present inside the FA element.
         node.textContent = '\u200B';
     } else if (isEditorTab(node)) {

@@ -16,6 +16,8 @@ import {
     descendants,
     isVisibleTextNode,
     nodeSize,
+    getTraversedNodes,
+    setSelection,
 } from '../utils/utils.js';
 
 Text.prototype.oEnter = function (offset) {
@@ -164,7 +166,9 @@ HTMLQuoteElement.prototype.oEnter = HTMLHeadingElement.prototype.oEnter;
  */
 HTMLLIElement.prototype.oEnter = function () {
     // If not empty list item, regular block split
-    if (this.textContent || this.querySelector('table')) {
+    const traverseNodes = getTraversedNodes(this);
+    const isContainUnbreakable = traverseNodes.some(isUnbreakable);
+    if (this.textContent || isContainUnbreakable) {
         const node = HTMLElement.prototype.oEnter.call(this, ...arguments);
         if (node.classList.contains('o_checked')) {
             toggleClass(node, 'o_checked');
@@ -182,6 +186,11 @@ HTMLPreElement.prototype.oEnter = function (offset) {
         this.insertBefore(lineBreak, this.childNodes[offset]);
         setCursorEnd(lineBreak);
     } else {
+        if (this.parentElement.nodeName === 'LI') {
+            setSelection(this.parentElement, childNodeIndex(this) + 1);
+            HTMLLIElement.prototype.oEnter.call(this.parentElement, ...arguments);
+            return;
+        }
         const node = document.createElement('p');
         this.parentNode.insertBefore(node, this.nextSibling);
         fillEmpty(node);

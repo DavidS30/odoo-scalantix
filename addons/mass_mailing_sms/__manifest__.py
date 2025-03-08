@@ -7,6 +7,7 @@
     'version': '1.1',
     'category': 'Marketing/Email Marketing',
     'sequence': 245,
+    'website': 'https://www.odoo.com/app/sms-marketing',
     'depends': [
         'portal',
         'mass_mailing',
@@ -27,7 +28,6 @@
         'wizard/mailing_sms_test_views.xml',
     ],
     'demo': [
-        'demo/utm.xml',
         'demo/mailing_list_contact.xml',
         'demo/mailing_subscription.xml',
         'demo/mailing_mailing.xml',

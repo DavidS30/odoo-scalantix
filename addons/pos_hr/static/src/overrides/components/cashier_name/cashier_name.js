@@ -1,5 +1,3 @@
-/** @odoo-module */
-
 import { CashierName } from "@point_of_sale/app/navbar/cashier_name/cashier_name";
 import { patch } from "@web/core/utils/patch";
 import { useCashierSelector } from "@pos_hr/app/select_cashier_mixin";
@@ -27,7 +25,7 @@ patch(CashierName.prototype, {
         }
         return super.cssClass;
     },
-    async selectCashier() {
-        return await this.cashierSelector();
+    async selectCashier(pin = false, login = false, list = false) {
+        return await this.cashierSelector(...arguments);
     },
 });

@@ -6,7 +6,7 @@ import { TourPointer } from "@web_tour/tour_pointer/tour_pointer";
 import { getScrollParent } from "./tour_utils";
 
 /**
- * @typedef {import("@web/core/position_hook").Direction} Direction
+ * @typedef {import("@web/core/position/position_hook").Direction} Direction
  *
  * @typedef {"in" | "out-below" | "out-above" | "unknown"} IntersectionPosition
  *
@@ -20,6 +20,7 @@ import { getScrollParent } from "./tour_utils";
  * @property {() => {}} [onMouseEnter]
  * @property {() => {}} [onMouseLeave]
  * @property {boolean} isVisible
+ * @property {boolean} isZone
  * @property {Direction} position
  * @property {number} rev
  *
@@ -49,11 +50,17 @@ class Intersection {
             if (observation.isIntersecting) {
                 this._targetPosition = "in";
             } else {
+                const scrollParentElement =
+                    getScrollParent(this.currentTarget) || document.documentElement;
                 const targetBounds = this.currentTarget.getBoundingClientRect();
-                if (targetBounds.bottom < this.rootBounds.height / 2) {
-                    this._targetPosition = "out-above";
-                } else if (targetBounds.top > this.rootBounds.height / 2) {
+                if (targetBounds.bottom > scrollParentElement.clientHeight) {
                     this._targetPosition = "out-below";
+                } else if (targetBounds.top < 0) {
+                    this._targetPosition = "out-above";
+                } else if (targetBounds.left < 0) {
+                    this._targetPosition = "out-left";
+                } else if (targetBounds.right > scrollParentElement.clientWidth) {
+                    this._targetPosition = "out-right";
                 }
             }
         } else {
@@ -100,11 +107,12 @@ export function createPointerState() {
     /**
      * @param {TourStep} step
      * @param {HTMLElement} [anchor]
+     * @param {boolean} [isZone] will border de zone. e.g.: a dropzone
      */
-    const pointTo = (anchor, step) => {
+    const pointTo = (anchor, step, isZone) => {
         intersection.setTarget(anchor);
         if (anchor) {
-            let { position, content } = step;
+            let { tooltipPosition, content } = step;
             switch (intersection.targetPosition) {
                 case "unknown": {
                     // Do nothing for unknown target position.
@@ -114,7 +122,14 @@ export function createPointerState() {
                     if (document.body.contains(floatingAnchor)) {
                         floatingAnchor.remove();
                     }
-                    setState({ anchor, content, onClick: null, position, isVisible: true });
+                    setState({
+                        anchor,
+                        content,
+                        isZone,
+                        onClick: null,
+                        position: tooltipPosition,
+                        isVisible: true,
+                    });
                     break;
                 }
                 default: {
@@ -125,7 +140,14 @@ export function createPointerState() {
 
                     const scrollParent = getScrollParent(anchor);
                     if (!scrollParent) {
-                        setState({ anchor, content, onClick: null, position, isVisible: true });
+                        setState({
+                            anchor,
+                            content,
+                            isZone,
+                            onClick: null,
+                            position: tooltipPosition,
+                            isVisible: true,
+                        });
                         return;
                     }
                     let { x, y, width, height } = scrollParent.getBoundingClientRect();
@@ -138,15 +160,27 @@ export function createPointerState() {
                         x += iframeOffset.x;
                         y += iframeOffset.y;
                     }
-                    floatingAnchor.style.left = `${x + width / 2}px`;
                     if (intersection.targetPosition === "out-below") {
-                        position = "top";
+                        tooltipPosition = "top";
                         content = _t("Scroll down to reach the next step.");
                         floatingAnchor.style.top = `${y + height - TourPointer.height}px`;
+                        floatingAnchor.style.left = `${x + width / 2}px`;
                     } else if (intersection.targetPosition === "out-above") {
-                        position = "bottom";
+                        tooltipPosition = "bottom";
                         content = _t("Scroll up to reach the next step.");
                         floatingAnchor.style.top = `${y + TourPointer.height}px`;
+                        floatingAnchor.style.left = `${x + width / 2}px`;
+                    }
+                    if (intersection.targetPosition === "out-left") {
+                        tooltipPosition = "right";
+                        content = _t("Scroll left to reach the next step.");
+                        floatingAnchor.style.top = `${y + height / 2}px`;
+                        floatingAnchor.style.left = `${x + TourPointer.width}px`;
+                    } else if (intersection.targetPosition === "out-right") {
+                        tooltipPosition = "left";
+                        content = _t("Scroll right to reach the next step.");
+                        floatingAnchor.style.top = `${y + height / 2}px`;
+                        floatingAnchor.style.left = `${x + width - TourPointer.width}px`;
                     }
                     if (!document.contains(floatingAnchor)) {
                         document.body.appendChild(floatingAnchor);
@@ -155,7 +189,8 @@ export function createPointerState() {
                         anchor: floatingAnchor,
                         content,
                         onClick,
-                        position,
+                        position: tooltipPosition,
+                        isZone,
                         isVisible: true,
                     });
                 }
@@ -186,5 +221,5 @@ export function createPointerState() {
     const floatingAnchor = document.createElement("div");
     floatingAnchor.className = "position-fixed";
 
-    return { state, methods: { setState, showContent, pointTo, hide, destroy } };
+    return { state, setState, showContent, pointTo, hide, destroy };
 }
