@@ -186,6 +186,14 @@ class CustomerPortal(Controller):
         })
 
         if post and request.httprequest.method == 'POST':
+            # Procesar la imagen subida
+            if 'image_1920' in request.httprequest.files:
+                image_file = request.httprequest.files['image_1920']
+                if image_file:
+                    partner.sudo().write({
+                        'image_1920': base64.b64encode(image_file.read()),
+                    })
+
             if not partner.can_edit_vat():
                 post['country_id'] = str(partner.country_id.id)
 

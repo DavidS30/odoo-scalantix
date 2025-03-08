@@ -1,0 +1,41 @@
+<odoo>
+    <template id="dashboard_template" name="Dashboard de Suscripciones">
+        <t t-call="website.layout">
+            <div class="container">
+                <h1>Dashboard de Suscripciones</h1>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Fecha de Inicio</th>
+                            <th>Fecha de Fin</th>
+                            <th>Estado</th>
+                            <th>Método de Pago</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="subscriptions" t-as="subscription">
+                            <tr>
+                                <td><t t-esc="subscription.name"/></td>
+                                <td><t t-esc="subscription.start_date"/></td>
+                                <td><t t-esc="subscription.end_date"/></td>
+                                <td><t t-esc="subscription.state"/></td>
+                                <td><t t-esc="subscription.payment_method"/></td>
+                                <td><t t-esc="subscription.amount"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+        </t>
+    </template>
+
+    <template id="my_account_link" inherit_id="portal.user_dropdown">
+        <xpath expr="//*[@id='o_logout_divider']" position="before">
+            <a href="/my/subscriptions" role="menuitem" class="dropdown-item ps-3">
+                <i class="fa fa-fw fa-id-card-o me-1 small text-primary"/> Mis Suscripciones
+            </a>
+        </xpath>
+    </template>
+</odoo>

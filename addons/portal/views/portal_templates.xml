@@ -429,6 +429,21 @@
 
     <template id="portal_my_details_fields">
         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+        <div t-attf-class="mb-3 #{error.get('image_1920') and 'o_has_error' or ''} col-xl-6">
+        <label class="col-form-label" for="image_1920">Profile Picture</label>
+        <div class="d-flex align-items-center">
+            <!-- Mostrar la imagen actual del usuario -->
+            <img t-if="partner.image_1920"
+                 t-att-src="'data:image/png;base64,' + partner.image_1920"
+                 alt="Profile Picture"
+                 class="rounded-circle me-3"
+                 style="width: 64px; height: 64px; object-fit: cover;"/>
+            <!-- Campo para cargar una nueva imagen -->
+                <input type="file" name="image" accept="image/*" class="form-control"/>
+            </div>
+            <small class="form-text text-muted">Upload a new profile picture.</small>
+        </div>
+
         <div t-if="error_message" class="alert alert-danger" role="alert">
             <div class="col-lg-12">
                 <t t-foreach="error_message" t-as="err"><t t-esc="err"/><br /></t>
