@@ -1219,8 +1219,8 @@ export class PosStore extends Reactive {
     }
 
     // There for override
-    async preSyncAllOrders(orders) {}
-    postSyncAllOrders(orders) {}
+    async preSyncAllOrders(orders) { }
+    postSyncAllOrders(orders) { }
     async syncAllOrders(options = {}) {
         const { orderToCreate, orderToUpdate } = this.getPendingOrder();
         let orders = options.orders || [...orderToCreate, ...orderToUpdate];
@@ -1259,6 +1259,7 @@ export class PosStore extends Reactive {
                 context,
             });
             const missingRecords = await this.data.missingRecursive(data);
+            this.data.dispatchData(missingRecords);
             const newData = this.models.loadData(missingRecords, [], false);
 
             for (const line of newData["pos.order.line"]) {
@@ -1433,19 +1434,19 @@ export class PosStore extends Reactive {
             console.warn(error);
             const reason = this.failed
                 ? _t(
-                      "Some orders could not be submitted to " +
-                          "the server due to configuration errors. " +
-                          "You can exit the Point of Sale, but do " +
-                          "not close the session before the issue " +
-                          "has been resolved."
-                  )
+                    "Some orders could not be submitted to " +
+                    "the server due to configuration errors. " +
+                    "You can exit the Point of Sale, but do " +
+                    "not close the session before the issue " +
+                    "has been resolved."
+                )
                 : _t(
-                      "Some orders could not be submitted to " +
-                          "the server due to internet connection issues. " +
-                          "You can exit the Point of Sale, but do " +
-                          "not close the session before the issue " +
-                          "has been resolved."
-                  );
+                    "Some orders could not be submitted to " +
+                    "the server due to internet connection issues. " +
+                    "You can exit the Point of Sale, but do " +
+                    "not close the session before the issue " +
+                    "has been resolved."
+                );
             await ask(this.dialog, {
                 title: _t("Offline Orders"),
                 body: reason,

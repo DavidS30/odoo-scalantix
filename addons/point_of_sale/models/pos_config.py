@@ -202,6 +202,13 @@ class PosConfig(models.Model):
     orderlines_sequence_in_cart_by_category = fields.Boolean(string="Order cart by category's sequence", default=False,
         help="When active, orderlines will be sorted based on product category and sequence in the product screen's order cart.")
 
+    def dispatch_record_ids(self, session_id, records, login_number):
+        self._notify('SYNCHRONISATION', {
+            'records': records,
+            'session_id': session_id,
+            'login_number': login_number
+        })
+
     def notify_synchronisation(self, session_id, login_number, records={}):
         static_records = {}
 

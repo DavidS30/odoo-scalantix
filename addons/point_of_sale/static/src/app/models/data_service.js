@@ -68,6 +68,27 @@ export class PosData extends Reactive {
         this.bus.addEventListener("connect", this.reconnectWebSocket.bind(this));
     }
 
+    dispatchData(data) {
+        let hasChanges = false;
+        const recordIds = Object.entries(data).reduce((acc, [model, records]) => {
+            acc[model] = records.map((record) => record.id);
+            hasChanges = hasChanges || acc[model].length > 0;
+            return acc;
+        }, {});
+
+        if (!hasChanges) {
+            return;
+        }
+
+        return this.call("pos.config", "dispatch_record_ids", [
+            odoo.pos_config_id,
+            odoo.pos_session_id,
+            recordIds,
+            odoo.login_number,
+        ]);
+    }
+
+
     intializeWebsocket() {
         this.onNotified = getOnNotified(this.bus, odoo.access_token);
     }
