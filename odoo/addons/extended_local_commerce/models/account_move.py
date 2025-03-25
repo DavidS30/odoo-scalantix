@@ -13,6 +13,11 @@ class AccountMove(models.Model):
             for vals in vals_list:
                 if 'invoice_line_ids' in vals:
                     for line in vals['invoice_line_ids']:
-                        line[2]['tax_ids'] = [(6, 0, [iva_tax.id])]  # Se le asigna el IVA
+                        line_data = line[2];
+                        tax_data = line[2]['tax_ids']
+                        if tax_data and not tax_data[0][2]:
+                            total_tax_adjust = 1 + iva_tax.amount/100;
+                            line_data['price_unit'] = line_data['price_unit'] / total_tax_adjust # se ajusta precio inicial para todo con iva
+                            line[2]['tax_ids'] = [(6, 0, [iva_tax.id])]  # Se le asigna el IVA
 
         return super().create(vals_list)
