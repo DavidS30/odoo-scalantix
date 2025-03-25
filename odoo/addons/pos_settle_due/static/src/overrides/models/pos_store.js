@@ -67,7 +67,8 @@ patch(PosStore.prototype, {
                     (order) =>
                         order.lines.length === 0 &&
                         order.payment_ids.length === 0 &&
-                        (!order.partner || order.partner.id === partner.id)
+                        (!order.partner || order.partner.id === partner.id) &&
+                        order.state === "draft"
                 );
                 if (emptyOrder) {
                     newOrder = emptyOrder;
