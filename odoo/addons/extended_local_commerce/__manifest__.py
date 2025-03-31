@@ -18,8 +18,11 @@ Caracteristicas Implementadas
 """,
     'depends': [
         'account',
+        'point_of_sale'
     ],
-    'data': [],
+    'data': [
+        'views/pos_session_sales_details.xml'
+    ],
     'installable': True,
     'auto_install': False,
     'application': False,
