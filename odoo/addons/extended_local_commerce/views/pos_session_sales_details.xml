@@ -6,6 +6,7 @@
 
             <!-- Agregar una nueva sección al final -->
             <xpath expr="//div[@t-if='opening_note or closing_note']" position="before">
+                <div class="fs-5 fw-bold">Total egresos en sesión: <span t-out="total_negative_moves" t-options="{'widget': 'float', 'precision': currency['precision']}">50.00</span><span t-out='currency["symbol"]'>$</span></div>
                 <div class="fs-5 fw-bold">Ganancias netas en sesión: <span t-out="total_without_cash_box" t-options="{'widget': 'float', 'precision': currency['precision']}">50.00</span><span t-out='currency["symbol"]'>$</span></div>
             </xpath>
         </template>
