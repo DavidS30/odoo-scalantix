@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+################################################################################
+# ============> SCALANTIX MODULE <================
+# Developer: David Salas (CEO)
+# Company: Scalantix
+# Website: https://scalantix.com
+# Description: This module control the extended functionality of the
+#              Local Colombian Commerce
+# License: AGPL-3
+################################################################################
 {
-    'name' : 'Modulo Extendido para Comercio local Colombiano',
+    'name' : 'Extended Local Commerce',
+    'author' : 'Scalantix',
+    'website' : 'https://scalantix.com',
+    'maintainer' : 'Scalantix',
     'version' : '0.1',
     'category': 'Accounting',
     'summary' : 'Modulo Extendido para Comercio local Colombiano',
-    'description' : """
-Extendido Comercio Local Colombiano
-==================================
-Con este modulo se busca agrupar todas las funcionalidades muy especificas
-del comercio local colombiano.
-
-Caracteristicas Implementadas
--------------
-* Añadir Iva automáticamente en facturas cuando se selecciona en el POS esta opción
-
-""",
+    'description' : """Extendido Comercio Local Colombiano.
+                    Con este modulo se busca agrupar todas las funcionalidades muy especificas
+                    del comercio local colombiano.""",
     'depends': [
         'account',
         'point_of_sale'
@@ -32,5 +35,5 @@ Caracteristicas Implementadas
             'extended_local_commerce/static/src/pos/css/*',
         ],
     },
-    'license': 'LGPL-3',
+    'license': 'AGPL-3',
 }

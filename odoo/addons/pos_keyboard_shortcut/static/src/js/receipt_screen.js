@@ -1,0 +1,37 @@
+/** @odoo-module */
+import { patch } from "@web/core/utils/patch";
+import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
+//Patch the Receipt screen and add the shortcuts on the Receipt screen
+patch(ReceiptScreen.prototype, {
+    setup() {
+        super.setup();
+        this._onKeyDown = this._onKeyDown.bind(this); // Aseguramos el contexto
+        this.receipt_screen_shortcuts();
+    },
+
+    receipt_screen_shortcuts() {
+        if (this.pos.config.enable_keyboard_shortcuts) {
+            document.addEventListener('keydown', this._onKeyDown);
+        }
+    },
+    _onKeyDown(event) {
+        const tagName = event.target.tagName.toLowerCase();
+        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+            return;
+        }
+        event.preventDefault();
+        if (event.ctrlKey && event.key === this.pos.keyboard_shortcuts[0].print_receipt.toLowerCase()) {
+            this.pos.printReceipt();
+        }
+        if (event.ctrlKey && event.key === this.pos.keyboard_shortcuts[0].new_order.toLowerCase()) {
+            this.orderDone();
+            this.removeEventKeyDown();
+        }
+        if (event.ctrlKey && event.key === this.pos.keyboard_shortcuts[0].sent_email.toLowerCase()) {
+            this.actionSendReceiptOnEmail();
+        }
+    },
+    removeEventKeyDown() {
+        document.removeEventListener('keydown', this._onKeyDown);
+    },
+});
