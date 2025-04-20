@@ -65,6 +65,10 @@ class TestHttpStaticCommon(TestHttpBase):
 
 @tagged('post_install', '-at_install')
 class TestHttpStatic(TestHttpStaticCommon):
+    def setUp(self):
+        super().setUp()
+        self.authenticate('demo', 'demo')
+
     def test_static00_static(self):
         with self.subTest(x_sendfile=False):
             res = self.assertDownloadGizeh('/test_http/static/src/img/gizeh.png')
@@ -84,6 +88,8 @@ class TestHttpStatic(TestHttpStaticCommon):
         self.assertCacheControl(res, 'no-cache, max-age=0')
 
     def test_static02_not_found(self):
+        session = self.authenticate(None, None)
+        session.db = None
         res = self.nodb_url_open("/test_http/static/i-dont-exist")
         self.assertEqual(res.status_code, 404)
 
@@ -270,6 +276,7 @@ class TestHttpStatic(TestHttpStaticCommon):
         )
 
     def test_static16_public_access_rights(self):
+        self.authenticate(None, None)
         default_user = self.env.ref('base.default_user')
 
         with self.subTest('model access rights'):
@@ -331,7 +338,42 @@ class TestHttpStatic(TestHttpStaticCommon):
         self.assertNotEqual(location.path, bad_path, "loop detected")
         self.assertEqual(res.status_code, 404)
 
-    def test_static20_download_false(self):
+    def test_static20_web_assets(self):
+        attachment = self.env['ir.attachment'].search([
+            ('url', 'like', '%/web.assets_frontend_minimal.min.js')
+        ], limit=1)
+        x_sendfile = opj(config.filestore(self.env.cr.dbname), attachment.store_fname)
+        x_accel_redirect = f'/web/filestore/{self.env.cr.dbname}/{attachment.store_fname}'
+
+        with self.subTest(x_sendfile=False):
+            self.assertDownload(
+                attachment.url,
+                headers={},
+                assert_status_code=200,
+                assert_headers={
+                    'Content-Length': str(attachment.file_size),
+                    'Content-Type': 'application/javascript; charset=utf-8',
+                    'Content-Disposition': 'inline; filename=web.assets_frontend_minimal.min.js',
+                },
+                assert_content=attachment.raw
+            )
+
+        with self.subTest(x_sendfile=True), \
+             patch.object(config, 'options', {**config.options, 'x_sendfile': True}):
+            self.assertDownload(
+                attachment.url,
+                headers={},
+                assert_status_code=200,
+                assert_headers={
+                    'X-Sendfile': x_sendfile,
+                    'X-Accel-Redirect': x_accel_redirect,
+                    'Content-Length': '0',
+                    'Content-Type': 'application/javascript; charset=utf-8',
+                    'Content-Disposition': 'inline; filename=web.assets_frontend_minimal.min.js',
+                },
+            )
+
+    def test_static21_download_false(self):
         self.assertDownloadGizeh('/web/content/test_http.gizeh_png?download=0')
         self.assertDownloadGizeh('/web/image/test_http.gizeh_png?download=0')
 
@@ -383,6 +425,29 @@ class TestHttpStatic(TestHttpStaticCommon):
             self.assertEqual(res.headers['Content-Type'], 'application/octet-stream')  # Shouldn't be text/html
             self.assertEqual(res.headers['Content-Security-Policy'], "default-src 'none'")
 
+    def test_static23_remove_cache_control_wkhmtltopdf(self):
+        session = self.authenticate(None, None)
+        for debug in ('', 'assets'):
+            session.debug = debug
+            odoo.http.root.session_store.save(self.session)
+            with self.subTest(debug=debug):
+                res = self.db_url_open('/test_http/static/src/img/gizeh.png', headers={
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) '
+                                  'AppleWebKit/534.34 (KHTML, like Gecko) '
+                                  'wkhtmltopdf Safari/534.34',
+                })
+                res.raise_for_status()
+                self.assertEqual(res.status_code, 200)
+                try:
+                    self.assertIn('Cache-Control', res.headers)
+                    cc = self.parse_http_cache_control(res.headers['Cache-Control'])
+                    self.assertTrue(cc.max_age, "max-age must be set and positive")
+                    self.assertFalse(cc.no_cache, "no-cache must not be set")
+                    self.assertFalse(cc.no_store, "no-store must not be set")
+                except AssertionError as exc:
+                    e = "wkhtmltopdf only works if it is allowed to cache everything"
+                    raise AssertionError(e) from exc
+                self.assertEqual(res.content, self.gizeh_data)
 
 @tagged('post_install', '-at_install')
 class TestHttpStaticLogo(TestHttpStaticCommon):

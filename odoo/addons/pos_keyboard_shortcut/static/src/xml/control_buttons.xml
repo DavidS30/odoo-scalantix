@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="ControlButtonKeyShortcut" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+        <xpath expr="//button[i[@class='fa fa-trash me-1']]" position="after">
+            <button class="btn btn-secondary btn-lg py-5" t-on-click="() => this.clickButtonCustom()">
+                <i class="fa fa-keyboard-o me-1" role="img" aria-label="Custom Action" title="Custom Action" />
+                See Keyboard Shortcuts
+            </button>
+        </xpath>
+    </t>
+</templates>

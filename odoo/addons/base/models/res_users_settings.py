@@ -9,11 +9,16 @@ class ResUsersSettings(models.Model):
     _description = 'User Settings'
     _rec_name = 'user_id'
 
-    user_id = fields.Many2one('res.users', string="User", required=True, readonly=True, ondelete='cascade')
+    user_id = fields.Many2one("res.users", string="User", required=True, ondelete="cascade", domain=[("res_users_settings_id", "=", False)])
 
     _sql_constraints = [
         ('unique_user_id', 'UNIQUE(user_id)', 'One user should only have one user settings.')
     ]
+
+    @api.model
+    def _get_fields_blacklist(self):
+        """ Get list of fields that won't be formatted. """
+        return []
 
     @api.model
     def _find_or_create_for_user(self, user):
@@ -24,8 +29,11 @@ class ResUsersSettings(models.Model):
 
     def _res_users_settings_format(self, fields_to_format=None):
         self.ensure_one()
-        if not fields_to_format:
-            fields_to_format = [name for name, field in self._fields.items() if name == 'id' or not field.automatic]
+        fields_blacklist = self._get_fields_blacklist()
+        if fields_to_format:
+            fields_to_format = [field for field in fields_to_format if field not in fields_blacklist]
+        else:
+            fields_to_format = [name for name, field in self._fields.items() if name == 'id' or (not field.automatic and name not in fields_blacklist)]
         res = self._format_settings(fields_to_format)
         return res
 

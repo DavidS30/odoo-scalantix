@@ -6,6 +6,8 @@ import email.policy
 
 from unittest.mock import patch
 
+import psycopg2.errors
+
 from odoo import tools
 from odoo.addons.base.tests import test_mail_examples
 from odoo.addons.base.tests.common import MockSmtplibCase
@@ -124,17 +126,26 @@ class TestIrMailServer(TransactionCase, MockSmtplibCase):
                 subject='Subject',
                 subtype='html',
             )
-            body_alternative = False
+            body_alternative = None
             for part in message.walk():
                 if part.get_content_maintype() == 'multipart':
                     continue  # skip container
                 if part.get_content_type() == 'text/plain':
                     if not part.get_payload():
                         continue
-                    body_alternative = tools.ustr(part.get_content())
                     # remove ending new lines as it just adds noise
-                    body_alternative = body_alternative.strip('\n')
+                    body_alternative = part.get_content().rstrip('\n')
             self.assertEqual(body_alternative, expected)
+
+    @mute_logger('odoo.sql_db')
+    def test_mail_server_auth_cert_requires_tls(self):
+        with self.assertRaises(psycopg2.errors.CheckViolation):
+            self.env['ir.mail_server'].create({
+                'name': 'test',
+                'smtp_host': 'smtp_host',
+                'smtp_encryption': 'none',
+                'smtp_authentication': 'certificate',
+            })
 
     @users('admin')
     def test_mail_server_get_test_email_from(self):
@@ -460,4 +471,31 @@ class TestIrMailServer(TransactionCase, MockSmtplibCase):
                     smtp_from=expected_smtp_from,
                     message_from=expected_msg_from,
                     mail_server=expected_mail_server,
+                )
+
+    def test_eml_attachment_encoding(self):
+        """Test that message/rfc822 attachments are encoded using 7bit, 8bit, or binary encoding."""
+        IrMailServer = self.env['ir.mail_server']
+
+        # Create a sample .eml file content
+        eml_content = b"From: user@example.com\nTo: user2@example.com\nSubject: Test Email\n\nThis is a test email."
+        attachments = [('test.eml', eml_content, 'message/rfc822')]
+
+        # Build the email with the .eml attachment
+        message = IrMailServer.build_email(
+            email_from='john.doe@from.example.com',
+            email_to='destinataire@to.example.com',
+            subject='Subject with .eml attachment',
+            body='This email contains a .eml attachment.',
+            attachments=attachments,
+        )
+
+        # Verify that the attachment is correctly encoded
+        acceptable_encodings = {'7bit', '8bit', 'binary'}
+        for part in message.iter_attachments():
+            if part.get_content_type() == 'message/rfc822':
+                self.assertIn(
+                    part.get('Content-Transfer-Encoding'),
+                    acceptable_encodings,
+                    "The message/rfc822 attachment should be encoded using 7bit, 8bit, or binary encoding.",
                 )

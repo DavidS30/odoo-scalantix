@@ -75,7 +75,7 @@ class configmanager(object):
         self.options = {
             'admin_passwd': 'admin',
             'csv_internal_sep': ',',
-            'publisher_warranty_url': 'http://services.openerp.com/publisher-warranty/',
+            'publisher_warranty_url': 'http://services.odoo.com/publisher-warranty/',
             'reportgz': False,
             'root_path': None,
             'websocket_keep_alive_timeout': 3600,
@@ -87,7 +87,6 @@ class configmanager(object):
         self.blacklist_for_save = set([
             'publisher_warranty_url', 'load_language', 'root_path',
             'init', 'save', 'config', 'update', 'stop_after_init', 'dev_mode', 'shell_interface',
-            'longpolling_port',
         ])
 
         # dictionary mapping option destination (keys in self.options) to MyOptions.
@@ -137,8 +136,6 @@ class configmanager(object):
                               "Keep empty to listen on all interfaces (0.0.0.0)")
         group.add_option("-p", "--http-port", dest="http_port", my_default=8069,
                          help="Listen port for the main HTTP service", type="int", metavar="PORT")
-        group.add_option("--longpolling-port", dest="longpolling_port", my_default=0,
-                         help="Deprecated alias to the gevent-port option", type="int", metavar="PORT")
         group.add_option("--gevent-port", dest="gevent_port", my_default=8072,
                          help="Listen port for the gevent worker", type="int", metavar="PORT")
         group.add_option("--no-http", dest="http_enable", action="store_false", my_default=True,
@@ -253,8 +250,12 @@ class configmanager(object):
         group.add_option("--pg_path", dest="pg_path", help="specify the pg executable path")
         group.add_option("--db_host", dest="db_host", my_default=False,
                          help="specify the database host")
+        group.add_option("--db_replica_host", dest="db_replica_host", my_default=False,
+                         help="specify the replica host. Specify an empty db_replica_host to use the default unix socket.")
         group.add_option("--db_port", dest="db_port", my_default=False,
                          help="specify the database port", type="int")
+        group.add_option("--db_replica_port", dest="db_replica_port", my_default=False,
+                         help="specify the replica port", type="int")
         group.add_option("--db_sslmode", dest="db_sslmode", type="choice", my_default='prefer',
                          choices=['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full'],
                          help="specify the database ssl connection mode (see PostgreSQL documentation)")
@@ -313,6 +314,10 @@ class configmanager(object):
         group.add_option("--max-cron-threads", dest="max_cron_threads", my_default=2,
                          help="Maximum number of threads processing concurrently cron jobs (default 2).",
                          type="int")
+        group.add_option("--limit-time-worker-cron", dest="limit_time_worker_cron", my_default=0,
+                         help="Maximum time a cron thread/worker stays alive before it is restarted. "
+                              "Set to 0 to disable. (default: 0)",
+                         type="int")
         group.add_option("--unaccent", dest="unaccent", my_default=False, action="store_true",
                          help="Try to enable the unaccent extension when creating new databases.")
         group.add_option("--geoip-city-db", "--geoip-db", dest="geoip_city_db", my_default='/usr/share/GeoIP/GeoLite2-City.mmdb',
@@ -331,9 +336,17 @@ class configmanager(object):
                              help="Maximum allowed virtual memory per worker (in bytes), when reached the worker be "
                              "reset after the current request (default 2048MiB).",
                              type="int")
+            group.add_option("--limit-memory-soft-gevent", dest="limit_memory_soft_gevent", my_default=False,
+                             help="Maximum allowed virtual memory per gevent worker (in bytes), when reached the worker will be "
+                             "reset after the current request. Defaults to `--limit-memory-soft`.",
+                             type="int")
             group.add_option("--limit-memory-hard", dest="limit_memory_hard", my_default=2560 * 1024 * 1024,
                              help="Maximum allowed virtual memory per worker (in bytes), when reached, any memory "
                              "allocation will fail (default 2560MiB).",
+                             type="int")
+            group.add_option("--limit-memory-hard-gevent", dest="limit_memory_hard_gevent", my_default=False,
+                             help="Maximum allowed virtual memory per gevent worker (in bytes), when reached, any memory "
+                             "allocation will fail. Defaults to `--limit-memory-hard`.",
                              type="int")
             group.add_option("--limit-time-cpu", dest="limit_time_cpu", my_default=60,
                              help="Maximum allowed CPU time per request (default 60).",
@@ -360,7 +373,7 @@ class configmanager(object):
         # generate default config
         self._parse_config()
 
-    def parse_config(self, args=None):
+    def parse_config(self, args: list[str] | None = None, *, setup_logging: bool | None = None) -> None:
         """ Parse the configuration file (if any) and the command-line
         arguments.
 
@@ -376,7 +389,18 @@ class configmanager(object):
             odoo.tools.config.parse_config(sys.argv[1:])
         """
         opt = self._parse_config(args)
-        odoo.netsvc.init_logger()
+        if setup_logging is not False:
+            odoo.netsvc.init_logger()
+            # warn after having done setup, so it has a chance to show up
+            # (mostly once this warning is bumped to DeprecationWarning proper)
+            if setup_logging is None:
+                warnings.warn(
+                    "As of Odoo 18, it's recommended to specify whether"
+                    " you want Odoo to setup its own logging (or want to"
+                    " handle it yourself)",
+                    category=PendingDeprecationWarning,
+                    stacklevel=2,
+                )
         self._warn_deprecated_options()
         odoo.modules.module.initialize_sys_path()
         return opt
@@ -446,16 +470,16 @@ class configmanager(object):
             self.options['server_wide_modules'] = 'base,web'
 
         # if defined do not take the configfile value even if the defined value is None
-        keys = ['gevent_port', 'http_interface', 'http_port', 'longpolling_port', 'http_enable', 'x_sendfile',
-                'db_name', 'db_user', 'db_password', 'db_host', 'db_sslmode',
-                'db_port', 'db_template', 'logfile', 'pidfile', 'smtp_port',
+        keys = ['gevent_port', 'http_interface', 'http_port', 'http_enable', 'x_sendfile',
+                'db_name', 'db_user', 'db_password', 'db_host', 'db_replica_host', 'db_sslmode',
+                'db_port', 'db_replica_port', 'db_template', 'logfile', 'pidfile', 'smtp_port',
                 'email_from', 'smtp_server', 'smtp_user', 'smtp_password', 'from_filter',
                 'smtp_ssl_certificate_filename', 'smtp_ssl_private_key_filename',
                 'db_maxconn', 'db_maxconn_gevent', 'import_partial', 'addons_path', 'upgrade_path',
                 'syslog', 'without_demo', 'screencasts', 'screenshots',
                 'dbfilter', 'log_level', 'log_db',
                 'log_db_level', 'geoip_city_db', 'geoip_country_db', 'dev_mode',
-                'shell_interface',
+                'shell_interface', 'limit_time_worker_cron',
         ]
 
         for arg in keys:
@@ -485,7 +509,7 @@ class configmanager(object):
 
         posix_keys = [
             'workers',
-            'limit_memory_hard', 'limit_memory_soft',
+            'limit_memory_hard', 'limit_memory_hard_gevent', 'limit_memory_soft', 'limit_memory_soft_gevent',
             'limit_time_cpu', 'limit_time_real', 'limit_request', 'limit_time_real_cron'
         ]
 
@@ -556,13 +580,6 @@ class configmanager(object):
         return opt
 
     def _warn_deprecated_options(self):
-        if self.options.get('longpolling_port', 0):
-            warnings.warn(
-                "The longpolling-port is a deprecated alias to "
-                "the gevent-port option, please use the latter.",
-                DeprecationWarning)
-            self.options['gevent_port'] = self.options.pop('longpolling_port')
-
         for old_option_name, new_option_name in [
             ('geoip_database', 'geoip_city_db'),
             ('osv_memory_age_limit', 'transient_age_limit')
@@ -688,7 +705,7 @@ class configmanager(object):
         for opt in sorted(self.options):
             if keys is not None and opt not in keys:
                 continue
-            if opt in ('version', 'language', 'translate_out', 'translate_in', 'overwrite_existing_translations', 'init', 'update'):
+            if opt in ('version', 'language', 'translate_out', 'translate_in', 'overwrite_existing_translations', 'init', 'update', 'demo'):
                 continue
             if opt in self.blacklist_for_save:
                 continue
@@ -768,8 +785,7 @@ class configmanager(object):
         return os.path.join(self['data_dir'], 'filestore', dbname)
 
     def set_admin_password(self, new_password):
-        hash_password = crypt_context.hash if hasattr(crypt_context, 'hash') else crypt_context.encrypt
-        self.options['admin_passwd'] = hash_password(new_password)
+        self.options['admin_passwd'] = crypt_context.hash(new_password)
 
     def verify_admin_password(self, password):
         """Verifies the super-admin password, possibly updating the stored hash if needed"""

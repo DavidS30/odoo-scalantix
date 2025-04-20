@@ -367,6 +367,30 @@ class TestUnityRead(TransactionCase):
                     ],
             }])
 
+    def test_one2many_with_order_respects_field_context(self):
+        archived = self.env['test_new_api.person'].create({'name': 'Archived', 'active': False})
+        employer = self.env['test_new_api.employer'].create({
+            'name': 'JS Corp',
+            'all_employee_ids': [Command.set([archived.id, self.teacher.id, self.author.id])],
+        })
+        read = employer.web_read({
+            'name': {},
+            'all_employee_ids': {
+                'fields': {'name': {}},
+                'order': 'name DESC',
+            },
+        })
+        self.assertEqual(read, [{
+            'id': employer.id,
+            'name': 'JS Corp',
+            'all_employee_ids':
+                [
+                    {'id': self.author.id, 'name': self.author.name},
+                    {'id': self.teacher.id, 'name': self.teacher.name},
+                    {'id': archived.id, 'name': archived.name},
+                ],
+        }])
+
     def test_read_many2many_gives_ids(self):
         with self.assertQueryCount(1        # 1 query for course
                                    + 1      # 1 query for the lessons
@@ -674,6 +698,45 @@ class TestUnityRead(TransactionCase):
             }
         ])
 
+    def test_many2one_reference_without_value(self):
+        read = self.course_no_author.web_read(
+            {
+                'm2o_reference_id':
+                    {
+                        'fields':
+                            {
+                                'display_name': {},
+                            },
+                    },
+            })
+        self.assertEqual(read, [
+            {
+                'id': self.course_no_author.id,
+                'm2o_reference_id': False,
+            }
+        ])
+
+    def test_many2one_reference_when_you_dont_have_access(self):
+        read = self.course.with_user(self.only_course_user).web_read(
+            {
+                'm2o_reference_id':
+                    {
+                        'fields':
+                            {
+                                'display_name': {},
+                            },
+                    },
+            })
+        self.assertEqual(read, [
+            {
+                'id': self.course.id,
+                'm2o_reference_id': {
+                    'id': self.lesson_day1.id,
+                    'display_name': "You don't have access to this record"
+                }
+            }
+        ])
+
     def test_reference_without_values(self):
         read = self.course_no_author.web_read(
             {
@@ -753,6 +816,21 @@ class TestUnityRead(TransactionCase):
                 'reference': False,
                 'm2o_reference_id': False,
                 'm2o_reference_model': False,
+            }
+        ])
+
+    def test_reference_when_you_dont_have_access(self):
+        read = self.course.with_user(self.only_course_user).web_read(
+            {
+                'reference': {'fields': {'display_name': {}}}
+            })
+        self.assertEqual(read, [
+            {
+                'id': self.course.id,
+                'reference': {
+                    'id': {'id': self.lesson_day1.id, 'model': self.lesson_day1._name},
+                    'display_name': "You don't have access to this record"
+                }
             }
         ])
 

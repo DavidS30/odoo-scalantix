@@ -37,7 +37,7 @@ class ResUsersDeletion(models.Model):
                 user_deletion.user_id_int = user_deletion.user_id.id
 
     @api.model
-    def _gc_portal_users(self, batch_size=10):
+    def _gc_portal_users(self, batch_size=50):
         """Remove the portal users that asked to deactivate their account.
 
         (see <res.users>::_deactivate_portal_user)
@@ -53,6 +53,8 @@ class ResUsersDeletion(models.Model):
         done_requests.state = "done"
 
         todo_requests = delete_requests - done_requests
+        cron_done, cron_remaining = len(done_requests), len(todo_requests)
+        self.env['ir.cron']._notify_progress(done=cron_done, remaining=cron_remaining)
         batch_requests = todo_requests[:batch_size]
 
         auto_commit = not getattr(threading.current_thread(), "testing", False)
@@ -60,23 +62,23 @@ class ResUsersDeletion(models.Model):
         for delete_request in batch_requests:
             user = delete_request.user_id
             user_name = user.name
+            partner = user.partner_id
             requester_name = delete_request.create_uid.name
             # Step 1: Delete User
             try:
-                self.env.cr.execute("SAVEPOINT delete_user")
-                partner = user.partner_id
-                user.unlink()
+                with self.env.cr.savepoint():
+                    user.unlink()
                 _logger.info("User #%i %r, deleted. Original request from %r.",
                              user.id, user_name, delete_request.create_uid.name)
-                self.env.cr.execute("RELEASE SAVEPOINT delete_user")
                 delete_request.state = 'done'
             except Exception as e:
                 _logger.error("User #%i %r could not be deleted. Original request from %r. Related error: %s",
-                             user.id, user_name, requester_name, e)
-                self.env.cr.execute("ROLLBACK TO SAVEPOINT delete_user")
+                              user.id, user_name, requester_name, e)
                 delete_request.state = "fail"
             # make sure we never rollback the work we've done, this can take a long time
+            cron_done, cron_remaining = cron_done + 1, cron_remaining - 1
             if auto_commit:
+                self.env['ir.cron']._notify_progress(done=cron_done, remaining=cron_remaining)
                 self.env.cr.commit()
             if delete_request.state == "fail":
                 continue
@@ -84,17 +86,14 @@ class ResUsersDeletion(models.Model):
             # Step 2: Delete Linked Partner
             #         Could be impossible if the partner is linked to a SO for example
             try:
-                self.env.cr.execute("SAVEPOINT delete_partner")
-                partner.unlink()
+                with self.env.cr.savepoint():
+                    partner.unlink()
                 _logger.info("Partner #%i %r, deleted. Original request from %r.",
                              partner.id, user_name, delete_request.create_uid.name)
-                self.env.cr.execute("RELEASE SAVEPOINT delete_partner")
             except Exception as e:
                 _logger.warning("Partner #%i %r could not be deleted. Original request from %r. Related error: %s",
-                             partner.id, user_name, requester_name, e)
-                self.env.cr.execute("ROLLBACK TO SAVEPOINT delete_partner")
+                                partner.id, user_name, requester_name, e)
             # make sure we never rollback the work we've done, this can take a long time
             if auto_commit:
                 self.env.cr.commit()
-        if len(todo_requests) > batch_size:
-            self.env.ref("base.ir_cron_res_users_deletion")._trigger()
+        self.env['ir.cron']._notify_progress(done=cron_done, remaining=cron_remaining)

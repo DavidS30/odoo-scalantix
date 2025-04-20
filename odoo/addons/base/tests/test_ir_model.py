@@ -5,7 +5,7 @@ from psycopg2 import IntegrityError
 from psycopg2.errors import NotNullViolation
 
 from odoo.exceptions import ValidationError
-from odoo.tests.common import Form, TransactionCase, HttpCase, tagged
+from odoo.tests import Form, TransactionCase, HttpCase, tagged
 from odoo.tools import mute_logger
 from odoo import Command
 
@@ -327,6 +327,10 @@ class TestIrModel(TransactionCase):
                 'field_id': fields_value,
             })
 
+        # ensure we can order by a stored field via inherits
+        user_model = self.env['ir.model'].search([('model', '=', 'res.users')])
+        user_model._check_order()  # must not raise
+
     def test_model_order_search(self):
         """Check that custom orders are applied when querying a model."""
         ORDERS = {
@@ -524,10 +528,10 @@ class TestIrModelFieldsTranslation(HttpCase):
         field = self.env['ir.model.fields'].search([('model_id.model', '=', 'res.users'), ('name', '=', 'login')])
         self.assertEqual(field.with_context(lang='en_US').field_description, 'Login')
         # check the name column of res.users is displayed as 'Login'
-        self.start_tour("/web", 'ir_model_fields_translation_en_tour', login="admin")
+        self.start_tour("/odoo", 'ir_model_fields_translation_en_tour', login="admin")
         field.update_field_translations('field_description', {'en_US': 'Login2'})
         # check the name column of res.users is displayed as 'Login2'
-        self.start_tour("/web", 'ir_model_fields_translation_en_tour2', login="admin")
+        self.start_tour("/odoo", 'ir_model_fields_translation_en_tour2', login="admin")
 
         # modify fr_FR translation
         self.env['res.lang']._activate_lang('fr_FR')
@@ -537,7 +541,7 @@ class TestIrModelFieldsTranslation(HttpCase):
         admin = self.env['res.users'].search([('login', '=', 'admin')], limit=1)
         admin.lang = 'fr_FR'
         # check the name column of res.users is displayed as 'Identifiant'
-        self.start_tour("/web", 'ir_model_fields_translation_fr_tour', login="admin")
+        self.start_tour("/odoo", 'ir_model_fields_translation_fr_tour', login="admin")
         field.update_field_translations('field_description', {'fr_FR': 'Identifiant2'})
         # check the name column of res.users is displayed as 'Identifiant2'
-        self.start_tour("/web", 'ir_model_fields_translation_fr_tour2', login="admin")
+        self.start_tour("/odoo", 'ir_model_fields_translation_fr_tour2', login="admin")

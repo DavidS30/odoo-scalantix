@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+<!--	Shortcut popup view-->
+  <t t-name="pos_keyboard_shortcut.ShortcutPopup" owl="1">
+    <!-- Fondo oscuro semi-transparente -->
+    <div class="o_dialog_container" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    ">
+        <!-- Contenedor del modal -->
+        <div class="o_dialog" style="
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        ">
+            <!-- Encabezado -->
+            <div class="modal-header" style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 10px;
+                margin-bottom: 15px;
+            ">
+                <h4 style="margin: 0;"><t t-esc="props.title"/></h4>
+                <button t-on-click="props.close" style="
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                ">×</button>
+            </div>
+
+            <!-- Cuerpo -->
+            <div class="modal-body">
+                <!-- Tus tablas de atajos aquí -->
+                <div>
+					<p class="fs-4">
+					<b>
+					Product Screen Shortcuts
+					</b>
+                	</p>
+                     <table class="table">
+						<thead>
+							<tr>
+								<th>
+									<b>Key</b>
+								</th>
+                                <th>
+									<b>Description</b>
+								</th>
+							</tr>
+						</thead>
+                        <tbody>
+							<t>
+								<tr>
+									<td>
+										Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.customer_screen"/>
+									</td>
+                                    <td>
+										Customer Screen
+									</td>
+								</tr>
+                                <tr>
+									<td>
+										Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.select_discount"/>
+									</td>
+                                    <td>
+										Select Discount
+									</td>
+								</tr>
+                                <tr>
+									<td>
+										Ctrl +  <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.select_price"/>
+									</td>
+                                    <td>
+										Select Price
+									</td>
+								</tr>
+                                <tr>
+									<td>
+										Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.select_qty"/>
+									</td>
+                                    <td>
+										Select Quantity
+									</td>
+								</tr>
+                                <tr>
+									<td>
+										Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.next_screen"/>
+									</td>
+                                    <td>
+										Payment
+									</td>
+								</tr>
+							</t>
+						</tbody>
+					</table>
+                </div>
+				<!-- Payment Screen Shortcuts -->
+                <div>
+					<p class="fs-4">
+					<b>
+					Payment Screen Shortcuts
+					</b>
+                	</p>
+                    <table class="table">
+						<thead>
+							<tr>
+								<th>
+									<b>Key</b>
+								</th>
+                                <th>
+									<b>Description</b>
+								</th>
+							</tr>
+						</thead>
+                        <tbody>
+								<tr>
+									<td>
+										Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.select_invoice"/>
+									</td>
+                                    <td>
+										Select Invoice
+									</td>
+								</tr>
+								<tr>
+									<td>
+										Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.back_screen"/>
+									</td>
+                                    <td>
+										Back to Product Screen
+									</td>
+								</tr>
+								<tr>
+									<td>
+										Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.validate_order"/>
+									</td>
+                                    <td>
+										Validate Order
+									</td>
+								</tr>
+								<p class="fs-5 mt-2">Métodos de pago</p>
+								<t t-foreach="this.env.services.pos.payment_method_key" t-as="method" t-key="method.id">
+									<tr>
+										<td>
+											Ctrl + <t t-esc="method.key_code"/>
+										</td>
+										<td>
+											<t t-esc="method.payment_method_id.name"/>
+										</td>
+									</tr>
+								</t>
+						</tbody>
+					</table>
+				</div>
+                <!-- Receipt Screen Shortcuts -->
+                <div>
+					<p class="fs-4">
+					<b>
+					Receipt Screen Shortcuts
+					</b>
+                	</p>
+                    <table class="table">
+						<thead>
+							<tr>
+								<th>
+									<b>Key</b>
+								</th>
+                                <th>
+									<b>Description</b>
+								</th>
+							</tr>
+						</thead>
+                        <tbody>
+							<tr>
+								<td>
+									Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.print_receipt"/>
+								</td>
+                                <td>
+									Print Receipt
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.sent_email"/>
+								</td>
+                                <td>
+									Sent Email
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Ctrl + <t t-esc="this.env.services.pos.keyboard_shortcuts[0]?.new_order"/>
+								</td>
+                                <td>
+									New Order
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+                <!-- All Screen Shortcuts -->
+                <!-- <div>
+					<p>
+						All Screen Shortcuts
+					</p>
+                    <table class="table">
+						<thead>
+							<tr>
+								<th>
+									<b>Key</b>
+								</th>
+                                <th>
+									<b>Description</b>
+								</th>
+							</tr>
+						</thead>
+                        <tbody>
+							<tr>
+								<td>
+									Ctrl +
+								</td>
+                                <td>
+									Cancel
+								</td>
+							</tr>
+                            <tr>
+								<td>
+									Ctrl +
+								</td>
+                                <td>
+									Ok
+								</td>
+							</tr>
+                            <tr>
+								<td>
+									Ctrl +
+								</td>
+                                <td>
+									Select User
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div> -->
+            </div>
+
+            <!-- Pie de página -->
+            <div class="modal-footer" style="
+                margin-top: 15px;
+                border-top: 1px solid #eee;
+                padding-top: 10px;
+                text-align: right;
+            ">
+                <button t-on-click="props.close" class="btn btn-secondary">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</t>
+	<t t-name="pos_keyboard_shortcut.ErrorPopup">
+    <div class="popup shortcut_popup warning">
+        <div class="modal-header warning">
+            <h4>
+                <t t-esc="'Warning'"/>
+            </h4>
+        </div>
+        <div class="modal-body table-container warning">
+            <div>
+                <p>Please select a shortcut first before proceeding</p>
+            </div>
+        </div>
+        <div class="footer footer-flex modal-footer warning">
+            <div class="button cancel btn btn-lg btn-secondary"
+                 t-on-click="cancel">
+                <t t-esc="props.cancelText"/>
+            </div>
+        </div>
+    </div>
+</t>
+</templates>
