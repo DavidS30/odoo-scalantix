@@ -28,10 +28,6 @@ patch(ProductScreen.prototype, {
             else if (event.ctrlKey && event.key === this.pos.keyboard_shortcuts[0].select_qty.toLowerCase()) {
                 this.onNumpadClick('quantity');
             }
-            else if (event.ctrlKey && event.key === this.pos.keyboard_shortcuts[0].select_user.toLowerCase()) {
-                const UserButton = document.querySelector('.username')
-                UserButton.click();
-            }
             else if (event.ctrlKey && event.key === this.pos.keyboard_shortcuts[0].next_screen.toLowerCase()) {
                 this.pos.pay();
             }

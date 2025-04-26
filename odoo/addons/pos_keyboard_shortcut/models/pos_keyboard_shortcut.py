@@ -28,21 +28,21 @@ class PosKeyboardShortcut(models.Model):
                                     help='To delete orderlines')
     print_receipt = fields.Char(string='Print Receipt', default='R',
                                 help='To print receipt')
-    next_screen_show = fields.Char(string="Show Next Screen", default='Enter',
-                                   readonly=True, help='To show the next '
-                                                       'screen')
+    # next_screen_show = fields.Char(string="Show Next Screen", default='Enter',
+    #                                readonly=True, help='To show the next '
+    #                                                    'screen')
     back_screen = fields.Char(string='Back Screen', default="B", help='Back '
                                                                       'screen')
-    click_ok = fields.Char(string='Ok Button of Popup', default='Enter',
-                           readonly=True, help='Ok button of popup')
-    select_user = fields.Char(string='Select POS user', default='U',
-                              help='To select POS User')
+    # click_ok = fields.Char(string='Ok Button of Popup', default='Enter',
+    #                        readonly=True, help='Ok button of popup')
+    # select_user = fields.Char(string='Select POS user', default='U',
+    #                           help='To select POS User')
     select_invoice = fields.Char(string='Order Invoice', default='I',
                                  help='To select invoice')
-    close_pos = fields.Char(string='Close Pos Session', default='M',
-                            help='To Close POS Session')
-    click_cancel = fields.Char(string='Cancel Button in Popup', default='Esc',
-                               readonly=True, help='To Cancel')
+    # close_pos = fields.Char(string='Close Pos Session', default='M',
+    #                         help='To Close POS Session')
+    # click_cancel = fields.Char(string='Cancel Button in Popup', default='Esc',
+    #                            readonly=True, help='To Cancel')
     payment_method_key_ids = fields.One2many(
         'pos.payment.method.key',
         inverse_name='keyboard_shortcut_id')
@@ -50,8 +50,8 @@ class PosKeyboardShortcut(models.Model):
                                  readonly=True, help='To validate order')
     new_order = fields.Char(string='New Order', default='X',
                             help='To new order')
-    resume_order = fields.Char(string='Resume Order', default='S',
-                               help='To Resume Order')
+    # resume_order = fields.Char(string='Resume Order', default='S',
+    #                            help='To Resume Order')
     sent_email = fields.Char(string='Sent Email', default='Y',
                              help='To Sent Email')
 
@@ -69,10 +69,9 @@ class PosKeyboardShortcut(models.Model):
 
     @api.constrains('customer_screen', 'next_screen', 'select_qty',
                     'select_discount', 'select_price', 'print_receipt',
-                    'back_screen', 'select_user', 'sent_email', 'resume_order',
-                    'new_order', 'close_pos', 'select_invoice',
-                    'validate_order', 'click_cancel', 'click_ok',
-                    'next_screen_show', 'delete_orderlines')
+                    'back_screen',  'sent_email', 
+                    'new_order', 'select_invoice',
+                    'validate_order', 'delete_orderlines')
     def _check_same_value(self):
         """This method serves as a constraint for ensuring that specific fields
         within the model do not contain identical values simultaneously.
@@ -83,10 +82,8 @@ class PosKeyboardShortcut(models.Model):
         for record in self:
             fields_to_check = ['customer_screen', 'next_screen', 'select_qty',
                                'select_discount', 'select_price',
-                               'print_receipt', 'back_screen', 'select_user',
-                               'sent_email', 'resume_order', 'new_order',
-                               'close_pos', 'select_invoice', 'validate_order',
-                               'click_cancel', 'next_screen_show',
+                               'print_receipt', 'back_screen', 
+                               'sent_email', 'new_order', 'select_invoice', 'validate_order',                               
                                'delete_orderlines']
             field_values = [getattr(record, field) for field in
                             fields_to_check]
@@ -101,10 +98,10 @@ class PosKeyboardShortcut(models.Model):
         domain = [('id', '=', config_id.select_shortcut_id.id)]
         fields = ["select_qty", "select_discount", "select_price",
                           "delete_orderlines", "print_receipt", "next_screen",
-                          "back_screen", "click_ok", "select_user",
-                          "select_invoice", "close_pos", "click_cancel",
-                          "customer_screen", "next_screen_show",
-                          "validate_order", "new_order", "resume_order",
+                          "back_screen", 
+                          "select_invoice", 
+                          "customer_screen", 
+                          "validate_order", "new_order",
                           "sent_email"]
         return {
                 'fields': fields,
