@@ -9,6 +9,10 @@ patch(ProductScreen.prototype, {
         super.setup(...arguments);
         owl.useExternalListener(document, "keydown", (ev) => {
             if (!this.hasOpenDialog()) {
+                const tagName = event.target.tagName.toLowerCase();
+                if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+                    return;
+                }
                 ev.preventDefault();
                 this._product_screen_shortcuts(ev)
             }
