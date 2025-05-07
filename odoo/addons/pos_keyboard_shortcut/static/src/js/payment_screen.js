@@ -6,11 +6,14 @@ patch(PaymentScreen.prototype, {
     setup() {
         super.setup();
         this._onKeyDown = this._onKeyDown.bind(this); // Aseguramos el contexto
+        this.keyAllowed = true;
         this.payment_screen_shortcuts();
+
     },
     payment_screen_shortcuts() {
-        if (this.pos.config.enable_keyboard_shortcuts) {
-            document.addEventListener('keydown', this._onKeyDown);
+        if (this.pos.config.enable_keyboard_shortcuts && this.keyAllowed) {
+            owl.useExternalListener(document, 'keydown', this._onKeyDown);
+            this.keyAllowed = false;
         }
     },
     _onKeyDown(event) {
@@ -37,5 +40,6 @@ patch(PaymentScreen.prototype, {
     },
     removeEventKeyDown() {
         document.removeEventListener('keydown', this._onKeyDown);
+        this.keyAllowed = true;
     },
 });

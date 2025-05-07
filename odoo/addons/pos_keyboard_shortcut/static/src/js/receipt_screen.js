@@ -1,17 +1,18 @@
 /** @odoo-module */
 import { patch } from "@web/core/utils/patch";
 import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
-//Patch the Receipt screen and add the shortcuts on the Receipt screen
 patch(ReceiptScreen.prototype, {
     setup() {
         super.setup();
         this._onKeyDown = this._onKeyDown.bind(this); // Aseguramos el contexto
+        this.keyAllowed = true;
         this.receipt_screen_shortcuts();
     },
 
     receipt_screen_shortcuts() {
-        if (this.pos.config.enable_keyboard_shortcuts) {
-            document.addEventListener('keydown', this._onKeyDown);
+        if (this.pos.config.enable_keyboard_shortcuts && this.keyAllowed) {
+            owl.useExternalListener(document, 'keydown', this._onKeyDown);
+            this.keyAllowed = false;
         }
     },
     _onKeyDown(event) {
@@ -33,5 +34,6 @@ patch(ReceiptScreen.prototype, {
     },
     removeEventKeyDown() {
         document.removeEventListener('keydown', this._onKeyDown);
+        this.keyAllowed = true;
     },
 });
