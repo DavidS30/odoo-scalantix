@@ -11,7 +11,7 @@
 ################################################################################
 {
     'name': 'POS Keyboard Shortcut',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.1',
     'summery': 'Module to add keyboard shortcuts in POS',
     'description': """Easily operate the Point of Sale (POS) system by
      utilizing POS keyboard shortcuts.""",
