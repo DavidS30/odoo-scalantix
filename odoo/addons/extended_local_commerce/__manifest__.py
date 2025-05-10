@@ -24,7 +24,8 @@
         'point_of_sale'
     ],
     'data': [
-        'views/pos_session_sales_details.xml'
+        'views/pos_session_sales_details.xml',
+        'report/extended_product_report.xml',
     ],
     'installable': True,
     'auto_install': False,
