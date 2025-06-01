@@ -197,10 +197,10 @@
         <!-- Background now controlled by css configuration, using color combinations -->
         <attribute name="class" add="o_colored_level o_cc" separator=" "/>
     </xpath>
-    <xpath expr="//t[@t-call='web.brand_promotion']/.." position="attributes">
+    <!-- <xpath expr="//t[@t-call='web.brand_promotion']/.." position="attributes">
         <attribute name="class" add="o_not_editable" separator=" "/>
         <attribute name="t-if">not editable</attribute>
-    </xpath>
+    </xpath> -->
 
     <xpath expr="//div[@id='wrapwrap']" position="after">
         <t t-if="website.google_analytics_key and not editable">
@@ -317,7 +317,7 @@
     </xpath>
 </template>
 
-<template id="brand_promotion" inherit_id="web.brand_promotion" name="Brand Promotion">
+<!-- <template id="brand_promotion" inherit_id="web.brand_promotion" name="Brand Promotion">
     <xpath expr="//t[@t-call='web.brand_promotion_message']" position="replace">
         <t t-call="web.brand_promotion_message">
             <t t-set="_message">
@@ -326,7 +326,7 @@
             <t t-set="_utm_medium" t-valuef="website"/>
         </t>
     </xpath>
-</template>
+</template> -->
 
 <!-- Navbar -->
 <template id="navbar_toggler" name="Navbar Toggler">
